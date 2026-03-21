@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZordPath - Logic Land RPG</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Title Screen (Canvas-rendered pixel art) -->
+    <div id="screen-title" class="screen active">
+        <canvas id="title-canvas"></canvas>
+        <div class="title-overlay">
+            <div class="title-start" id="btn-new-game">PUSH START</div>
+        </div>
+    </div>
+
+    <!-- Character Creation Screen (Canvas-rendered) -->
+    <div id="screen-character" class="screen">
+        <canvas id="charselect-canvas"></canvas>
+        <!-- Hidden input that captures keyboard when editing name -->
+        <input type="text" id="char-name" maxlength="16" style="position:absolute;left:-9999px;opacity:0;">
+        <button id="btn-start-adventure" style="display:none;"></button>
+        <div id="name-section" style="display:none;"></div>
+        <div id="character-grid" style="display:none;"></div>
+    </div>
+
+    <!-- Main Game Screen (full canvas) -->
+    <div id="screen-game" class="screen">
+        <div class="game-fullcanvas">
+            <canvas id="game-canvas" class="pixel-canvas"></canvas>
+
+            <!-- HTML overlays on top of canvas (for text input & clickable elements) -->
+            <!-- Hidden HUD elements for JS state tracking -->
+            <span id="hud-name" style="display:none"></span>
+            <span id="hud-hp" style="display:none"></span>
+            <span id="hud-location" style="display:none"></span>
+            <span id="hud-rubies" style="display:none"></span>
+
+            <!-- Clickable HUD buttons (positioned over canvas) -->
+            <div class="canvas-hud-buttons">
+                <span id="hud-inventory-btn" class="canvas-hud-btn" title="Inventory (I)"><canvas class="icon-canvas" id="icon-inv" width="20" height="20"></canvas></span>
+                <span id="hud-map-btn" class="canvas-hud-btn" title="Map (M)"><canvas class="icon-canvas" id="icon-map" width="20" height="20"></canvas></span>
+                <span id="hud-zordlist-btn" class="canvas-hud-btn" title="Zords (Z)"><canvas class="icon-canvas" id="icon-zord" width="20" height="20"></canvas></span>
+                <span id="hud-help-btn" class="canvas-hud-btn" title="Help (H)" onclick="toggleHelp()"><canvas class="icon-canvas" id="icon-help" width="20" height="20"></canvas></span>
+            </div>
+
+            <!-- Dialogue panel (HTML for clickable choices) -->
+            <div id="dialogue-panel" class="dialogue-panel-canvas" style="display:none;">
+                <div class="dialogue-portrait" id="dialogue-portrait"></div>
+                <div class="dialogue-body">
+                    <div class="dialogue-speaker" id="dialogue-speaker"></div>
+                    <div class="dialogue-text" id="dialogue-text"></div>
+                    <div class="dialogue-choices" id="dialogue-choices"></div>
+                </div>
+            </div>
+
+            <!-- Interaction prompt (rendered on canvas, but keep element for state) -->
+            <div id="interact-prompt" style="display:none;"><span id="interact-text"></span></div>
+
+            <!-- World Map overlay -->
+            <div id="worldmap-overlay" class="inventory-overlay" style="display:none;">
+                <div class="worldmap-window">
+                    <div class="inventory-header">
+                        <h3>World Map</h3>
+                        <span class="close-btn" id="close-worldmap">[X]</span>
+                    </div>
+                    <canvas id="worldmap-canvas"></canvas>
+                    <div class="worldmap-legend" id="worldmap-legend"></div>
+                </div>
+            </div>
+
+            <!-- Help overlay -->
+            <div id="help-overlay" class="inventory-overlay" style="display:none;">
+                <div class="inventory-window" style="max-width:520px;">
+                    <div class="inventory-header">
+                        <h3>Controls</h3>
+                        <span class="close-btn" id="close-help">[X]</span>
+                    </div>
+                    <div id="help-content" style="font-size:9px;line-height:2.2;color:var(--text);">
+                        <div style="color:var(--gold);margin-bottom:6px;">-- Movement --</div>
+                        <div>WASD / Arrow Keys ... Move</div>
+                        <div style="color:var(--gold);margin:8px 0 6px;">-- Actions --</div>
+                        <div>E / Space .......... Interact / Talk</div>
+                        <div>I .................. Inventory</div>
+                        <div>M .................. World Map</div>
+                        <div>Z .................. ZordList</div>
+                        <div>H .................. This Help</div>
+                        <div>Esc ................ Close Menus</div>
+                        <div>K+B ................ Toggle Touch Controls</div>
+                        <div style="color:var(--gold);margin:8px 0 6px;">-- Battle --</div>
+                        <div>WASD / Arrows ...... Move</div>
+                        <div>Space .............. Attack</div>
+                        <div>Shift .............. Block (shield)</div>
+                        <div>P .................. Use Potion</div>
+                        <div>C .................. Throw ZordCage</div>
+                        <div>D .................. Deploy Zord</div>
+                        <div style="color:var(--gold);margin:8px 0 6px;">-- Fishing --</div>
+                        <div>WASD / Arrows ...... Aim</div>
+                        <div>Space .............. Cast / Reel</div>
+                        <div>Esc ................ Leave</div>
+                        <div style="color:var(--gold);margin:8px 0 6px;">-- Controller --</div>
+                        <div>D-Pad / Left Stick . Move</div>
+                        <div>A .................. Attack / Confirm</div>
+                        <div>B .................. Interact</div>
+                        <div>X .................. ZordCage</div>
+                        <div>Y .................. Potion</div>
+                        <div>LB / RB ............ Zords / Inventory</div>
+                        <div>Select / Start ..... Map / Enter</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Inventory overlay -->
+            <div id="inventory-overlay" class="inventory-overlay" style="display:none;">
+                <div class="inventory-window">
+                    <div class="inventory-header">
+                        <h3>Inventory</h3>
+                        <span class="close-btn" id="close-inventory">[X]</span>
+                    </div>
+                    <div class="inventory-items" id="inventory-items"></div>
+                    <div class="inventory-builds" id="inventory-builds"></div>
+                </div>
+            </div>
+            <!-- ZordList overlay -->
+            <div id="zordlist-overlay" class="inventory-overlay" style="display:none;">
+                <div class="inventory-window" style="max-width:600px;">
+                    <div class="inventory-header">
+                        <h3>ZordList</h3>
+                        <span class="close-btn" id="close-zordlist">[X]</span>
+                    </div>
+                    <div id="zordlist-items"></div>
+                </div>
+            </div>
+            <!-- Zord Naming overlay -->
+            <div id="zordname-overlay" class="inventory-overlay" style="display:none;">
+                <div class="inventory-window" style="max-width:400px;text-align:center;">
+                    <div style="font-size:36px;margin-bottom:8px;" id="zordname-sprite"></div>
+                    <div style="color:var(--gold);font-size:12px;margin-bottom:4px;" id="zordname-species"></div>
+                    <div style="color:var(--success);font-size:10px;margin-bottom:16px;">CAUGHT!</div>
+                    <div style="color:var(--text-dim);font-size:9px;margin-bottom:10px;">Give it a nickname:</div>
+                    <input type="text" id="zordname-input" maxlength="16" style="
+                        font-family:'Press Start 2P',monospace;font-size:14px;padding:10px 14px;
+                        background:#0a0a18;border:2px solid var(--gold);color:var(--gold);
+                        width:80%;text-align:center;outline:none;margin-bottom:14px;">
+                    <br>
+                    <button class="btn btn-primary" id="zordname-confirm">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Zord Battle Screen (Turn-based) -->
+    <div id="screen-zordbattle" class="screen">
+        <div class="zordbattle-container">
+            <div class="zb-header">
+                <div class="zb-zord" id="zb-player-zord"></div>
+                <div class="zb-vs">VS</div>
+                <div class="zb-zord" id="zb-enemy-zord"></div>
+            </div>
+            <div class="zb-log" id="zb-log"></div>
+            <div class="zb-actions" id="zb-actions"></div>
+        </div>
+    </div>
+
+    <!-- Battle Screen (Action-based) -->
+    <div id="screen-battle" class="screen">
+        <div class="battle-layout">
+            <!-- Battle HUD -->
+            <div class="battle-hud">
+                <div class="battle-hud-player">
+                    <span class="battle-hud-name" id="battle-hud-name"></span>
+                    <div class="battle-hp-bar"><div class="battle-hp-fill" id="battle-player-hp"></div></div>
+                    <span class="battle-hud-hp-text" id="battle-player-hp-text"></span>
+                </div>
+                <div class="battle-hud-info" id="battle-hud-info"></div>
+                <div class="battle-hud-enemy">
+                    <span class="battle-hud-name" id="battle-enemy-name"></span>
+                    <div class="battle-hp-bar"><div class="battle-hp-fill" id="battle-enemy-hp"></div></div>
+                    <span class="battle-hud-hp-text" id="battle-enemy-hp-text"></span>
+                </div>
+            </div>
+            <!-- Battle Canvas -->
+            <div class="battle-canvas-wrapper">
+                <canvas id="battle-canvas"></canvas>
+            </div>
+            <!-- Battle Controls hint -->
+            <div class="battle-controls" id="battle-controls">
+                <span id="battle-controls-text"></span>
+            </div>
+            <!-- Victory/Defeat overlay -->
+            <div class="battle-result" id="battle-result" style="display:none;">
+                <div class="battle-result-text" id="battle-result-text"></div>
+                <button class="btn btn-primary" id="battle-result-btn">Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quiz Screen (pre-battle) -->
+    <div id="screen-quiz" class="screen">
+        <div class="quiz-container">
+            <div class="quiz-lesson" id="quiz-lesson"></div>
+            <div class="quiz-question" id="quiz-question"></div>
+            <div class="quiz-choices" id="quiz-choices"></div>
+            <div class="quiz-feedback" id="quiz-feedback"></div>
+            <div class="quiz-progress" id="quiz-progress"></div>
+        </div>
+    </div>
+
+    <!-- Fishing Screen -->
+    <div id="screen-fishing" class="screen">
+        <div class="fishing-layout">
+            <div class="fishing-hud">
+                <span id="fishing-status">Cast your line!</span>
+                <span id="fishing-fish-count"></span>
+            </div>
+            <div class="fishing-canvas-wrapper">
+                <canvas id="fishing-canvas"></canvas>
+            </div>
+            <div class="fishing-controls" id="fishing-controls">
+                Arrows/WASD: Aim | Space: Cast / Reel | Esc: Leave
+            </div>
+            <div class="fishing-result" id="fishing-result" style="display:none;">
+                <div class="fishing-result-text" id="fishing-result-text"></div>
+                <div class="fishing-result-actions" id="fishing-result-actions"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Store Screen -->
+    <div id="screen-store" class="screen">
+        <div class="store-container store-wide">
+            <h2>Logic Land General Store</h2>
+            <p class="store-rubies">Rubies: <span id="store-rubies"></span></p>
+            <div class="store-columns">
+                <div class="store-col" id="store-equip"></div>
+                <div class="store-col" id="store-build"></div>
+            </div>
+            <button id="btn-leave-store" class="btn btn-secondary">Leave Store</button>
+        </div>
+    </div>
+
+    <!-- Build Screen -->
+    <div id="screen-build" class="screen">
+        <div class="build-container">
+            <h2>Al-Muṣawwir</h2>
+            <div class="build-options" id="build-options"></div>
+            <div class="build-preview" id="build-preview"></div>
+            <button id="btn-leave-build" class="btn btn-secondary">Back</button>
+        </div>
+    </div>
+
+    <!-- Touch Controls Toggle -->
+    <div id="touch-toggle" class="touch-toggle" style="display:none;">SHOW</div>
+
+    <!-- Touch Controls (hidden on non-touch devices) -->
+    <div id="touch-controls" class="touch-controls" style="display:none;">
+        <!-- D-Pad -->
+        <div class="touch-dpad">
+            <div class="dpad-btn dpad-up" data-key="arrowup"></div>
+            <div class="dpad-btn dpad-left" data-key="arrowleft"></div>
+            <div class="dpad-center"></div>
+            <div class="dpad-btn dpad-right" data-key="arrowright"></div>
+            <div class="dpad-btn dpad-down" data-key="arrowdown"></div>
+        </div>
+        <!-- Action Buttons -->
+        <div class="touch-actions">
+            <div class="action-btn action-a" data-key=" ">A</div>
+            <div class="action-btn action-b" data-key="e">B</div>
+            <div class="action-btn action-sm action-i" data-key="i">I</div>
+            <div class="action-btn action-sm action-z" data-key="z">Z</div>
+            <div class="action-btn action-sm action-m" data-key="m">M</div>
+            <div class="action-btn action-sm action-h" data-key="h">?</div>
+        </div>
+        <!-- Keyboard toggle -->
+        <div id="keyboard-toggle" class="touch-kb-toggle">KB</div>
+    </div>
+    <!-- Hidden input for virtual keyboard -->
+    <input type="text" id="virtual-kb-input" style="position:fixed;bottom:-100px;left:0;opacity:0;font-size:16px;">
+
+    <script src="game.js"></script>
+</body>
+</html>
