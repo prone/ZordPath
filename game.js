@@ -5840,7 +5840,7 @@ function drawBattleEnemy(c, ex, ey, enemy, frame) {
     }
 
     // Charging speed lines (all types)
-    if (battle.enemyCharging) {
+    if (battle && battle.enemyCharging) {
         for (let i = 0; i < 4; i++) {
             c.fillStyle = 'rgba(255,50,50,0.3)';
             c.fillRect(ex + 30 + i * 8, ey - 10 + i * 6 + eBob, 20, 3);
@@ -6843,39 +6843,41 @@ function drawNPCs() {
     });
 }
 
-// Pre-computed element colors for overworld enemies (avoids per-frame regex)
-const _elColorData = {};
-(function() {
-    const elColors = {
-        fire: '#c03020', ice: '#4080c0', nature: '#308030', shadow: '#4a2060',
-        light: '#c0a030', arcane: '#6040a0', earth: '#8a6a3a', electric: '#c0b020',
-        void: '#1a1040', water: '#2070a0'
-    };
-    const lighten = c => c.replace(/[0-9a-f]{2}/gi, m => Math.min(255, parseInt(m,16)+40).toString(16).padStart(2,'0'));
-    const darken = c => c.replace(/[0-9a-f]{2}/gi, m => Math.max(0, parseInt(m,16)-30).toString(16).padStart(2,'0'));
-    for (const [el, c] of Object.entries(elColors)) {
-        _elColorData[el] = { base: c, light: lighten(c), dark: darken(c) };
+// Pre-render battle sprites to small offscreen canvases for overworld use
+const _overworldSpriteCache = {};
+function buildOverworldSprites() {
+    // Collect all unique enemy indices used in zones
+    const indices = new Set();
+    for (const loc of Object.keys(ENEMY_ZONES)) {
+        ENEMY_ZONES[loc].forEach(z => indices.add(z.enemyIndex));
     }
-    _elColorData._default = { base: '#804040', light: lighten('#804040'), dark: darken('#804040') };
-})();
+    indices.forEach(idx => {
+        const enemy = ENEMIES[idx];
+        if (!enemy) return;
+        const srcSize = 100; // render area for battle sprite
+        const oc = document.createElement('canvas');
+        oc.width = srcSize; oc.height = srcSize;
+        const c = oc.getContext('2d');
+        // Draw battle sprite centered, frame=0 (no animation)
+        drawBattleEnemy(c, srcSize / 2, srcSize / 2 - 5, enemy, 0);
+        _overworldSpriteCache[idx] = oc;
+    });
+}
 
 function drawEnemies() {
     const zones = ENEMY_ZONES[state.location];
     const positions = enemyPos[state.location];
     if (!zones || !positions) return;
 
+    // Lazy init: build sprites on first call
+    if (Object.keys(_overworldSpriteCache).length === 0) buildOverworldSprites();
+
     zones.forEach((z, i) => {
         const key = `${state.location}_${i}`;
         if (state.defeatedZones.has(key)) return;
 
-        const enemy = ENEMIES[z.enemyIndex];
         const ep = positions[i];
         const bob = Math.sin(state.animFrame * 0.06 + i * 2) * 2;
-        const ecd = _elColorData[enemy.element] || _elColorData._default;
-        const elColor = ecd.base;
-
-        const lighter = ecd.light;
-        const darker = ecd.dark;
 
         // Danger glow
         const pulse = Math.sin(state.animFrame * 0.08 + i) * 0.12 + 0.15;
@@ -6890,42 +6892,11 @@ function drawEnemies() {
         ctx.ellipse(ep.x, ep.y + 18, 12, 4, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Body
-        ctx.fillStyle = elColor;
-        ctx.fillRect(ep.x - 10, ep.y - 8 + bob, 20, 18);
-        ctx.fillRect(ep.x - 8, ep.y - 12 + bob, 16, 4);
-        // Belly
-        ctx.fillStyle = lighter;
-        ctx.fillRect(ep.x - 6, ep.y - 2 + bob, 12, 10);
-        // Dark back
-        ctx.fillStyle = darker;
-        ctx.fillRect(ep.x - 10, ep.y - 8 + bob, 20, 4);
-        // Eyes
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(ep.x - 6, ep.y - 8 + bob, 5, 4);
-        ctx.fillRect(ep.x + 2, ep.y - 8 + bob, 5, 4);
-        ctx.fillStyle = '#e02020';
-        ctx.fillRect(ep.x - 5, ep.y - 7 + bob, 3, 3);
-        ctx.fillRect(ep.x + 3, ep.y - 7 + bob, 3, 3);
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(ep.x - 5, ep.y - 7 + bob, 1, 1);
-        ctx.fillRect(ep.x + 3, ep.y - 7 + bob, 1, 1);
-        // Horns/spikes
-        ctx.fillStyle = darker;
-        ctx.fillRect(ep.x - 8, ep.y - 14 + bob, 3, 4);
-        ctx.fillRect(ep.x + 6, ep.y - 14 + bob, 3, 4);
-        // Mouth
-        ctx.fillStyle = '#1a0a0a';
-        ctx.fillRect(ep.x - 4, ep.y + 2 + bob, 8, 2);
-        // Teeth
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(ep.x - 2, ep.y + 2 + bob, 2, 2);
-        ctx.fillRect(ep.x + 2, ep.y + 2 + bob, 2, 2);
-        // Legs
-        ctx.fillStyle = darker;
-        const legA = Math.sin(state.animFrame * 0.1 + i) * 2;
-        ctx.fillRect(ep.x - 8, ep.y + 10 + bob + legA, 6, 6);
-        ctx.fillRect(ep.x + 3, ep.y + 10 + bob - legA, 6, 6);
+        // Draw cached sprite (100x100 source → 36x36 on screen)
+        const sprite = _overworldSpriteCache[z.enemyIndex];
+        if (sprite) {
+            ctx.drawImage(sprite, 0, 0, 100, 100, ep.x - 18, ep.y - 18 + bob, 36, 36);
+        }
     });
 }
 
