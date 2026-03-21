@@ -74,6 +74,9 @@ function trackTempleFloor(floor) {
     saveStats();
 }
 
+// HTML escape for user-provided strings in innerHTML
+function escapeHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
 const TILE = 48; // tile size in pixels (larger for detail)
 const COLS = 24;
 const ROWS = 14;
@@ -745,7 +748,7 @@ function updateEnemyMovement() {
 
     positions.forEach((ep, i) => {
         const key = `${state.location}_${i}`;
-        if (state.defeatedZones.includes(key)) return;
+        if (state.defeatedZones.has(key)) return;
 
         // Direction change timer
         ep.dirTimer--;
@@ -1310,7 +1313,8 @@ const ELEMENTS = {
     arcane:  { name: 'Arcane',  color: '#9b59b6', icon: '\u{1F52E}', strong: null, weak: null },
     earth:   { name: 'Earth',   color: '#a0522d', icon: '\u{1FAA8}', strong: 'electric', weak: 'nature' },
     electric:{ name: 'Electric',color: '#f1c40f', icon: '\u{26A1}', strong: 'ice', weak: 'earth' },
-    void:    { name: 'Void',    color: '#1a1a3e', icon: '\u{1F30C}', strong: 'arcane', weak: 'light' }
+    void:    { name: 'Void',    color: '#1a1a3e', icon: '\u{1F30C}', strong: 'arcane', weak: 'light' },
+    water:   { name: 'Water',   color: '#2980b9', icon: '\u{1F4A7}', strong: 'fire', weak: 'electric' }
 };
 
 function getElementMultiplier(attackEl, defendEl) {
@@ -1324,7 +1328,7 @@ function getElementMultiplier(attackEl, defendEl) {
 // --- ZORDS (enemies / tameable creatures) ---
 // moveType: vertical, fly, roam, slow | attackType: fireball, icebeam, electric, shadow, spread, bomb, laser | speed: movement multiplier
 const ENEMIES = [
-    // === CAVE ZORDS (0-4) ===
+    // === CAVE ZORDS (0-5) ===
     { name: 'Glitch Goblin',  sprite: '\u{1F47A}', hp: 40, attack: 6,  rubies: 3,  lessonId: 'propositional-basics', catchRate: 0.6,  element: 'arcane',  power: { name: 'Glitch Pulse', damage: 12, element: 'arcane' },   moveType: 'vertical', attackType: 'fireball', speed: 0.8 },
     { name: 'Paradox Bat',    sprite: '\u{1F987}', hp: 50, attack: 8,  rubies: 5,  lessonId: 'truth-tables',         catchRate: 0.5,  element: 'shadow',  power: { name: 'Echo Screech', damage: 15, element: 'shadow' },   moveType: 'fly', attackType: 'shadow', speed: 1.2 },
     { name: 'Fallacy Fox',    sprite: '\u{1F98A}', hp: 60, attack: 10, rubies: 7,  lessonId: 'implication',          catchRate: 0.4,  element: 'fire',    power: { name: 'Trick Flame', damage: 18, element: 'fire' },     moveType: 'roam', attackType: 'bite', speed: 1.5 },
@@ -1339,27 +1343,27 @@ const ENEMIES = [
     { name: 'Ember Wisp',     sprite: '\u{1FA94}', hp: 45, attack: 8,  rubies: 5,  lessonId: 'propositional-basics', catchRate: 0.6,  element: 'fire',    power: { name: 'Spark Burst', damage: 14, element: 'fire' },     moveType: 'fly', attackType: 'fireball', speed: 1.4 },
     { name: 'Shadow Lynx',    sprite: '\u{1F408}', hp: 65, attack: 13, rubies: 9,  lessonId: 'truth-tables',         catchRate: 0.3,  element: 'shadow',  power: { name: 'Dark Pounce', damage: 24, element: 'shadow' },   moveType: 'roam', attackType: 'bite', speed: 2.0 },
     { name: 'Wind Hawk',      sprite: '\u{1F985}', hp: 50, attack: 10, rubies: 7,  lessonId: 'implication',          catchRate: 0.45, element: 'electric',power: { name: 'Gale Bolt', damage: 18, element: 'electric' },    moveType: 'fly', attackType: 'electric', speed: 1.6 },
-    // === TEMPLE FLOOR 1-2 (12-15) ===
+    // === TEMPLE FLOOR 1-2 (13-16) ===
     { name: 'Stone Sentinel', sprite: '\u{1F5FF}', hp: 70, attack: 10, rubies: 8,  lessonId: 'propositional-basics', catchRate: 0.35, element: 'earth',   power: { name: 'Boulder Crush', damage: 20, element: 'earth' },  moveType: 'slow', attackType: 'bomb', speed: 0.4 },
     { name: 'Rune Beetle',    sprite: '\u{1FAB2}', hp: 55, attack: 9,  rubies: 7,  lessonId: 'truth-tables',         catchRate: 0.5,  element: 'arcane',  power: { name: 'Rune Blast', damage: 16, element: 'arcane' },    moveType: 'roam', attackType: 'fireball', speed: 1.1 },
     { name: 'Shadow Negator', sprite: '\u{1F311}', hp: 80, attack: 12, rubies: 10, lessonId: 'truth-tables',         catchRate: 0.3,  element: 'shadow',  power: { name: 'Negate Force', damage: 22, element: 'shadow' },  moveType: 'fly', attackType: 'shadow', speed: 0.9 },
     { name: 'Gloom Moth',     sprite: '\u{1FAB3}', hp: 45, attack: 8,  rubies: 6,  lessonId: 'propositional-basics', catchRate: 0.55, element: 'shadow',  power: { name: 'Dust Cloud', damage: 14, element: 'shadow' },    moveType: 'fly', attackType: 'spread', speed: 1.3 },
-    // === TEMPLE FLOOR 3-4 (16-19) ===
+    // === TEMPLE FLOOR 3-4 (17-20) ===
     { name: 'Ink Phantom',    sprite: '\u{1F4D6}', hp: 85, attack: 11, rubies: 10, lessonId: 'implication',          catchRate: 0.3,  element: 'arcane',  power: { name: 'Ink Torrent', damage: 20, element: 'arcane' },   moveType: 'fly', attackType: 'spread', speed: 1.0 },
     { name: 'Page Golem',     sprite: '\u{1F4DA}', hp: 90, attack: 13, rubies: 12, lessonId: 'truth-tables',         catchRate: 0.25, element: 'earth',   power: { name: 'Paper Storm', damage: 24, element: 'earth' },    moveType: 'slow', attackType: 'bomb', speed: 0.6 },
     { name: 'Frost Construct',sprite: '\u{2744}\uFE0F', hp: 95, attack: 14, rubies: 12, lessonId: 'equivalence',     catchRate: 0.25, element: 'ice',     power: { name: 'Blizzard', damage: 26, element: 'ice' },         moveType: 'vertical', attackType: 'icebeam', speed: 0.8 },
     { name: 'Ice Wraith',     sprite: '\u{1F9CA}', hp: 85, attack: 13, rubies: 11, lessonId: 'implication',          catchRate: 0.3,  element: 'ice',     power: { name: 'Frost Bite', damage: 22, element: 'ice' },       moveType: 'fly', attackType: 'icebeam', speed: 1.1 },
-    // === TEMPLE FLOOR 5-6 (20-25) ===
+    // === TEMPLE FLOOR 5-6 (21-26) ===
     { name: 'Magma Beast',    sprite: '\u{1F525}', hp: 110,attack: 16, rubies: 15, lessonId: 'valid-reasoning',      catchRate: 0.2,  element: 'fire',    power: { name: 'Eruption', damage: 30, element: 'fire' },       moveType: 'roam', attackType: 'spread', speed: 1.0 },
     { name: 'Lava Serpent',   sprite: '\u{1F40D}', hp: 100,attack: 15, rubies: 14, lessonId: 'equivalence',          catchRate: 0.25, element: 'fire',    power: { name: 'Magma Coil', damage: 28, element: 'fire' },     moveType: 'roam', attackType: 'fireball', speed: 1.3 },
     { name: 'Cinder Scorpion',sprite: '\u{1F982}', hp: 90, attack: 14, rubies: 12, lessonId: 'implication',          catchRate: 0.3,  element: 'fire',    power: { name: 'Ember Sting', damage: 24, element: 'fire' },    moveType: 'roam', attackType: 'electric', speed: 1.5 },
     { name: 'Void Walker',    sprite: '\u{1F573}\uFE0F', hp: 120,attack: 17, rubies: 18, lessonId: 'valid-reasoning',catchRate: 0.15, element: 'void',    power: { name: 'Rift Tear', damage: 32, element: 'void' },      moveType: 'fly', attackType: 'laser', speed: 0.8 },
     { name: 'Null Entity',    sprite: '\u{1F47E}', hp: 115,attack: 16, rubies: 16, lessonId: 'equivalence',          catchRate: 0.2,  element: 'void',    power: { name: 'Null Wave', damage: 28, element: 'void' },      moveType: 'fly', attackType: 'shadow', speed: 1.0 },
     { name: 'Phase Jellyfish', sprite: '\u{1FABC}', hp: 70, attack: 12, rubies: 10, lessonId: 'truth-tables',        catchRate: 0.35, element: 'electric',power: { name: 'Phase Shock', damage: 20, element: 'electric' },  moveType: 'fly', attackType: 'electric', speed: 0.7 },
-    // === TEMPLE FLOOR 7 (26-27) ===
+    // === TEMPLE FLOOR 7 (27-28) ===
     { name: 'Temple Guardian',sprite: '\u{1F916}', hp: 130,attack: 18, rubies: 20, lessonId: 'valid-reasoning',      catchRate: 0.1,  element: 'light',   power: { name: 'Holy Smite', damage: 34, element: 'light' },    moveType: 'roam', attackType: 'laser', speed: 1.2 },
     { name: 'Prismatic Drake',sprite: '\u{1F409}', hp: 140,attack: 19, rubies: 22, lessonId: 'equivalence',          catchRate: 0.08, element: 'light',   power: { name: 'Prisma Beam', damage: 36, element: 'light' },   moveType: 'fly', attackType: 'laser', speed: 1.5 },
-    // === BOSSES (uncatchable) (28) ===
+    // === BOSSES (uncatchable) (29) ===
     { name: 'Arch-Logician Zephyr', sprite: '\u{1F9D9}\u200D\u2642\uFE0F', hp: 200, attack: 22, rubies: 50, lessonId: 'valid-reasoning', catchRate: 0, element: 'arcane', power: { name: 'Axiom Annihilation', damage: 45, element: 'arcane' }, moveType: 'fly', attackType: 'laser', speed: 1.8, escapeRate: 0.15 },
     // === BEACH ZORDS (30-35) ===
     { name: 'Tide Crab',      sprite: '\u{1F980}', hp: 45, attack: 7,  rubies: 4,  lessonId: 'propositional-basics', catchRate: 0.6,  element: 'water',   power: { name: 'Pinch Tide', damage: 12, element: 'water' },     moveType: 'roam', attackType: 'bite', speed: 0.8 },
@@ -2273,7 +2277,7 @@ const state = {
     playerRow: Math.floor(ROWS / 2),
     facing: 'down',
     defeatedEnemies: [],
-    defeatedZones: [],   // track which enemy zone instances are cleared
+    defeatedZones: new Set(),   // track which enemy zone instances are cleared
     builtItems: [],
     fish: {},           // { fishId: count }
     zordList: [],       // [{ nickname, species, sprite, hp, maxHp, attack, element, power, level, xp, catchLocation }]
@@ -3293,7 +3297,7 @@ function renderZordList() {
             if (!z) return;
             const el = ELEMENTS[z.element];
             html += `<div class="inv-item" style="flex-wrap:wrap;gap:4px;background:rgba(245,200,66,0.05);border-left:3px solid ${el ? el.color : '#888'};">
-                <span>${z.sprite} <strong style="color:var(--gold)">${z.nickname}</strong> <span style="font-size:8px;color:var(--text-dim)">Lv.${z.level}</span></span>
+                <span>${z.sprite} <strong style="color:var(--gold)">${escapeHtml(z.nickname)}</strong> <span style="font-size:8px;color:var(--text-dim)">Lv.${z.level}</span></span>
                 <span style="font-size:8px;color:${el ? el.color : '#888'}">${el ? el.icon + ' ' + el.name : ''}</span>
                 <span style="font-size:7px;color:var(--text-dim)">HP:${z.currentHp}/${z.maxHp} ATK:${z.attack} | ${z.power.name} (${z.power.damage}dmg)</span>
                 <span style="font-size:7px;color:var(--text-dim)">XP: ${z.xp}/${getZordXpNeeded(z)}</span>
@@ -3315,7 +3319,7 @@ function renderZordList() {
         div.className = 'inv-item';
         div.style.cssText = 'flex-wrap:wrap;gap:4px;' + (onBench ? 'opacity:0.5;' : '');
         div.innerHTML = `
-            <span>${zord.sprite} <strong style="color:var(--gold)">${zord.nickname}</strong> <span style="font-size:8px;color:var(--text-dim)">Lv.${zord.level}</span></span>
+            <span>${zord.sprite} <strong style="color:var(--gold)">${escapeHtml(zord.nickname)}</strong> <span style="font-size:8px;color:var(--text-dim)">Lv.${zord.level}</span></span>
             <span style="font-size:8px;color:${el ? el.color : '#888'}">${el ? el.icon + ' ' + el.name : ''}</span>
             <span style="font-size:7px;color:var(--text-dim)">${zord.species} | HP:${zord.currentHp}/${zord.maxHp} ATK:${zord.attack}</span>
             <span style="font-size:7px;color:var(--text-dim)">${zord.power.name} (${zord.power.damage} ${el ? el.name : ''} dmg)</span>
@@ -3962,8 +3966,8 @@ function checkTransition() {
 
 function doTransition(t) {
     // Check forest lock
-    if (t.target === 'forest' && state.defeatedZones.length < 3) {
-        showDialogue('\u{1F6AB}', 'Blocked', `The forest is too dangerous! Defeat at least 3 enemies first. (${state.defeatedZones.length}/3)`);
+    if (t.target === 'forest' && state.defeatedZones.size < 3) {
+        showDialogue('\u{1F6AB}', 'Blocked', `The forest is too dangerous! Defeat at least 3 enemies first. (${state.defeatedZones.size}/3)`);
         state.playerCol -= (state.facing === 'right' ? 1 : state.facing === 'left' ? -1 : 0);
         state.playerRow -= (state.facing === 'down' ? 1 : state.facing === 'up' ? -1 : 0);
         return;
@@ -3988,6 +3992,7 @@ function doTransition(t) {
 // ENEMY ZONE ENCOUNTERS
 // ============================================================
 function checkEnemyZone() {
+    if (state._encounterCooldown > 0) { state._encounterCooldown--; return; }
     const zones = ENEMY_ZONES[state.location];
     const positions = enemyPos[state.location];
     if (!zones || !positions) return;
@@ -3997,7 +4002,7 @@ function checkEnemyZone() {
 
     for (let i = 0; i < zones.length; i++) {
         const key = `${state.location}_${i}`;
-        if (state.defeatedZones.includes(key)) continue;
+        if (state.defeatedZones.has(key)) continue;
 
         const ep = positions[i];
         const dist = Math.sqrt((px - ep.x) ** 2 + (py - ep.y) ** 2);
@@ -4329,9 +4334,9 @@ function renderQuiz() {
     }
 
     const question = lesson.questions[qi];
-    document.getElementById('quiz-lesson').innerHTML = qi === 0
-        ? `<h3>${lesson.title}</h3><p>${lesson.content.replace(/\n/g, '<br>')}</p>`
-        : document.getElementById('quiz-lesson').innerHTML;
+    if (qi === 0) {
+        document.getElementById('quiz-lesson').innerHTML = `<h3>${lesson.title}</h3><p>${lesson.content.replace(/\n/g, '<br>')}</p>`;
+    }
 
     document.getElementById('quiz-question').textContent = `Q${qi + 1}: ${question.q}`;
     document.getElementById('quiz-feedback').textContent = '';
@@ -4517,6 +4522,7 @@ function battleUpdate() {
                 b.over = true;
                 state.hp = b.playerHp;
                 state._pendingZoneKey = null;
+                state._encounterCooldown = 90;
                 playSound('gem');
                 const resultEl = document.getElementById('battle-result');
                 document.getElementById('battle-result-text').innerHTML = 'Escaped!';
@@ -4664,7 +4670,7 @@ function battleUpdate() {
                     const resultEl = document.getElementById('battle-result');
                     const textEl = document.getElementById('battle-result-text');
                     resultEl.style.display = 'flex';
-                    textEl.innerHTML = `${b.pendingCatch.species} caught!<br><br>Named: <span style="color:var(--gold)">${nickname}</span><br>+${b.pendingCatch.rubies} rubies`;
+                    textEl.innerHTML = `${escapeHtml(b.pendingCatch.species)} caught!<br><br>Named: <span style="color:var(--gold)">${escapeHtml(nickname)}</span><br>+${b.pendingCatch.rubies} rubies`;
                     document.getElementById('battle-result-btn').textContent = 'Continue';
                     document.getElementById('battle-result-btn').onclick = () => {
                         battle.running = false; battle = null;
@@ -6097,8 +6103,8 @@ function endBattle(victory) {
         state.hp = battle.playerHp;
         if (!state.defeatedEnemies.includes(enemy.name)) state.defeatedEnemies.push(enemy.name);
         // Mark zone enemy as defeated only on victory
-        if (state._pendingZoneKey && !state.defeatedZones.includes(state._pendingZoneKey)) {
-            state.defeatedZones.push(state._pendingZoneKey);
+        if (state._pendingZoneKey && !state.defeatedZones.has(state._pendingZoneKey)) {
+            state.defeatedZones.add(state._pendingZoneKey);
         }
         state._pendingZoneKey = null;
         trackEnemyDefeated();
@@ -6111,6 +6117,7 @@ function endBattle(victory) {
     } else {
         state.hp = 1;
         state._pendingZoneKey = null;
+        state._encounterCooldown = 90;
         trackDeath();
         textEl.innerHTML = `You were defeated...<br><br><span style="color:var(--accent)">You escape with 1 HP</span>`;
         btnEl.textContent = 'Return';
@@ -6836,28 +6843,39 @@ function drawNPCs() {
     });
 }
 
-function drawEnemies() {
-    const zones = ENEMY_ZONES[state.location];
-    const positions = enemyPos[state.location];
-    if (!zones || !positions) return;
-
+// Pre-computed element colors for overworld enemies (avoids per-frame regex)
+const _elColorData = {};
+(function() {
     const elColors = {
         fire: '#c03020', ice: '#4080c0', nature: '#308030', shadow: '#4a2060',
         light: '#c0a030', arcane: '#6040a0', earth: '#8a6a3a', electric: '#c0b020',
         void: '#1a1040', water: '#2070a0'
     };
+    const lighten = c => c.replace(/[0-9a-f]{2}/gi, m => Math.min(255, parseInt(m,16)+40).toString(16).padStart(2,'0'));
+    const darken = c => c.replace(/[0-9a-f]{2}/gi, m => Math.max(0, parseInt(m,16)-30).toString(16).padStart(2,'0'));
+    for (const [el, c] of Object.entries(elColors)) {
+        _elColorData[el] = { base: c, light: lighten(c), dark: darken(c) };
+    }
+    _elColorData._default = { base: '#804040', light: lighten('#804040'), dark: darken('#804040') };
+})();
+
+function drawEnemies() {
+    const zones = ENEMY_ZONES[state.location];
+    const positions = enemyPos[state.location];
+    if (!zones || !positions) return;
 
     zones.forEach((z, i) => {
         const key = `${state.location}_${i}`;
-        if (state.defeatedZones.includes(key)) return;
+        if (state.defeatedZones.has(key)) return;
 
         const enemy = ENEMIES[z.enemyIndex];
         const ep = positions[i];
         const bob = Math.sin(state.animFrame * 0.06 + i * 2) * 2;
-        const elColor = elColors[enemy.element] || '#804040';
+        const ecd = _elColorData[enemy.element] || _elColorData._default;
+        const elColor = ecd.base;
 
-        const lighter = elColor.replace(/[0-9a-f]{2}/gi, m => Math.min(255, parseInt(m, 16) + 40).toString(16).padStart(2, '0'));
-        const darker = elColor.replace(/[0-9a-f]{2}/gi, m => Math.max(0, parseInt(m, 16) - 30).toString(16).padStart(2, '0'));
+        const lighter = ecd.light;
+        const darker = ecd.dark;
 
         // Danger glow
         const pulse = Math.sin(state.animFrame * 0.08 + i) * 0.12 + 0.15;
@@ -7053,7 +7071,7 @@ function showZordPicker() {
         const el = ELEMENTS[z.element];
         const btn = document.createElement('button');
         btn.className = 'btn btn-choice';
-        btn.innerHTML = `${z.sprite} ${z.nickname} Lv.${z.level} <span style="color:${el.color}">${el.icon}${el.name}</span> HP:${z.currentHp}/${z.maxHp}`;
+        btn.innerHTML = `${z.sprite} ${escapeHtml(z.nickname)} Lv.${z.level} <span style="color:${el.color}">${el.icon}${el.name}</span> HP:${z.currentHp}/${z.maxHp}`;
         btn.addEventListener('click', () => deployZord(idx));
         container.appendChild(btn);
     });
@@ -7110,7 +7128,7 @@ function renderZordBattle() {
     const pHpPct = Math.max(0, (pz.currentHp / pz.maxHp) * 100);
     document.getElementById('zb-player-zord').innerHTML = `
         <span class="zord-sprite">${pz.sprite}</span>
-        <span class="zord-name">${pz.nickname}</span>
+        <span class="zord-name">${escapeHtml(pz.nickname)}</span>
         <span class="zord-info">Lv.${pz.level} ${pz.species || ''}</span>
         <span class="zord-element" style="color:${pEl.color}">${pEl.icon} ${pEl.name}</span>
         <div class="battle-hp-bar"><div class="battle-hp-fill ${pHpPct < 30 ? 'low' : ''}" style="width:${pHpPct}%"></div></div>
@@ -7193,14 +7211,14 @@ function zordDoTurn(action) {
     let playerDmg = 0;
     if (action === 'attack') {
         playerDmg = Math.max(1, pz.attack + Math.floor(Math.random() * 3) - 1);
-        zb.log.push(`${pz.nickname} attacks for ${playerDmg} damage!`);
+        zb.log.push(`${escapeHtml(pz.nickname)} attacks for ${playerDmg} damage!`);
     } else if (action === 'power') {
         const mult = getElementMultiplier(pz.power.element, ez.element);
         playerDmg = Math.max(1, Math.floor(pz.power.damage * mult + Math.random() * 3));
         let effText = '';
         if (mult > 1) effText = ' Super effective!';
         else if (mult < 1) effText = ' Not very effective...';
-        zb.log.push(`${pz.nickname} uses ${pz.power.name}! ${playerDmg} damage!${effText}`);
+        zb.log.push(`${escapeHtml(pz.nickname)} uses ${pz.power.name}! ${playerDmg} damage!${effText}`);
         if (mult > 1) playSound('hit');
     }
 
@@ -7237,7 +7255,7 @@ function zordDoTurn(action) {
         playSound('hurt');
 
         if (pz.currentHp <= 0) {
-            zb.log.push(`${pz.nickname} fainted!`);
+            zb.log.push(`${escapeHtml(pz.nickname)} fainted!`);
             // Check if other bench Zords are alive
             const alive = state.zordBench.filter(i => state.zordList[i].currentHp > 0);
             if (alive.length > 0) {
@@ -7271,6 +7289,10 @@ function zordBattleEnd(victory) {
         const rubiesEarned = enemy.rubies + (state.quizCorrect || 0);
         state.rubies += rubiesEarned;
         if (!state.defeatedEnemies.includes(enemy.name)) state.defeatedEnemies.push(enemy.name);
+        if (state._pendingZoneKey && !state.defeatedZones.has(state._pendingZoneKey)) {
+            state.defeatedZones.add(state._pendingZoneKey);
+        }
+        state._pendingZoneKey = null;
 
         // Grant XP to bench Zords
         const xpGain = 5 + Math.floor(enemy.hp / 10);
@@ -7292,6 +7314,7 @@ function zordBattleEnd(victory) {
         });
         actionsEl.appendChild(btn);
     } else {
+        state._pendingZoneKey = null;
         zb.log.push('Your Zords were defeated...');
         renderZordBattle();
 
@@ -8326,7 +8349,6 @@ doTransition = function(t) {
 
     window.addEventListener('gamepadconnected', (e) => {
         gamepadConnected = true;
-        console.log('Gamepad connected:', e.gamepad.id);
         // Hide touch controls when controller is connected
         const touchEl = document.getElementById('touch-controls');
         if (touchEl) touchEl.style.display = 'none';
@@ -8334,7 +8356,6 @@ doTransition = function(t) {
 
     window.addEventListener('gamepaddisconnected', () => {
         gamepadConnected = false;
-        console.log('Gamepad disconnected');
     });
 
     // Standard gamepad mapping:
