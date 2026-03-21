@@ -4532,6 +4532,15 @@ document.getElementById('btn-leave-build').addEventListener('click', () => {
 // ============================================================
 // QUIZ SYSTEM
 // ============================================================
+function updateQuizScrollArrow() {
+    const el = document.getElementById('quiz-lesson');
+    const arrow = document.getElementById('quiz-scroll-arrow');
+    if (!el || !arrow) return;
+    const canScroll = el.scrollHeight > el.clientHeight;
+    const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 10;
+    arrow.classList.toggle('hidden', !canScroll || atBottom);
+}
+
 function renderQuiz() {
     const lesson = state.currentLesson;
     const qi = state.quizIndex;
@@ -4543,7 +4552,11 @@ function renderQuiz() {
 
     const question = lesson.questions[qi];
     if (qi === 0) {
-        document.getElementById('quiz-lesson').innerHTML = `<h3>${lesson.title}</h3><p>${lesson.content.replace(/\n/g, '<br>')}</p>`;
+        const lessonEl = document.getElementById('quiz-lesson');
+        lessonEl.innerHTML = `<h3>${lesson.title}</h3><p>${lesson.content.replace(/\n/g, '<br>')}</p>`;
+        lessonEl.scrollTop = 0;
+        updateQuizScrollArrow();
+        lessonEl.onscroll = updateQuizScrollArrow;
     }
 
     document.getElementById('quiz-question').textContent = `Q${qi + 1}: ${question.q}`;

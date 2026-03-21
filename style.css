@@ -648,6 +648,33 @@ body {
     line-height: 2.2;
     max-height: 300px;
     overflow-y: auto;
+    position: relative;
+}
+
+.quiz-lesson-wrap {
+    position: relative;
+}
+
+.quiz-lesson-wrap .scroll-arrow {
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: var(--gold);
+    font-size: 14px;
+    pointer-events: none;
+    animation: scrollArrowPulse 1.2s ease-in-out infinite;
+    text-shadow: 0 0 8px var(--gold), 0 0 16px rgba(245, 200, 66, 0.4);
+    z-index: 1;
+}
+
+.quiz-lesson-wrap .scroll-arrow.hidden {
+    display: none;
+}
+
+@keyframes scrollArrowPulse {
+    0%, 100% { opacity: 0.5; transform: translateX(-50%) translateY(0); }
+    50% { opacity: 1; transform: translateX(-50%) translateY(3px); }
 }
 
 .quiz-lesson h3 {
