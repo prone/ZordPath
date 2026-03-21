@@ -525,6 +525,116 @@ function buildMountainMap() {
     m[2][midC + 1] = T.SIGN;
     // Sign deeper in
     m[8][midC + 2] = T.SIGN;
+    // Door to peak climb (south, center) — through the bottom wall
+    for (let c = midC - 1; c <= midC + 1; c++) { m[ROWS - 1][c] = T.PATH; m[ROWS - 2][c] = T.PATH; }
+    m[ROWS - 1][midC] = T.DOOR;
+    m[ROWS - 2][midC + 2] = T.SIGN;
+    return m;
+}
+
+// --- PEAK CLIMB DEFINITIONS (5 floors up the mountain) ---
+const PEAK_FLOORS = [
+    { id: 'peak_1', name: 'Peak 1: Rocky Foothills',   groundColor: '#6a6a5a', wallColor: '#4a4a42' },
+    { id: 'peak_2', name: 'Peak 2: Pine Ridge',        groundColor: '#5a6050', wallColor: '#3a4038' },
+    { id: 'peak_3', name: 'Peak 3: Frozen Pass',       groundColor: '#8090a0', wallColor: '#505860' },
+    { id: 'peak_4', name: 'Peak 4: Windswept Crag',    groundColor: '#909088', wallColor: '#606058' },
+    { id: 'peak_5', name: 'Peak 5: The Summit',        groundColor: '#c0c8d0', wallColor: '#808890' }
+];
+
+function buildPeakFloor(floorNum) {
+    const m = createMap(ROWS, COLS, T.MTN_GROUND);
+    const midC = Math.floor(COLS / 2);
+    const midR = Math.floor(ROWS / 2);
+
+    // Walls around edges
+    for (let c = 0; c < COLS; c++) { m[0][c] = T.MTN_WALL; m[ROWS-1][c] = T.MTN_WALL; }
+    for (let r = 0; r < ROWS; r++) { m[r][0] = T.MTN_WALL; m[r][COLS-1] = T.MTN_WALL; }
+
+    // Carve walkable interior
+    for (let r = 2; r < ROWS - 2; r++) {
+        for (let c = 2; c < COLS - 2; c++) {
+            m[r][c] = T.MTN_GROUND;
+        }
+    }
+
+    // Winding path up center
+    for (let r = 2; r < ROWS - 1; r++) m[r][midC] = T.PATH;
+
+    // Floor-specific layouts
+    if (floorNum === 0) {
+        // Rocky Foothills - scattered rocks, some pines
+        for (let c = 4; c < COLS - 4; c++) m[midR][c] = T.PATH;
+        const rocks = [[3,4],[4,8],[5,16],[6,20],[8,5],[9,18],[10,10],[3,14]];
+        rocks.forEach(([r,c]) => { if (m[r][c] === T.MTN_GROUND) m[r][c] = T.ROCK; });
+        const pines = [[4,3],[5,19],[3,10],[9,4],[10,20]];
+        pines.forEach(([r,c]) => { if (m[r][c] === T.MTN_GROUND) m[r][c] = T.PINE; });
+    } else if (floorNum === 1) {
+        // Pine Ridge - dense pines with narrow paths
+        for (let c = 3; c < COLS - 3; c++) m[5][c] = T.PATH;
+        for (let c = 3; c < COLS - 3; c++) m[9][c] = T.PATH;
+        for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+            if (m[r][c] === T.MTN_GROUND && Math.random() < 0.25) m[r][c] = T.PINE;
+        }
+        // Clear paths
+        for (let r = 2; r < ROWS - 1; r++) m[r][midC] = T.PATH;
+        for (let c = 3; c < COLS - 3; c++) { m[5][c] = T.PATH; m[9][c] = T.PATH; }
+    } else if (floorNum === 2) {
+        // Frozen Pass - ice and snow
+        for (let c = 3; c < COLS - 3; c++) m[midR][c] = T.PATH;
+        for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+            if (m[r][c] === T.MTN_GROUND && Math.random() < 0.35) m[r][c] = T.SNOW;
+            if (m[r][c] === T.MTN_GROUND && Math.random() < 0.08) m[r][c] = T.ICE;
+        }
+        // Frozen lake
+        for (let r = 4; r < 7; r++) for (let c = 15; c < 19; c++) m[r][c] = T.ICE;
+    } else if (floorNum === 3) {
+        // Windswept Crag - narrow ledges, lots of walls
+        for (let c = 3; c < COLS - 3; c++) m[4][c] = T.PATH;
+        for (let c = 3; c < COLS - 3; c++) m[10][c] = T.PATH;
+        // Extra wall outcrops
+        for (let i = 0; i < 8; i++) {
+            const r = 3 + Math.floor(Math.random() * (ROWS - 6));
+            const c = 3 + Math.floor(Math.random() * (COLS - 6));
+            if (m[r][c] === T.MTN_GROUND) m[r][c] = T.MTN_WALL;
+            if (r+1 < ROWS && m[r+1][c] === T.MTN_GROUND) m[r+1][c] = T.MTN_WALL;
+        }
+        // Snow patches
+        for (let r = 2; r < ROWS-2; r++) for (let c = 2; c < COLS-2; c++) {
+            if (m[r][c] === T.MTN_GROUND && Math.random() < 0.2) m[r][c] = T.SNOW;
+        }
+        // Ensure paths stay clear
+        for (let r = 2; r < ROWS - 1; r++) m[r][midC] = T.PATH;
+        for (let c = 3; c < COLS - 3; c++) { m[4][c] = T.PATH; m[10][c] = T.PATH; }
+    } else if (floorNum === 4) {
+        // The Summit - boss arena, wide open snowy area
+        for (let r = 2; r < ROWS - 2; r++) for (let c = 2; c < COLS - 2; c++) {
+            m[r][c] = T.SNOW;
+        }
+        // Central path
+        for (let r = 2; r < ROWS - 1; r++) m[r][midC] = T.PATH;
+        for (let c = 4; c < COLS - 4; c++) m[midR][c] = T.PATH;
+        // Rock pillars framing the arena
+        for (let c = 5; c < COLS - 5; c += 4) {
+            m[3][c] = T.ROCK; m[ROWS-4][c] = T.ROCK;
+        }
+        // Lava vents breaking through the snow
+        m[5][6] = T.LAVA; m[5][7] = T.LAVA;
+        m[8][17] = T.LAVA; m[8][18] = T.LAVA;
+    }
+
+    // Stairs down (entrance) at bottom center
+    m[ROWS - 2][midC] = T.STAIRS_DN;
+    m[ROWS - 2][midC - 1] = T.MTN_GROUND; m[ROWS - 2][midC + 1] = T.MTN_GROUND;
+
+    // Stairs up (to next floor) at top center (not on final floor)
+    if (floorNum < 4) {
+        m[2][midC] = T.STAIRS_UP;
+        m[2][midC - 1] = T.MTN_GROUND; m[2][midC + 1] = T.MTN_GROUND;
+    }
+
+    // Sign on each floor
+    m[ROWS - 3][midC + 1] = T.SIGN;
+
     return m;
 }
 
@@ -535,6 +645,11 @@ const MAPS = {
     beach: buildBeachMap(),
     mountains: buildMountainMap()
 };
+
+// Build peak floors
+for (let i = 0; i < 5; i++) {
+    MAPS['peak_' + (i + 1)] = buildPeakFloor(i);
+}
 
 // Build temple floors
 for (let i = 0; i < 7; i++) {
@@ -556,7 +671,27 @@ const TRANSITIONS = {
         { col: Math.floor(COLS / 2), row: ROWS - 2, target: 'town', spawnCol: Math.floor(COLS / 2), spawnRow: 2 }
     ],
     mountains: [
-        { col: Math.floor(COLS / 2), row: 0, target: 'town', spawnCol: Math.floor(COLS / 2), spawnRow: ROWS - 2 }
+        { col: Math.floor(COLS / 2), row: 0, target: 'town', spawnCol: Math.floor(COLS / 2), spawnRow: ROWS - 2 },
+        { col: Math.floor(COLS / 2), row: ROWS - 1, target: 'peak_1', spawnCol: Math.floor(COLS / 2), spawnRow: ROWS - 3 }
+    ],
+    peak_1: [
+        { col: Math.floor(COLS / 2), row: ROWS - 2, target: 'mountains', spawnCol: Math.floor(COLS / 2), spawnRow: ROWS - 3 },
+        { col: Math.floor(COLS / 2), row: 2, target: 'peak_2', spawnCol: Math.floor(COLS / 2), spawnRow: ROWS - 3 }
+    ],
+    peak_2: [
+        { col: Math.floor(COLS / 2), row: ROWS - 2, target: 'peak_1', spawnCol: Math.floor(COLS / 2), spawnRow: 3 },
+        { col: Math.floor(COLS / 2), row: 2, target: 'peak_3', spawnCol: Math.floor(COLS / 2), spawnRow: ROWS - 3 }
+    ],
+    peak_3: [
+        { col: Math.floor(COLS / 2), row: ROWS - 2, target: 'peak_2', spawnCol: Math.floor(COLS / 2), spawnRow: 3 },
+        { col: Math.floor(COLS / 2), row: 2, target: 'peak_4', spawnCol: Math.floor(COLS / 2), spawnRow: ROWS - 3 }
+    ],
+    peak_4: [
+        { col: Math.floor(COLS / 2), row: ROWS - 2, target: 'peak_3', spawnCol: Math.floor(COLS / 2), spawnRow: 3 },
+        { col: Math.floor(COLS / 2), row: 2, target: 'peak_5', spawnCol: Math.floor(COLS / 2), spawnRow: ROWS - 3 }
+    ],
+    peak_5: [
+        { col: Math.floor(COLS / 2), row: ROWS - 2, target: 'peak_4', spawnCol: Math.floor(COLS / 2), spawnRow: 3 }
     ],
     forest: [
         { col: 1, row: Math.floor(ROWS / 2), target: 'town', spawnCol: COLS - 3, spawnRow: Math.floor(ROWS / 2) },
@@ -603,7 +738,9 @@ const SIGN_TEXTS = {
     beach_south: 'Back to Town v',
     beach_dock: 'Fishing Dock - Cast your line!',
     mtn_north: 'Back to Town ^',
-    mtn_deep: 'Beware! Strong creatures dwell deeper in the peaks.'
+    mtn_deep: 'Beware! Strong creatures dwell deeper in the peaks.',
+    mtn_south: 'v The Peak Climb (5 levels to the summit!)',
+    peak_sign: 'The air grows thinner... keep climbing!'
 };
 
 // --- MAP NPC PLACEMENTS ---
@@ -658,6 +795,32 @@ const ENEMY_ZONES = {
         { col: 16, row: 7, enemyIndex: 39, roam: 2 },
         { col: 4, row: 8, enemyIndex: 40, roam: 2 },
         { col: 19, row: 10, enemyIndex: 41, roam: 2 }
+    ],
+    peak_1: [
+        { col: 6, row: 5, enemyIndex: 42, roam: 3 },
+        { col: 16, row: 8, enemyIndex: 43, roam: 2 },
+        { col: 10, row: 10, enemyIndex: 42, roam: 2 }
+    ],
+    peak_2: [
+        { col: 6, row: 6, enemyIndex: 44, roam: 2 },
+        { col: 18, row: 5, enemyIndex: 43, roam: 3 },
+        { col: 10, row: 10, enemyIndex: 44, roam: 2 }
+    ],
+    peak_3: [
+        { col: 6, row: 5, enemyIndex: 45, roam: 3 },
+        { col: 16, row: 8, enemyIndex: 46, roam: 2 },
+        { col: 10, row: 10, enemyIndex: 45, roam: 2 }
+    ],
+    peak_4: [
+        { col: 6, row: 5, enemyIndex: 47, roam: 2 },
+        { col: 18, row: 6, enemyIndex: 48, roam: 3 },
+        { col: 8, row: 10, enemyIndex: 47, roam: 2 },
+        { col: 16, row: 10, enemyIndex: 46, roam: 2 }
+    ],
+    peak_5: [
+        { col: 8, row: 6, enemyIndex: 48, roam: 2 },
+        { col: 16, row: 6, enemyIndex: 47, roam: 2 },
+        { col: 12, row: 9, enemyIndex: 49, roam: 1 }
     ],
     temple_1: [
         { col: 6, row: 5, enemyIndex: 13, roam: 2 },
@@ -719,7 +882,7 @@ function findWalkableTile(map, startCol, startRow) {
 }
 
 function initEnemyPositions() {
-    const allLocs = ['cave', 'forest', 'beach', 'mountains', 'temple_1', 'temple_2', 'temple_3', 'temple_4', 'temple_5', 'temple_6', 'temple_7'];
+    const allLocs = ['cave', 'forest', 'beach', 'mountains', 'peak_1', 'peak_2', 'peak_3', 'peak_4', 'peak_5', 'temple_1', 'temple_2', 'temple_3', 'temple_4', 'temple_5', 'temple_6', 'temple_7'];
     for (const loc of allLocs) {
         if (!ENEMY_ZONES[loc] || !MAPS[loc]) continue;
         const map = MAPS[loc];
@@ -1378,7 +1541,17 @@ const ENEMIES = [
     { name: 'Peak Eagle',     sprite: '\u{1F985}', hp: 55, attack: 11, rubies: 7,  lessonId: 'equivalence',          catchRate: 0.4,  element: 'electric',power: { name: 'Storm Talon', damage: 19, element: 'electric' },  moveType: 'fly', attackType: 'electric', speed: 1.8 },
     { name: 'Snow Wraith',    sprite: '\u{1F47B}', hp: 65, attack: 13, rubies: 9,  lessonId: 'valid-reasoning',      catchRate: 0.3,  element: 'ice',     power: { name: 'Frost Wail', damage: 22, element: 'ice' },       moveType: 'fly', attackType: 'shadow', speed: 1.0 },
     { name: 'Iron Ram',       sprite: '\u{1F40F}', hp: 95, attack: 14, rubies: 10, lessonId: 'propositional-basics', catchRate: 0.25, element: 'earth',   power: { name: 'Horn Charge', damage: 24, element: 'earth' },    moveType: 'roam', attackType: 'bite', speed: 1.2 },
-    { name: 'Crystal Yeti',   sprite: '\u{1F9CC}', hp: 110,attack: 15, rubies: 12, lessonId: 'equivalence',          catchRate: 0.2,  element: 'ice',     power: { name: 'Avalanche', damage: 28, element: 'ice' },        moveType: 'slow', attackType: 'spread', speed: 0.6 }
+    { name: 'Crystal Yeti',   sprite: '\u{1F9CC}', hp: 110,attack: 15, rubies: 12, lessonId: 'equivalence',          catchRate: 0.2,  element: 'ice',     power: { name: 'Avalanche', damage: 28, element: 'ice' },        moveType: 'slow', attackType: 'spread', speed: 0.6 },
+    // === PEAK CLIMB ZORDS (42-49) ===
+    { name: 'Granite Hound',  sprite: '\u{1F43A}', hp: 80, attack: 13, rubies: 9,  lessonId: 'propositional-basics', catchRate: 0.35, element: 'earth',   power: { name: 'Stone Fang', damage: 22, element: 'earth' },     moveType: 'roam', attackType: 'bite', speed: 1.3 },
+    { name: 'Gale Hawk',      sprite: '\u{1F985}', hp: 60, attack: 12, rubies: 8,  lessonId: 'truth-tables',         catchRate: 0.4,  element: 'electric',power: { name: 'Wind Slash', damage: 20, element: 'electric' },   moveType: 'fly', attackType: 'electric', speed: 1.8 },
+    { name: 'Rime Spider',    sprite: '\u{1F577}\uFE0F', hp: 75, attack: 14, rubies: 10, lessonId: 'implication',    catchRate: 0.3,  element: 'ice',     power: { name: 'Ice Web', damage: 24, element: 'ice' },          moveType: 'roam', attackType: 'icebeam', speed: 1.0 },
+    { name: 'Blizzard Wraith',sprite: '\u{1F47B}', hp: 90, attack: 15, rubies: 12, lessonId: 'equivalence',          catchRate: 0.25, element: 'ice',     power: { name: 'Whiteout', damage: 26, element: 'ice' },         moveType: 'fly', attackType: 'shadow', speed: 0.9 },
+    { name: 'Magma Mole',     sprite: '\u{1F9AB}', hp: 85, attack: 14, rubies: 11, lessonId: 'truth-tables',         catchRate: 0.3,  element: 'fire',    power: { name: 'Lava Dig', damage: 24, element: 'fire' },        moveType: 'slow', attackType: 'bomb', speed: 0.6 },
+    { name: 'Storm Condor',   sprite: '\u{1F985}', hp: 100,attack: 16, rubies: 14, lessonId: 'valid-reasoning',      catchRate: 0.2,  element: 'electric',power: { name: 'Thunder Dive', damage: 28, element: 'electric' },moveType: 'fly', attackType: 'laser', speed: 1.6 },
+    { name: 'Obsidian Golem', sprite: '\u{1F5FF}', hp: 130,attack: 17, rubies: 16, lessonId: 'equivalence',          catchRate: 0.15, element: 'earth',   power: { name: 'Tectonic Slam', damage: 30, element: 'earth' },  moveType: 'slow', attackType: 'bomb', speed: 0.5 },
+    // === PEAK BOSS (49) ===
+    { name: 'Titan Frostclaw', sprite: '\u{1F409}', hp: 250, attack: 24, rubies: 60, lessonId: 'valid-reasoning', catchRate: 0, element: 'ice', power: { name: 'Glacial Annihilation', damage: 50, element: 'ice' }, moveType: 'fly', attackType: 'laser', speed: 1.6, escapeRate: 0.1 }
 ];
 
 // --- NPCs ---
@@ -2485,8 +2658,9 @@ function spawnGems(location) {
     const map = MAPS[location];
     const gems = [];
     const isTemple = location.startsWith('temple_');
-    const count = isTemple ? 4 : location === 'forest' ? 8 : location === 'beach' ? 7 : location === 'mountains' ? 6 : location === 'cave' ? 6 : 5;
-    const gemValue = isTemple ? (2 + parseInt(location.split('_')[1])) : location === 'forest' ? 2 : location === 'beach' ? 2 : location === 'mountains' ? 3 : 1;
+    const isPeak = location.startsWith('peak_');
+    const count = isTemple ? 4 : isPeak ? 4 : location === 'forest' ? 8 : location === 'beach' ? 7 : location === 'mountains' ? 6 : location === 'cave' ? 6 : 5;
+    const gemValue = isTemple ? (2 + parseInt(location.split('_')[1])) : isPeak ? (3 + parseInt(location.split('_')[1])) : location === 'forest' ? 2 : location === 'beach' ? 2 : location === 'mountains' ? 3 : 1;
     for (let i = 0; i < count; i++) {
         let r, c, attempts = 0;
         do {
@@ -2507,6 +2681,7 @@ spawnGems('town');
 spawnGems('forest');
 spawnGems('beach');
 spawnGems('mountains');
+for (let i = 1; i <= 5; i++) { mapGems['peak_' + i] = []; spawnGems('peak_' + i); }
 for (let i = 1; i <= 7; i++) { mapGems['temple_' + i] = []; spawnGems('temple_' + i); }
 
 function checkGemPickup() {
@@ -3535,6 +3710,23 @@ function renderWorldMap() {
             c.fillStyle = '#3090b8'; c.fillRect(x + 58, y + h * 0.72, 14, 4);
           }
         },
+        { id: 'peak_1', name: 'Foothills', x: 290, y: 235, w: 35, h: 30,
+          draw: (c, x, y, w, h) => { c.fillStyle = '#5a5a4a'; c.fillRect(x, y, w, h); c.fillStyle = '#6a6a58'; c.fillRect(x+4, y+4, w-8, h-8); c.fillStyle = '#4a4a3a'; c.fillRect(x+8, y+10, 10, 6); c.fillRect(x+20, y+6, 8, 5); } },
+        { id: 'peak_2', name: 'P2', x: 290, y: 268, w: 35, h: 25,
+          draw: (c, x, y, w, h) => { c.fillStyle = '#4a5040'; c.fillRect(x, y, w, h); c.fillStyle = '#1a4a20'; for (let dx=4;dx<w-4;dx+=8) { c.fillRect(x+dx, y+4, 6, 8); c.fillRect(x+dx+2, y+2, 4, 6); } } },
+        { id: 'peak_3', name: 'P3', x: 290, y: 296, w: 35, h: 25,
+          draw: (c, x, y, w, h) => { c.fillStyle = '#687888'; c.fillRect(x, y, w, h); c.fillStyle = '#e0e8f0'; c.fillRect(x+2, y+2, w-4, 6); c.fillStyle = '#88c8e0'; c.fillRect(x+10, y+12, 14, 6); } },
+        { id: 'peak_4', name: 'P4', x: 290, y: 324, w: 35, h: 25,
+          draw: (c, x, y, w, h) => { c.fillStyle = '#707068'; c.fillRect(x, y, w, h); c.fillStyle = '#e0e8f0'; c.fillRect(x+4, y+2, 8, 4); c.fillRect(x+18, y+6, 10, 3); c.fillStyle = '#505048'; c.fillRect(x+8, y+10, 6, 8); c.fillRect(x+20, y+14, 8, 6); } },
+        { id: 'peak_5', name: 'Summit', x: 288, y: 352, w: 38, h: 30,
+          draw: (c, x, y, w, h) => {
+            c.fillStyle = '#c0c8d0'; c.fillRect(x, y, w, h);
+            c.fillStyle = '#e0e8f0'; c.fillRect(x+2, y+2, w-4, h-4);
+            // Boss marker
+            c.fillStyle = '#c02020'; c.beginPath(); c.arc(x+w/2, y+h/2, 6, 0, Math.PI*2); c.fill();
+            c.fillStyle = '#ff4040'; c.beginPath(); c.arc(x+w/2, y+h/2, 3, 0, Math.PI*2); c.fill();
+          }
+        },
         { id: 'forest', name: 'Enchanted Forest', x: 300, y: 80, w: 120, h: 140,
           draw: (c, x, y, w, h) => {
             // Dense dark green
@@ -3630,7 +3822,12 @@ function renderWorldMap() {
         const nexts = regions.filter(r => {
             if (a.id === 'cave') return r.id === 'town';
             if (a.id === 'town') return r.id === 'forest' || r.id === 'beach' || r.id === 'mountains';
+            if (a.id === 'mountains') return r.id === 'peak_1';
             if (a.id === 'forest') return r.id === 'temple_1';
+            if (a.id.startsWith('peak_')) {
+                const n = parseInt(a.id.split('_')[1]) + 1;
+                return r.id === 'peak_' + n;
+            }
             if (a.id.startsWith('temple_')) {
                 const n = parseInt(a.id.split('_')[1]) + 1;
                 return r.id === 'temple_' + n;
@@ -3921,9 +4118,13 @@ function readSign(row, col) {
         else if (row > ROWS - 4) text = SIGN_TEXTS.town_south;
         else if (col < COLS / 2) text = SIGN_TEXTS.town_left;
         else text = SIGN_TEXTS.town_right;
-    } else if (state.location === 'mountains') {
+    } else if ((state.location === 'mountains' || state.location.startsWith('peak_'))) {
         if (row < 5) text = SIGN_TEXTS.mtn_north;
+        else if (row > ROWS - 4) text = SIGN_TEXTS.mtn_south;
         else text = SIGN_TEXTS.mtn_deep;
+    } else if (state.location.startsWith('peak_')) {
+        const floorNum = parseInt(state.location.split('_')[1]);
+        text = PEAK_FLOORS[floorNum - 1].name;
     } else if (state.location === 'beach') {
         if (col > 15 && row < 8) text = SIGN_TEXTS.beach_dock;
         else text = SIGN_TEXTS.beach_south;
@@ -3975,6 +4176,13 @@ function doTransition(t) {
     // Check temple lock - must defeat Logic Lord
     if (t.target === 'temple_1' && !state.defeatedEnemies.includes('Logic Lord')) {
         showDialogue('\u{1F3DB}\uFE0F', 'Temple Sealed', 'The ancient doors are sealed. Only one who has defeated the Logic Lord may enter.');
+        state.playerCol -= (state.facing === 'right' ? 1 : state.facing === 'left' ? -1 : 0);
+        state.playerRow -= (state.facing === 'down' ? 1 : state.facing === 'up' ? -1 : 0);
+        return;
+    }
+    // Check peak climb lock - must defeat Crystal Yeti
+    if (t.target === 'peak_1' && !state.defeatedEnemies.includes('Crystal Yeti')) {
+        showDialogue('\u{26F0}\uFE0F', 'Path Blocked', 'The mountain pass is sealed by ice. Only one who has defeated the Crystal Yeti may ascend.');
         state.playerCol -= (state.facing === 'right' ? 1 : state.facing === 'left' ? -1 : 0);
         state.playerRow -= (state.facing === 'down' ? 1 : state.facing === 'up' ? -1 : 0);
         return;
@@ -5319,7 +5527,7 @@ function drawBattleBackground(c) {
             c.fillStyle = `rgba(200,230,80,${ffBright * 0.3})`;
             c.beginPath(); c.arc(ffx + 1, ffy + 1, 4, 0, Math.PI * 2); c.fill();
         }
-    } else if (loc === 'mountains') {
+    } else if (loc === 'mountains' || loc.startsWith('peak_')) {
         // --- MOUNTAIN ENVIRONMENT ---
         // Pale blue sky
         for (let y2 = 0; y2 < BH * 0.35; y2++) {
@@ -5488,6 +5696,9 @@ function getEnemySpriteType(name) {
         'Tide Crab': 'spider', 'Coral Sprite': 'slime', 'Gull Phantom': 'bat', 'Shell Golem': 'golem',
         'Frost Wolf': 'fox', 'Boulder Beetle': 'golem', 'Peak Eagle': 'bat', 'Snow Wraith': 'ghost',
         'Iron Ram': 'ram', 'Crystal Yeti': 'golem',
+        'Granite Hound': 'fox', 'Gale Hawk': 'bat', 'Rime Spider': 'spider', 'Blizzard Wraith': 'ghost',
+        'Magma Mole': 'slime', 'Storm Condor': 'bat', 'Obsidian Golem': 'golem',
+        'Titan Frostclaw': 'dragon',
         'Arch-Logician Zephyr': 'wizard'
     };
     return map[name] || 'goblin';
@@ -6398,7 +6609,7 @@ function drawTile(col, row, tileType) {
 
     // === FLOWER ===
     if (tileType === T.FLOWER) {
-        const flBg = state.location === 'beach' ? ((col+row)%2===0?'#e0c888':'#d8c080') : state.location === 'mountains' ? ((col+row)%2===0?'#7a7868':'#746e60') : ((col+row)%2===0?'#3a8044':'#378040');
+        const flBg = state.location === 'beach' ? ((col+row)%2===0?'#e0c888':'#d8c080') : (state.location === 'mountains' || state.location.startsWith('peak_')) ? ((col+row)%2===0?'#7a7868':'#746e60') : ((col+row)%2===0?'#3a8044':'#378040');
         ctx.fillStyle = flBg; ctx.fillRect(x, y, S, S);
         ctx.fillStyle = '#2a6830'; ctx.fillRect(x+S/2-1, y+S/2, 2, S/2-2);
         ctx.fillStyle = '#1e5a24'; ctx.fillRect(x+S/2+4, y+S/2+6, 8, 2); // leaf
@@ -6413,7 +6624,7 @@ function drawTile(col, row, tileType) {
 
     // === FENCE ===
     if (tileType === T.FENCE) {
-        ctx.fillStyle = state.location === 'beach' ? '#e0c888' : state.location === 'mountains' ? '#7a7868' : '#3a8044'; ctx.fillRect(x, y, S, S);
+        ctx.fillStyle = state.location === 'beach' ? '#e0c888' : (state.location === 'mountains' || state.location.startsWith('peak_')) ? '#7a7868' : '#3a8044'; ctx.fillRect(x, y, S, S);
         ctx.fillStyle = '#5a3c1e';
         ctx.fillRect(x, y+14, S, 8); ctx.fillRect(x, y+32, S, 6);
         ctx.fillRect(x+6, y+6, 6, 36); ctx.fillRect(x+S-12, y+6, 6, 36);
@@ -6426,7 +6637,7 @@ function drawTile(col, row, tileType) {
 
     // === SIGN ===
     if (tileType === T.SIGN) {
-        const sgBg = state.location === 'beach' ? ((col+row)%2===0?'#e0c888':'#d8c080') : state.location === 'mountains' ? ((col+row)%2===0?'#7a7868':'#746e60') : ((col+row)%2===0?'#3a8044':'#378040');
+        const sgBg = state.location === 'beach' ? ((col+row)%2===0?'#e0c888':'#d8c080') : (state.location === 'mountains' || state.location.startsWith('peak_')) ? ((col+row)%2===0?'#7a7868':'#746e60') : ((col+row)%2===0?'#3a8044':'#378040');
         ctx.fillStyle = sgBg; ctx.fillRect(x, y, S, S);
         ctx.fillStyle = '#5a3c1e'; ctx.fillRect(x+S/2-2, y+S/2, 4, S/2);
         ctx.fillStyle = '#c4a060'; ctx.fillRect(x+6, y+8, S-12, 18);
@@ -6974,6 +7185,7 @@ function drawCanvasHUD() {
     ctx.font = '8px "Press Start 2P", monospace';
     const locNames = { cave: 'The Cave', town: 'Logic Land Town', forest: 'Enchanted Forest', beach: 'Coral Cove Beach', mountains: 'Iron Peak Mountains' };
     TEMPLE_FLOORS.forEach((f, i) => { locNames['temple_' + (i + 1)] = f.name; });
+    PEAK_FLOORS.forEach((f, i) => { locNames['peak_' + (i + 1)] = f.name; });
     ctx.fillText(locNames[state.location] || state.location, CANVAS_W / 2, y);
 
     // Rubies (right)
@@ -7486,7 +7698,7 @@ function fishingUpdate() {
 
 function pickFish() {
     // Determine water type based on location
-    const waterType = state.location === 'beach' ? 'ocean' : state.location === 'mountains' ? 'mountain' : 'pond';
+    const waterType = state.location === 'beach' ? 'ocean' : (state.location === 'mountains' || state.location.startsWith('peak_')) ? 'mountain' : 'pond';
     const localFish = FISH_TYPES.filter(ft => ft.water === waterType);
 
     // Experience: more fish caught = better odds for rare fish, less junk
@@ -7639,7 +7851,7 @@ function fishingRender() {
     const c = fishCtx;
     const pw = FW / 2; // player X position
     const isOcean = state.location === 'beach';
-    const isMtn = state.location === 'mountains';
+    const isMtn = (state.location === 'mountains' || state.location.startsWith('peak_'));
 
     // === WATER ===
     if (isOcean) {
@@ -7998,6 +8210,7 @@ function startMusic(theme) {
         temple: [196, 247, 294, 196, 175, 220, 262, 175, 196, 247, 294, 330, 294, 247, 196, 175],
         beach:  [392, 494, 523, 587, 523, 494, 392, 440, 494, 523, 587, 659, 587, 523, 494, 440],
         mountains: [196, 220, 262, 294, 262, 220, 196, 175, 165, 196, 220, 262, 294, 262, 220, 196],
+        peak_boss: [175, 220, 262, 330, 294, 262, 220, 175, 165, 220, 262, 330, 349, 330, 262, 175],
         temple_boss: [165, 196, 247, 330, 294, 247, 196, 165, 147, 196, 247, 294, 330, 294, 247, 165]
     };
 
@@ -8068,7 +8281,10 @@ function unlockAudio() {
                       state.screen === 'battle' ? 'battle' :
                       state.screen === 'fishing' ? 'fishing' :
                       state.screen === 'game' ? (state.location.startsWith('temple_') ?
-                          (state.location === 'temple_7' ? 'temple_boss' : 'temple') : state.location) : 'title';
+                          (state.location === 'temple_7' ? 'temple_boss' : 'temple') :
+                          state.location.startsWith('peak_') ?
+                          (state.location === 'peak_5' ? 'peak_boss' : 'mountains') :
+                          state.location) : 'title';
         startMusic(theme);
     };
 
@@ -8101,6 +8317,8 @@ showScreen = function(screenId) {
     if (screenId === 'game') {
         const musicTheme = state.location.startsWith('temple_')
             ? (state.location === 'temple_7' ? 'temple_boss' : 'temple')
+            : state.location.startsWith('peak_')
+            ? (state.location === 'peak_5' ? 'peak_boss' : 'mountains')
             : state.location;
         startMusic(musicTheme);
     } else if (screenId === 'battle') {
@@ -8121,6 +8339,8 @@ doTransition = function(t) {
     if (state.screen === 'game') {
         const musicTheme = state.location.startsWith('temple_')
             ? (state.location === 'temple_7' ? 'temple_boss' : 'temple')
+            : state.location.startsWith('peak_')
+            ? (state.location === 'peak_5' ? 'peak_boss' : 'mountains')
             : state.location;
         startMusic(musicTheme);
     }

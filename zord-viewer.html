@@ -201,7 +201,17 @@
         { name: 'Peak Eagle',     hp: 55, attack: 11, rubies: 7,  catchRate: 0.4,  element: 'electric',power: { name: 'Storm Talon', damage: 19, element: 'electric' },  moveType: 'fly', attackType: 'electric', speed: 1.8 },
         { name: 'Snow Wraith',    hp: 65, attack: 13, rubies: 9,  catchRate: 0.3,  element: 'ice',     power: { name: 'Frost Wail', damage: 22, element: 'ice' },       moveType: 'fly', attackType: 'shadow', speed: 1.0 },
         { name: 'Iron Ram',       hp: 95, attack: 14, rubies: 10, catchRate: 0.25, element: 'earth',   power: { name: 'Horn Charge', damage: 24, element: 'earth' },    moveType: 'roam', attackType: 'bite', speed: 1.2 },
-        { name: 'Crystal Yeti',   hp: 110,attack: 15, rubies: 12, catchRate: 0.2,  element: 'ice',     power: { name: 'Avalanche', damage: 28, element: 'ice' },        moveType: 'slow', attackType: 'spread', speed: 0.6 }
+        { name: 'Crystal Yeti',   hp: 110,attack: 15, rubies: 12, catchRate: 0.2,  element: 'ice',     power: { name: 'Avalanche', damage: 28, element: 'ice' },        moveType: 'slow', attackType: 'spread', speed: 0.6 },
+        // PEAK CLIMB (42-48)
+        { name: 'Granite Hound',  hp: 80, attack: 13, rubies: 9,  catchRate: 0.35, element: 'earth',   power: { name: 'Stone Fang', damage: 22, element: 'earth' },     moveType: 'roam', attackType: 'bite', speed: 1.3 },
+        { name: 'Gale Hawk',      hp: 60, attack: 12, rubies: 8,  catchRate: 0.4,  element: 'electric',power: { name: 'Wind Slash', damage: 20, element: 'electric' },   moveType: 'fly', attackType: 'electric', speed: 1.8 },
+        { name: 'Rime Spider',    hp: 75, attack: 14, rubies: 10, catchRate: 0.3,  element: 'ice',     power: { name: 'Ice Web', damage: 24, element: 'ice' },          moveType: 'roam', attackType: 'icebeam', speed: 1.0 },
+        { name: 'Blizzard Wraith',hp: 90, attack: 15, rubies: 12, catchRate: 0.25, element: 'ice',     power: { name: 'Whiteout', damage: 26, element: 'ice' },         moveType: 'fly', attackType: 'shadow', speed: 0.9 },
+        { name: 'Magma Mole',     hp: 85, attack: 14, rubies: 11, catchRate: 0.3,  element: 'fire',    power: { name: 'Lava Dig', damage: 24, element: 'fire' },        moveType: 'slow', attackType: 'bomb', speed: 0.6 },
+        { name: 'Storm Condor',   hp: 100,attack: 16, rubies: 14, catchRate: 0.2,  element: 'electric',power: { name: 'Thunder Dive', damage: 28, element: 'electric' },moveType: 'fly', attackType: 'laser', speed: 1.6 },
+        { name: 'Obsidian Golem', hp: 130,attack: 17, rubies: 16, catchRate: 0.15, element: 'earth',   power: { name: 'Tectonic Slam', damage: 30, element: 'earth' },  moveType: 'slow', attackType: 'bomb', speed: 0.5 },
+        // PEAK BOSS (49)
+        { name: 'Titan Frostclaw',hp: 250,attack: 24, rubies: 60, catchRate: 0,    element: 'ice',     power: { name: 'Glacial Annihilation', damage: 50, element: 'ice' }, moveType: 'fly', attackType: 'laser', speed: 1.6 }
     ];
 
     // Zone mapping
@@ -215,6 +225,8 @@
         if (i === 29) return 'Boss';
         if (i <= 35) return 'Beach';
         if (i <= 41) return 'Mountains';
+        if (i <= 48) return 'Peak Climb';
+        if (i === 49) return 'Peak Boss';
         return 'Unknown';
     }
 
@@ -233,6 +245,9 @@
             'Ember Wisp': 'fire', 'Magma Beast': 'fire',
             'Lava Serpent': 'snake', 'Sand Serpent': 'snake',
             'Phase Jellyfish': 'jelly', 'Jellyfish Drift': 'jelly',
+            'Granite Hound': 'fox', 'Gale Hawk': 'bat', 'Rime Spider': 'spider', 'Blizzard Wraith': 'ghost',
+            'Magma Mole': 'slime', 'Storm Condor': 'bat', 'Obsidian Golem': 'golem',
+            'Titan Frostclaw': 'dragon',
             'Arch-Logician Zephyr': 'wizard'
         };
         return map[name] || 'goblin';
