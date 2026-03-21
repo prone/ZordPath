@@ -11,7 +11,12 @@
     <div id="screen-title" class="screen active">
         <canvas id="title-canvas"></canvas>
         <div class="title-overlay">
-            <div class="title-start" id="btn-new-game">PUSH START</div>
+            <div class="save-slots-container" id="save-slots-container">
+                <div class="save-slot" id="save-slot-0" data-slot="0"></div>
+                <div class="save-slot" id="save-slot-1" data-slot="1"></div>
+                <div class="save-slot" id="save-slot-2" data-slot="2"></div>
+            </div>
+            <div class="title-start" id="btn-new-game">NEW GAME</div>
         </div>
     </div>
 
@@ -42,6 +47,7 @@
                 <span id="hud-inventory-btn" class="canvas-hud-btn" title="Inventory (I)"><canvas class="icon-canvas" id="icon-inv" width="20" height="20"></canvas></span>
                 <span id="hud-map-btn" class="canvas-hud-btn" title="Map (M)"><canvas class="icon-canvas" id="icon-map" width="20" height="20"></canvas></span>
                 <span id="hud-zordlist-btn" class="canvas-hud-btn" title="Zords (Z)"><canvas class="icon-canvas" id="icon-zord" width="20" height="20"></canvas></span>
+                <span id="hud-quiz-btn" class="canvas-hud-btn" title="Quiz Progress (Q)" onclick="toggleQuizProgress()"><canvas class="icon-canvas" id="icon-quiz" width="20" height="20"></canvas></span>
                 <span id="hud-help-btn" class="canvas-hud-btn" title="Help (H)" onclick="toggleHelp()"><canvas class="icon-canvas" id="icon-help" width="20" height="20"></canvas></span>
             </div>
 
@@ -122,6 +128,16 @@
                     <div class="inventory-builds" id="inventory-builds"></div>
                 </div>
             </div>
+            <!-- Quiz Progress overlay -->
+            <div id="quizprogress-overlay" class="inventory-overlay" style="display:none;">
+                <div class="inventory-window" style="max-width:600px;">
+                    <div class="inventory-header">
+                        <h3>Quiz Progress</h3>
+                        <span class="close-btn" id="close-quizprogress">[X]</span>
+                    </div>
+                    <div id="quizprogress-items"></div>
+                </div>
+            </div>
             <!-- ZordList overlay -->
             <div id="zordlist-overlay" class="inventory-overlay" style="display:none;">
                 <div class="inventory-window" style="max-width:600px;">
@@ -150,16 +166,41 @@
         </div>
     </div>
 
-    <!-- Zord Battle Screen (Turn-based) -->
+    <!-- Zord Battle Screen (Turn-based, Pokemon-style) -->
     <div id="screen-zordbattle" class="screen">
-        <div class="zordbattle-container">
-            <div class="zb-header">
-                <div class="zb-zord" id="zb-player-zord"></div>
-                <div class="zb-vs">VS</div>
-                <div class="zb-zord" id="zb-enemy-zord"></div>
+        <div class="zb-scene">
+            <!-- Enemy info (top-left) -->
+            <div class="zb-info-enemy" id="zb-enemy-info">
+                <div class="zb-info-name" id="zb-enemy-name-tag"></div>
+                <div class="zb-info-level" id="zb-enemy-level-tag"></div>
+                <div class="zb-hp-row">
+                    <span class="zb-hp-label">HP:</span>
+                    <div class="zb-hp-track"><div class="zb-hp-fill" id="zb-enemy-hp-bar"></div></div>
+                </div>
+                <div class="zb-hp-text" id="zb-enemy-hp-text"></div>
             </div>
-            <div class="zb-log" id="zb-log"></div>
-            <div class="zb-actions" id="zb-actions"></div>
+            <!-- Enemy sprite (top-right, canvas) -->
+            <canvas class="zb-sprite-enemy" id="zb-enemy-sprite" width="240" height="240"></canvas>
+            <!-- Player sprite (bottom-left, canvas) -->
+            <canvas class="zb-sprite-player" id="zb-player-sprite" width="280" height="280"></canvas>
+            <!-- Player info (bottom-right) -->
+            <div class="zb-info-player" id="zb-player-info">
+                <div class="zb-info-name" id="zb-player-name-tag"></div>
+                <div class="zb-info-level" id="zb-player-level-tag"></div>
+                <div class="zb-hp-row">
+                    <span class="zb-hp-label">HP:</span>
+                    <div class="zb-hp-track"><div class="zb-hp-fill" id="zb-player-hp-bar"></div></div>
+                </div>
+                <div class="zb-hp-text" id="zb-player-hp-text"></div>
+            </div>
+            <!-- Ground lines -->
+            <div class="zb-ground-enemy"></div>
+            <div class="zb-ground-player"></div>
+            <!-- Bottom panel: log + actions -->
+            <div class="zb-bottom">
+                <div class="zb-log" id="zb-log"></div>
+                <div class="zb-actions" id="zb-actions"></div>
+            </div>
         </div>
     </div>
 
@@ -205,6 +246,7 @@
             </div>
             <div class="quiz-question" id="quiz-question"></div>
             <div class="quiz-choices" id="quiz-choices"></div>
+            <div class="quiz-interactive" id="quiz-interactive" style="display:none;"></div>
             <div class="quiz-feedback" id="quiz-feedback"></div>
             <div class="quiz-progress" id="quiz-progress"></div>
         </div>
@@ -227,6 +269,15 @@
                 <div class="fishing-result-text" id="fishing-result-text"></div>
                 <div class="fishing-result-actions" id="fishing-result-actions"></div>
             </div>
+        </div>
+    </div>
+
+    <!-- Zord Arena Screen (Arena/Hospital/Spa menus) -->
+    <div id="screen-zordarena" class="screen">
+        <div class="store-container store-wide" id="zordarena-container">
+            <h2 id="zordarena-title">Zord Arena</h2>
+            <div id="zordarena-content"></div>
+            <button id="btn-leave-zordarena" class="btn btn-secondary">Leave</button>
         </div>
     </div>
 

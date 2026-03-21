@@ -138,6 +138,70 @@ body {
     padding-bottom: 8%;
 }
 
+/* Save Slots on Title Screen */
+.save-slots-container {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 700px;
+}
+
+.save-slot {
+    background: rgba(10, 10, 30, 0.85);
+    border: 2px solid #2a2a5a;
+    padding: 10px 14px;
+    min-width: 180px;
+    cursor: pointer;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    color: #8888aa;
+    line-height: 2.2;
+    transition: border-color 0.15s, transform 0.15s;
+    position: relative;
+    text-align: left;
+}
+
+.save-slot:hover {
+    border-color: #f5c842;
+    transform: translateY(-2px);
+}
+
+.save-slot .slot-name {
+    color: #f5c842;
+    font-size: 10px;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.save-slot .slot-info {
+    color: #8888aa;
+    font-size: 7px;
+    line-height: 2;
+}
+
+.save-slot .slot-empty {
+    color: #555;
+    font-size: 9px;
+    text-align: center;
+    padding: 8px 0;
+}
+
+.save-slot .slot-delete {
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    color: #555;
+    font-size: 8px;
+    cursor: pointer;
+    padding: 2px 4px;
+}
+
+.save-slot .slot-delete:hover {
+    color: #e94560;
+}
+
 .title-start {
     font-family: 'Press Start 2P', monospace;
     font-size: 14px;
@@ -499,65 +563,208 @@ body {
     padding: 0 20px;
 }
 
-/* Zord Battle Screen (Turn-based) */
-.zordbattle-container {
-    width: 90%;
-    max-width: 700px;
-    background: var(--panel-bg);
-    border: 3px solid var(--gold);
-    padding: 20px;
-    max-height: 95vh;
-    overflow-y: auto;
+/* Zord Battle Screen (Pokemon-style) */
+.zb-scene {
+    width: 100vw;
+    height: 100vh;
+    background: linear-gradient(180deg, #c8d8c0 0%, #a8c0a0 40%, #88a880 60%, #c8c0a0 60%, #b8b090 100%);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
-.zb-header {
+/* Enemy info box (top-left, closer to center) */
+.zb-info-enemy {
+    position: absolute;
+    top: 6%;
+    left: 20%;
+    background: #f8f0d0;
+    border: 3px solid #484848;
+    border-radius: 6px;
+    padding: 10px 16px;
+    min-width: 240px;
+    z-index: 2;
+}
+
+/* Player info box (bottom-right, above menu, closer to center) */
+.zb-info-player {
+    position: absolute;
+    bottom: 32%;
+    right: 15%;
+    background: #f8f0d0;
+    border: 3px solid #484848;
+    border-radius: 6px;
+    padding: 10px 16px;
+    min-width: 260px;
+    z-index: 2;
+}
+
+.zb-info-name {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 16px;
+    color: #282828;
+    display: inline;
+}
+
+.zb-info-level {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 13px;
+    color: #484848;
+    display: inline;
+    margin-left: 8px;
+}
+
+.zb-hp-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    margin-bottom: 16px;
+    margin-top: 4px;
+    gap: 6px;
 }
 
-.zb-zord {
-    text-align: center;
+.zb-hp-label {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 12px;
+    color: #f0a030;
+    font-weight: bold;
+}
+
+.zb-hp-track {
     flex: 1;
+    height: 12px;
+    background: #383838;
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid #282828;
 }
 
-.zb-zord .zord-sprite { font-size: 48px; display: block; margin-bottom: 4px; }
-.zb-zord .zord-name { font-size: 11px; color: var(--gold); display: block; margin-bottom: 2px; }
-.zb-zord .zord-info { font-size: 8px; color: var(--text-dim); display: block; margin-bottom: 4px; }
-.zb-zord .zord-element { font-size: 9px; display: block; margin-bottom: 6px; }
-.zb-zord .battle-hp-bar { width: 120px; height: 10px; background: var(--bg-dark); border: 2px solid var(--border); margin: 0 auto; }
-.zb-zord .battle-hp-fill { height: 100%; background: var(--success); transition: width 0.3s; }
-.zb-zord .battle-hp-fill.low { background: var(--accent); }
-.zb-zord .zord-hp-text { font-size: 8px; color: var(--text-dim); }
+.zb-hp-fill {
+    height: 100%;
+    background: #48c848;
+    transition: width 0.4s;
+    border-radius: 3px;
+}
 
-.zb-vs { font-size: 16px; color: var(--accent); padding: 0 10px; }
+.zb-hp-fill.medium { background: #f0c030; }
+.zb-hp-fill.low { background: #e04040; }
+
+.zb-hp-text {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 12px;
+    color: #484848;
+    text-align: right;
+    margin-top: 4px;
+}
+
+/* Enemy sprite (top-right, canvas, closer to center) */
+.zb-sprite-enemy {
+    position: absolute;
+    top: 2%;
+    right: 18%;
+    width: 240px;
+    height: 240px;
+    z-index: 1;
+    image-rendering: pixelated;
+}
+
+/* Player sprite (bottom-left, canvas, closer to center) */
+.zb-sprite-player {
+    position: absolute;
+    bottom: 26%;
+    left: 12%;
+    width: 280px;
+    height: 280px;
+    z-index: 1;
+    image-rendering: pixelated;
+}
+
+/* Ground ellipses — hidden, sprites draw their own shadow */
+.zb-ground-enemy, .zb-ground-player {
+    display: none;
+}
+
+/* Bottom panel */
+.zb-bottom {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 28%;
+    display: flex;
+    background: #f8f0d0;
+    border-top: 4px solid #484848;
+    z-index: 3;
+}
 
 .zb-log {
-    background: var(--bg-dark);
-    border: 1px solid var(--border);
-    padding: 10px;
-    margin-bottom: 12px;
-    min-height: 60px;
-    max-height: 120px;
+    flex: 1;
+    padding: 14px 18px;
     overflow-y: auto;
-    font-size: 9px;
-    line-height: 2;
+    font-size: 14px;
+    line-height: 2.2;
+    color: #282828;
+    font-family: 'Press Start 2P', monospace;
+    border-right: 3px solid #484848;
 }
 
-.zb-log-line { margin-bottom: 2px; }
-.zb-log-line.effective { color: var(--success); }
-.zb-log-line.weak { color: var(--accent); }
-.zb-log-line.neutral { color: var(--text); }
+.zb-log-line { margin-bottom: 2px; color: #282828; }
+.zb-log-line.effective { color: #28a028; }
+.zb-log-line.weak { color: #b04040; }
+.zb-log-line.neutral { color: #282828; }
 
 .zb-actions {
-    display: flex;
-    flex-wrap: wrap;
+    width: 280px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 6px;
-    justify-content: center;
+    padding: 12px 14px;
+    align-content: center;
 }
 
-.zb-actions .btn { font-size: 9px; padding: 8px 14px; }
+.zb-actions .btn {
+    font-size: 13px;
+    padding: 10px 8px;
+    background: #f8f0d0;
+    color: #282828;
+    border: 2px solid #484848;
+    text-align: left;
+}
+
+.zb-actions .btn:hover {
+    background: #e8d8b0;
+}
+
+.zb-actions .btn-primary {
+    background: #f8f0d0;
+    color: #282828;
+    border-color: #484848;
+}
+
+.zb-actions .btn-primary:hover {
+    background: #e0d0a0;
+}
+
+.zb-actions .btn-secondary {
+    background: #f8f0d0;
+    color: #606060;
+    border-color: #808080;
+}
+
+.zb-actions .btn-choice {
+    grid-column: 1 / -1;
+    text-align: left;
+    background: #f8f0d0;
+    color: #282828;
+    border-color: #484848;
+}
+
+@media (max-width: 600px) {
+    .zb-actions { width: 160px; }
+    .zb-sprite-enemy { font-size: 56px; }
+    .zb-sprite-player { font-size: 64px; }
+    .zb-info-enemy, .zb-info-player { min-width: 140px; padding: 6px 10px; }
+    .zb-info-name { font-size: 9px; }
+}
 
 /* Fishing Screen */
 .fishing-layout {
@@ -1063,4 +1270,385 @@ body {
     .touch-controls { height: 200px; }
     .touch-dpad { width: 150px; height: 150px; bottom: 24px; left: 20px; }
     .action-btn { width: 60px; height: 60px; }
+}
+
+/* ============================================================
+   INTERACTIVE QUIZ TYPES
+   ============================================================ */
+.quiz-interactive {
+    margin-bottom: 12px;
+}
+
+/* Truth Table (Type 3) */
+.truth-table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 10px 0;
+    font-size: 10px;
+}
+
+.truth-table th {
+    background: var(--bg-dark);
+    color: var(--gold);
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    text-align: center;
+}
+
+.truth-table td {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    text-align: center;
+    color: var(--text);
+    background: var(--bg-medium);
+}
+
+.truth-cell-input {
+    cursor: pointer;
+    background: var(--bg-dark);
+    color: var(--gold);
+    font-weight: bold;
+    min-width: 40px;
+    transition: background 0.15s;
+    user-select: none;
+}
+
+.truth-cell-input:hover {
+    background: #1a2a4e;
+    border-color: var(--gold);
+}
+
+.truth-cell-input.correct-cell {
+    background: rgba(78, 204, 163, 0.3);
+    color: var(--success);
+}
+
+.truth-cell-input.incorrect-cell {
+    background: rgba(233, 69, 96, 0.3);
+    color: var(--accent);
+}
+
+/* Pattern Matching (Type 4) */
+.pattern-columns {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin: 10px 0;
+}
+
+.pattern-col {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 120px;
+}
+
+.pattern-col-label {
+    font-size: 9px;
+    color: var(--gold);
+    text-align: center;
+    margin-bottom: 4px;
+}
+
+.pattern-item {
+    background: var(--bg-dark);
+    border: 2px solid var(--border);
+    padding: 8px 12px;
+    font-size: 9px;
+    color: var(--text);
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+    user-select: none;
+}
+
+.pattern-item:hover {
+    border-color: var(--gold);
+    background: #1a2a4e;
+}
+
+.pattern-item.selected {
+    border-color: var(--gold);
+    background: rgba(245, 200, 66, 0.15);
+}
+
+.pattern-item.matched {
+    border-color: var(--success);
+    background: rgba(78, 204, 163, 0.15);
+    color: var(--success);
+    cursor: default;
+}
+
+.pattern-item.incorrect-match {
+    border-color: var(--accent);
+    background: rgba(233, 69, 96, 0.15);
+}
+
+/* Logic Builder (Type 5) */
+.logic-bar {
+    background: var(--bg-dark);
+    border: 2px solid var(--border);
+    padding: 12px 16px;
+    min-height: 44px;
+    margin: 10px 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    font-size: 11px;
+    color: var(--gold);
+}
+
+.logic-bar-empty {
+    color: var(--text-dim);
+    font-size: 9px;
+}
+
+.logic-elements {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 8px 0;
+}
+
+.logic-element {
+    background: var(--bg-medium);
+    border: 2px solid var(--border);
+    padding: 8px 14px;
+    font-size: 10px;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+}
+
+.logic-element:hover {
+    border-color: var(--gold);
+    background: #1a2a4e;
+}
+
+.logic-element.operator {
+    color: var(--gold);
+    border-color: rgba(245, 200, 66, 0.3);
+}
+
+.logic-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+/* Circuit Builder (Type 6) */
+.circuit-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 10px 0;
+    align-items: center;
+}
+
+.circuit-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.circuit-input {
+    background: var(--bg-dark);
+    border: 1px solid var(--border);
+    padding: 6px 10px;
+    font-size: 10px;
+    color: var(--text);
+    min-width: 30px;
+    text-align: center;
+}
+
+.circuit-slot {
+    background: var(--bg-medium);
+    border: 2px solid var(--gold);
+    padding: 8px 14px;
+    font-size: 10px;
+    color: var(--gold);
+    cursor: pointer;
+    min-width: 60px;
+    text-align: center;
+    transition: all 0.15s;
+    user-select: none;
+}
+
+.circuit-slot:hover {
+    background: rgba(245, 200, 66, 0.15);
+}
+
+.circuit-wire {
+    width: 20px;
+    height: 2px;
+    background: var(--border);
+}
+
+.circuit-output {
+    background: var(--bg-dark);
+    border: 2px solid var(--border);
+    padding: 8px 14px;
+    font-size: 11px;
+    color: var(--text-dim);
+    min-width: 40px;
+    text-align: center;
+}
+
+.circuit-output.pass {
+    border-color: var(--success);
+    color: var(--success);
+}
+
+.circuit-output.fail {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.circuit-target {
+    font-size: 9px;
+    color: var(--text-dim);
+    margin-top: 6px;
+    text-align: center;
+}
+
+/* Quiz Progress Panel */
+.quiz-progress-item {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    font-size: 9px;
+    line-height: 2;
+}
+
+.quiz-progress-item .qp-title {
+    color: var(--gold);
+    font-size: 10px;
+    display: block;
+    margin-bottom: 2px;
+}
+
+.quiz-progress-item .qp-stats {
+    color: var(--text-dim);
+    font-size: 8px;
+}
+
+.quiz-progress-item .qp-level {
+    display: inline-block;
+    padding: 2px 8px;
+    font-size: 8px;
+    border: 1px solid var(--border);
+    margin-left: 8px;
+}
+
+.quiz-progress-item .qp-level.level-0 { color: var(--text-dim); border-color: var(--text-dim); }
+.quiz-progress-item .qp-level.level-1 { color: #4ecca3; border-color: #4ecca3; }
+.quiz-progress-item .qp-level.level-2 { color: #f5c842; border-color: #f5c842; }
+.quiz-progress-item .qp-level.level-3 { color: #e94560; border-color: #e94560; }
+
+.quiz-progress-item .qp-bar {
+    width: 100%;
+    height: 6px;
+    background: var(--bg-dark);
+    border: 1px solid var(--border);
+    margin-top: 4px;
+}
+
+.quiz-progress-item .qp-bar-fill {
+    height: 100%;
+    background: var(--success);
+    transition: width 0.3s;
+}
+
+.quiz-progress-item.locked {
+    opacity: 0.4;
+}
+
+/* Zord Arena */
+.arena-trainer {
+    background: var(--bg-dark);
+    border: 1px solid var(--border);
+    padding: 12px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.arena-trainer-info {
+    flex: 1;
+}
+
+.arena-trainer-name {
+    font-size: 10px;
+    color: var(--gold);
+    display: block;
+    margin-bottom: 4px;
+}
+
+.arena-trainer-desc {
+    font-size: 8px;
+    color: var(--text-dim);
+    line-height: 2;
+}
+
+.arena-trainer .btn {
+    font-size: 8px;
+    padding: 8px 14px;
+}
+
+.arena-zord-card {
+    background: var(--bg-dark);
+    border: 1px solid var(--border);
+    padding: 10px 14px;
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 9px;
+}
+
+.arena-zord-card .zord-hp-bar {
+    width: 80px;
+    height: 8px;
+    background: var(--bg-medium);
+    border: 1px solid var(--border);
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 8px;
+}
+
+.arena-zord-card .zord-hp-fill {
+    height: 100%;
+    background: var(--success);
+}
+
+.arena-zord-card .zord-hp-fill.low {
+    background: var(--accent);
+}
+
+.arena-section-title {
+    color: var(--gold);
+    font-size: 11px;
+    margin: 12px 0 8px 0;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--border);
+}
+
+.spa-quiz-prompt {
+    background: var(--bg-dark);
+    border: 1px solid var(--border);
+    padding: 14px;
+    margin: 10px 0;
+    font-size: 10px;
+    line-height: 2;
+}
+
+.quiz-progress-summary {
+    padding: 10px;
+    font-size: 9px;
+    color: var(--text);
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 8px;
+    line-height: 2.2;
 }

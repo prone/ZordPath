@@ -49,6 +49,7 @@ saveStats();
 setInterval(() => {
     if (state && state.screen === 'game') {
         stats.totalPlayTime += 30;
+        state.playTime = (state.playTime || 0) + 30;
         saveStats();
     }
 }, 30000);
@@ -58,10 +59,38 @@ function trackEnemyDefeated() { stats.enemiesDefeated++; saveStats(); }
 function trackZordCaught() { stats.zordsCaught++; saveStats(); }
 function trackFishCaught() { stats.fishCaught++; saveStats(); }
 function trackRubiesEarned(amount) { stats.rubiesEarned += amount; saveStats(); }
+function getPlayerXpNeeded() { return 10 + state.playerLevel; }
+
 function trackQuizAnswer(correct) {
     stats.quizAnswered++;
-    if (correct) stats.quizCorrect++;
+    if (correct) {
+        stats.quizCorrect++;
+        state.playerLevelXp++;
+        while (state.playerLevelXp >= getPlayerXpNeeded()) {
+            state.playerLevelXp -= getPlayerXpNeeded();
+            state.playerLevel++;
+            state.maxHp += 2;
+            state.hp = Math.min(state.hp + 2, state.maxHp);
+            state.attack += 1;
+            showPlayerLevelUp();
+        }
+    }
     saveStats();
+}
+
+function showPlayerLevelUp() {
+    // Brief on-screen notification (non-blocking)
+    let el = document.getElementById('levelup-toast');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'levelup-toast';
+        el.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9998;font-family:"Press Start 2P",monospace;font-size:14px;color:#f5c842;background:rgba(0,0,0,0.85);border:3px solid #f5c842;padding:18px 28px;text-align:center;pointer-events:none;line-height:2.5;';
+        document.body.appendChild(el);
+    }
+    el.innerHTML = `LEVEL UP!<br><span style="font-size:10px;color:#4ecca3">Level ${state.playerLevel}</span><br><span style="font-size:8px;color:#8888aa">+2 HP  +1 ATK</span>`;
+    el.style.display = 'block';
+    playSound('victory');
+    setTimeout(() => { el.style.display = 'none'; }, 2000);
 }
 function trackDeath() { stats.deaths++; saveStats(); }
 function trackGameStart(charName) {
@@ -76,6 +105,191 @@ function trackTempleFloor(floor) {
 
 // HTML escape for user-provided strings in innerHTML
 function escapeHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ============================================================
+// SAVE/LOAD SYSTEM (3 slots in localStorage)
+// ============================================================
+const SAVE_VERSION = 1;
+const SAVE_PREFIX = 'zordpath_save_';
+
+function saveToSlot(i) {
+    const data = {
+        version: SAVE_VERSION,
+        timestamp: new Date().toISOString(),
+        playTime: state.playTime || 0,
+        name: state.name,
+        characterId: state.character ? state.character.id : null,
+        hp: state.hp, maxHp: state.maxHp, attack: state.attack, defense: state.defense,
+        rubies: state.rubies,
+        inventory: { ...state.inventory },
+        fish: { ...state.fish },
+        location: state.location,
+        playerCol: state.playerCol, playerRow: state.playerRow, facing: state.facing,
+        defeatedEnemies: [...state.defeatedEnemies],
+        defeatedZones: [...state.defeatedZones],
+        builtItems: [...state.builtItems],
+        zordList: state.zordList.map(z => ({ ...z, power: { ...z.power } })),
+        zordBench: [...state.zordBench],
+        discoveredAreas: [...discoveredAreas],
+        npcDialogueIndex: { ...state.npcDialogueIndex },
+        quizMastery: JSON.parse(JSON.stringify(state.quizMastery)),
+        defeatedArenaTrainers: state.defeatedArenaTrainers || [],
+        playerLevel: state.playerLevel,
+        playerLevelXp: state.playerLevelXp
+    };
+    try {
+        localStorage.setItem(SAVE_PREFIX + i, JSON.stringify(data));
+    } catch (e) { console.warn('Save failed:', e); }
+}
+
+function loadFromSlot(i) {
+    try {
+        const raw = localStorage.getItem(SAVE_PREFIX + i);
+        if (!raw) return false;
+        const d = JSON.parse(raw);
+
+        const cls = CHARACTER_CLASSES.find(c => c.id === d.characterId);
+        if (!cls) return false;
+
+        state.character = cls;
+        state.name = d.name;
+        state.hp = d.hp; state.maxHp = d.maxHp;
+        state.attack = d.attack; state.defense = d.defense;
+        state.rubies = d.rubies;
+        state.inventory = d.inventory || {};
+        state.fish = d.fish || {};
+        state.location = d.location;
+        state.playerCol = d.playerCol; state.playerRow = d.playerRow;
+        state.facing = d.facing || 'down';
+        state.defeatedEnemies = d.defeatedEnemies || [];
+        state.defeatedZones = new Set(d.defeatedZones || []);
+        state.builtItems = d.builtItems || [];
+        state.zordList = (d.zordList || []).map(z => ({ ...z, power: { ...z.power } }));
+        state.zordBench = d.zordBench || [];
+        state.npcDialogueIndex = d.npcDialogueIndex || {};
+        state.quizMastery = d.quizMastery || {};
+        state.playTime = d.playTime || 0;
+        state.currentSaveSlot = i;
+        state.defeatedArenaTrainers = d.defeatedArenaTrainers || [];
+        state.playerLevel = d.playerLevel || 1;
+        state.playerLevelXp = d.playerLevelXp || 0;
+
+        // Restore discoveredAreas set
+        discoveredAreas.clear();
+        (d.discoveredAreas || ['cave']).forEach(a => discoveredAreas.add(a));
+
+        // Restore movement speed based on perk
+        MOVE_DELAY = cls.perk === 'tamer' ? 80 : 120;
+
+        showScreen('game');
+        updateHUD();
+        gameLoop();
+        return true;
+    } catch (e) { console.warn('Load failed:', e); return false; }
+}
+
+function loadSlotPreview(i) {
+    try {
+        const raw = localStorage.getItem(SAVE_PREFIX + i);
+        if (!raw) return null;
+        const d = JSON.parse(raw);
+        const cls = CHARACTER_CLASSES.find(c => c.id === d.characterId);
+        return {
+            name: d.name,
+            characterId: d.characterId,
+            character: cls,
+            location: d.location,
+            playTime: d.playTime || 0,
+            rubies: d.rubies,
+            zordCount: (d.zordList || []).length,
+            timestamp: d.timestamp,
+            hp: d.hp, maxHp: d.maxHp,
+            playerLevel: d.playerLevel || 1
+        };
+    } catch (e) { return null; }
+}
+
+function deleteSlot(i) {
+    localStorage.removeItem(SAVE_PREFIX + i);
+}
+
+function autoSave() {
+    if (state.testingMode) return; // never save in testing mode
+    if (state.currentSaveSlot !== undefined && state.currentSaveSlot !== null) {
+        saveToSlot(state.currentSaveSlot);
+    }
+}
+
+function formatPlayTime(seconds) {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
+}
+
+// ============================================================
+// QUIZ MASTERY TRACKING
+// ============================================================
+function initQuizMastery() {
+    const allIds = LOGIC_LESSONS.map(l => l.id);
+    allIds.forEach(id => {
+        if (!state.quizMastery[id]) {
+            state.quizMastery[id] = { answered: 0, correct: 0, history: [], level: 0 };
+        }
+    });
+}
+
+function updateMasteryAfterAnswer(lessonId, wasCorrect) {
+    if (!state.quizMastery[lessonId]) {
+        state.quizMastery[lessonId] = { answered: 0, correct: 0, history: [], level: 0 };
+    }
+    const m = state.quizMastery[lessonId];
+    m.answered++;
+    if (wasCorrect) m.correct++;
+    m.history.push(wasCorrect ? 1 : 0);
+    // Keep history capped at last 50
+    if (m.history.length > 50) m.history.shift();
+
+    // Recalculate level
+    const pct = m.answered > 0 ? m.correct / m.answered : 0;
+    if (pct >= 0.8 && m.answered >= 30 && m.level >= 2) m.level = 3;
+    else if (pct >= 0.8 && m.answered >= 20 && m.level >= 1) m.level = Math.max(m.level, 2);
+    else if (pct >= 0.8 && m.answered >= 10) m.level = Math.max(m.level, 1);
+}
+
+function getMasteryLevel(lessonId) {
+    return (state.quizMastery[lessonId] || {}).level || 0;
+}
+
+// Check if all base lessons have reached a given level
+function allBaseLessonsAtLevel(level) {
+    const baseIds = ['propositional-basics', 'truth-tables', 'implication', 'equivalence', 'valid-reasoning'];
+    return baseIds.every(id => getMasteryLevel(id) >= level);
+}
+
+function allTierLessonsAtLevel(tierIds, level) {
+    return tierIds.every(id => getMasteryLevel(id) >= level);
+}
+
+// Returns which advanced lessons are unlocked based on mastery
+function getUnlockedLessonIds() {
+    const base = ['propositional-basics', 'truth-tables', 'implication', 'equivalence', 'valid-reasoning'];
+    const unlocked = [...base];
+    const tier2 = ['predicate-logic', 'logical-proofs'];
+    const tier3 = ['set-theory', 'boolean-algebra'];
+    const tier4 = ['modal-logic', 'paradoxes'];
+
+    if (allBaseLessonsAtLevel(1)) {
+        unlocked.push(...tier2);
+        if (allTierLessonsAtLevel(tier2, 1)) {
+            unlocked.push(...tier3);
+            if (allTierLessonsAtLevel(tier3, 1)) {
+                unlocked.push(...tier4);
+            }
+        }
+    }
+    return unlocked;
+}
 
 const TILE = 48; // tile size in pixels (larger for detail)
 const COLS = 24;
@@ -150,7 +364,7 @@ const TILE_COLORS = {
     [T.ICE]:      '#a8d8ea',
     [T.BOOKSHELF]:'#5c3d1e',
     [T.STATUE]:   '#808080',
-    [T.CARPET]:   '#8b1a1a',
+    [T.CARPET]:   '#3a2040',
     [T.VOID]:     '#0a0a1a',
     [T.PORTAL]:   '#9b59b6',
     [T.SAND]:     '#e8d5a3',
@@ -292,6 +506,11 @@ function buildTownMap() {
     for (let c = townMidC - 1; c <= townMidC + 1; c++) { m[ROWS - 1][c] = T.PATH; m[ROWS - 2][c] = T.PATH; }
     m[ROWS - 1][townMidC] = T.DOOR;
     m[ROWS - 2][townMidC + 2] = T.SIGN;
+    // Zord Arena entrance (bottom-right area)
+    m[10][17] = T.PILLAR; m[10][21] = T.PILLAR;
+    m[11][18] = T.PATH; m[11][19] = T.PATH; m[11][20] = T.PATH;
+    m[11][19] = T.DOOR;
+    m[10][19] = T.SIGN;
     return m;
 }
 
@@ -638,12 +857,94 @@ function buildPeakFloor(floorNum) {
     return m;
 }
 
+// Zord Arena map
+function buildZordArenaMap() {
+    const m = createMap(ROWS, COLS, T.CARPET);
+    // Walls around edges
+    for (let c = 0; c < COLS; c++) { m[0][c] = T.TEMPLE_W; m[ROWS - 1][c] = T.TEMPLE_W; }
+    for (let r = 0; r < ROWS; r++) { m[r][0] = T.TEMPLE_W; m[r][COLS - 1] = T.TEMPLE_W; }
+    // Central path
+    const midR = Math.floor(ROWS / 2);
+    for (let c = 2; c < COLS - 2; c++) m[midR][c] = T.PATH;
+    for (let r = 2; r < ROWS - 2; r++) m[r][Math.floor(COLS / 2)] = T.PATH;
+    // Arena building (left side) - large structure
+    for (let r = 3; r <= 5; r++) for (let c = 3; c <= 7; c++) m[r][c] = T.TEMPLE_W;
+    m[5][5] = T.PATH; // arena entrance
+    m[6][5] = T.SIGN;
+    // Pillars flanking arena
+    m[3][2] = T.PILLAR; m[3][8] = T.PILLAR;
+    // Hospital building (right side)
+    for (let r = 3; r <= 5; r++) for (let c = 16; c <= 20; c++) m[r][c] = T.TEMPLE_W;
+    m[5][18] = T.PATH; // hospital entrance
+    m[6][18] = T.SIGN;
+    // Spa building (upper left, below arena)
+    for (let r = 8; r <= 10; r++) for (let c = 3; c <= 7; c++) m[r][c] = T.TEMPLE_W;
+    m[8][5] = T.PATH; // spa entrance
+    m[7][5] = T.SIGN;
+    // Decorative pillars
+    m[midR - 1][4] = T.PILLAR; m[midR - 1][19] = T.PILLAR;
+    m[midR + 1][4] = T.PILLAR; m[midR + 1][19] = T.PILLAR;
+    // Statues at center
+    m[midR - 2][Math.floor(COLS / 2) - 2] = T.STATUE;
+    m[midR - 2][Math.floor(COLS / 2) + 2] = T.STATUE;
+    // Flowers for decoration
+    m[midR + 2][8] = T.FLOWER; m[midR + 2][15] = T.FLOWER;
+    m[2][11] = T.FLOWER; m[2][12] = T.FLOWER;
+    // Door back to town (bottom)
+    m[ROWS - 1][Math.floor(COLS / 2)] = T.PATH;
+    m[ROWS - 2][Math.floor(COLS / 2)] = T.DOOR;
+    m[ROWS - 2][Math.floor(COLS / 2) + 1] = T.SIGN;
+    return m;
+}
+
+// --- ARENA NPC TRAINERS (for Zord battles) ---
+const ARENA_TRAINERS = [
+    {
+        name: 'Trainer Kai', sprite: '\u{1F9D1}\u200D\u{1F393}',
+        dialogue: 'I am Trainer Kai! My Zords are ready! Think you can beat them?',
+        zords: [
+            { nickname: 'Blaze', species: 'Ember Wisp', sprite: '\u{1FA94}', maxHp: 50, attack: 9, element: 'fire', power: { name: 'Spark Burst', damage: 16, element: 'fire' }, level: 3 }
+        ],
+        reward: 15, minZords: 1
+    },
+    {
+        name: 'Trainer Luna', sprite: '\u{1F9D9}\u200D\u2640\uFE0F',
+        dialogue: 'The moon powers my Zords! Let us battle under its light!',
+        zords: [
+            { nickname: 'Shade', species: 'Paradox Bat', sprite: '\u{1F987}', maxHp: 60, attack: 10, element: 'shadow', power: { name: 'Echo Screech', damage: 18, element: 'shadow' }, level: 4 },
+            { nickname: 'Glimmer', species: 'Crystal Spider', sprite: '\u{1F577}\uFE0F', maxHp: 45, attack: 8, element: 'light', power: { name: 'Prism Web', damage: 16, element: 'light' }, level: 3 }
+        ],
+        reward: 30, minZords: 2
+    },
+    {
+        name: 'Trainer Rex', sprite: '\u{1F9D4}',
+        dialogue: 'I have trained for years! My team is unbeatable!',
+        zords: [
+            { nickname: 'Boulder', species: 'Stone Sentinel', sprite: '\u{1F5FF}', maxHp: 80, attack: 12, element: 'earth', power: { name: 'Boulder Crush', damage: 22, element: 'earth' }, level: 5 },
+            { nickname: 'Frostbite', species: 'Ice Wraith', sprite: '\u{1F9CA}', maxHp: 70, attack: 11, element: 'ice', power: { name: 'Frost Bite', damage: 20, element: 'ice' }, level: 5 },
+            { nickname: 'Sparky', species: 'Wind Hawk', sprite: '\u{1F985}', maxHp: 55, attack: 13, element: 'electric', power: { name: 'Gale Bolt', damage: 22, element: 'electric' }, level: 6 }
+        ],
+        reward: 60, minZords: 3
+    },
+    {
+        name: 'Champion Zara', sprite: '\u{1F451}',
+        dialogue: 'I am the Arena Champion! Defeat me and prove your mastery!',
+        zords: [
+            { nickname: 'Inferno', species: 'Magma Beast', sprite: '\u{1F525}', maxHp: 100, attack: 16, element: 'fire', power: { name: 'Eruption', damage: 30, element: 'fire' }, level: 8 },
+            { nickname: 'Abyss', species: 'Void Walker', sprite: '\u{1F573}\uFE0F', maxHp: 110, attack: 15, element: 'void', power: { name: 'Rift Tear', damage: 28, element: 'void' }, level: 8 },
+            { nickname: 'Prism', species: 'Prismatic Drake', sprite: '\u{1F409}', maxHp: 120, attack: 18, element: 'light', power: { name: 'Prisma Beam', damage: 34, element: 'light' }, level: 10 }
+        ],
+        reward: 150, minZords: 3
+    }
+];
+
 const MAPS = {
     cave: buildCaveMap(),
     town: buildTownMap(),
     forest: buildForestMap(),
     beach: buildBeachMap(),
-    mountains: buildMountainMap()
+    mountains: buildMountainMap(),
+    zordarena: buildZordArenaMap()
 };
 
 // Build peak floors
@@ -665,7 +966,8 @@ const TRANSITIONS = {
         { col: 1, row: Math.floor(ROWS / 2), target: 'cave', spawnCol: COLS - 4, spawnRow: Math.floor(ROWS / 2) },
         { col: COLS - 2, row: Math.floor(ROWS / 2), target: 'forest', spawnCol: 2, spawnRow: Math.floor(ROWS / 2) },
         { col: Math.floor(COLS / 2), row: 0, target: 'beach', spawnCol: Math.floor(COLS / 2), spawnRow: ROWS - 3 },
-        { col: Math.floor(COLS / 2), row: ROWS - 1, target: 'mountains', spawnCol: Math.floor(COLS / 2), spawnRow: 2 }
+        { col: Math.floor(COLS / 2), row: ROWS - 1, target: 'mountains', spawnCol: Math.floor(COLS / 2), spawnRow: 2 },
+        { col: 19, row: 11, target: 'zordarena', spawnCol: Math.floor(COLS / 2), spawnRow: ROWS - 3 }
     ],
     beach: [
         { col: Math.floor(COLS / 2), row: ROWS - 2, target: 'town', spawnCol: Math.floor(COLS / 2), spawnRow: 2 }
@@ -692,6 +994,9 @@ const TRANSITIONS = {
     ],
     peak_5: [
         { col: Math.floor(COLS / 2), row: ROWS - 2, target: 'peak_4', spawnCol: Math.floor(COLS / 2), spawnRow: 3 }
+    ],
+    zordarena: [
+        { col: Math.floor(COLS / 2), row: ROWS - 2, target: 'town', spawnCol: 19, spawnRow: 10 }
     ],
     forest: [
         { col: 1, row: Math.floor(ROWS / 2), target: 'town', spawnCol: COLS - 3, spawnRow: Math.floor(ROWS / 2) },
@@ -740,7 +1045,12 @@ const SIGN_TEXTS = {
     mtn_north: 'Back to Town ^',
     mtn_deep: 'Beware! Strong creatures dwell deeper in the peaks.',
     mtn_south: 'v The Peak Climb (5 levels to the summit!)',
-    peak_sign: 'The air grows thinner... keep climbing!'
+    peak_sign: 'The air grows thinner... keep climbing!',
+    town_arena: 'Zord Arena v (Battle, Heal & Train!)',
+    arena_battle: 'The Arena - Battle Town Trainers!',
+    arena_hospital: 'Zord Hospital - Heal your Zords!',
+    arena_spa: 'Zord Spa - Train & Level Up!',
+    arena_exit: 'Back to Town v'
 };
 
 // --- MAP NPC PLACEMENTS ---
@@ -1462,7 +1772,632 @@ This works! If all dogs are animals and Zorp ISN'T an animal, then Zorp CAN'T be
                 answer: 0
             }
         ]
+    },
+    {
+        id: 'predicate-logic',
+        title: 'Beyond True/False: Predicates & Quantifiers',
+        content: `So far we have worked with simple statements like "it is raining." But logic gets even more powerful when we use PREDICATES and QUANTIFIERS!
+
+A PREDICATE is like a test you can apply to things. "Is tall" is a predicate - you can test it on anyone!
+- Is tall(Giraffe) = TRUE
+- Is tall(Ant) = FALSE
+
+Think of a predicate as a question with a blank: "___ is tall" or "___ can fly" or "___ is even."
+
+Now for QUANTIFIERS - these let us talk about GROUPS of things:
+
+FOR ALL (every): "For all dogs, they have four legs" means EVERY SINGLE dog has four legs. If even ONE dog does not have four legs, the statement is FALSE!
+
+THERE EXISTS (some/at least one): "There exists a fruit that is yellow" means AT LEAST ONE fruit is yellow. Bananas are yellow, so this is TRUE! We only need to find ONE example.
+
+Here is the key difference:
+- "For all X, X is heavy" = EVERYTHING is heavy (hard to be true!)
+- "There exists X, X is heavy" = SOMETHING is heavy (much easier to be true!)
+
+To DISPROVE a "for all" statement, you just need ONE counterexample!
+"All birds can fly." Penguins can't fly - so this is FALSE!
+
+To PROVE a "there exists" statement, you just need ONE example!
+"There exists an animal that lives in water." Fish! So this is TRUE!`,
+        questions: [
+            {
+                q: 'What is a predicate in logic?',
+                choices: ['A type of animal', 'A test or property you can apply to things', 'A number that is always true', 'A special kind of question'],
+                answer: 1
+            },
+            {
+                q: '"Is round" is a predicate. Which of these makes it TRUE?',
+                choices: ['Is round(Basketball)', 'Is round(Book)', 'Is round(Box)', 'Is round(Pyramid)'],
+                answer: 0
+            },
+            {
+                q: '"For all birds, they have feathers." What does "for all" mean here?',
+                choices: ['Some birds have feathers', 'At least one bird has feathers', 'EVERY bird has feathers', 'No birds have feathers'],
+                answer: 2
+            },
+            {
+                q: '"There exists a planet that has rings." What does this mean?',
+                choices: ['Every planet has rings', 'No planets have rings', 'At least ONE planet has rings', 'Most planets have rings'],
+                answer: 2
+            },
+            {
+                q: 'How do you DISPROVE a "for all" statement?',
+                choices: ['Show that everything fits', 'Find just ONE thing that does not fit', 'Ask a teacher', 'You cannot disprove it'],
+                answer: 1
+            },
+            {
+                q: '"For all animals, they can swim." A cat hates water and cannot swim. What does this tell us?',
+                choices: ['The statement is TRUE', 'The statement is FALSE - we found a counterexample', 'Cats are not animals', 'We need more evidence'],
+                answer: 1
+            },
+            {
+                q: '"There exists a number greater than 100." Is this true?',
+                choices: ['FALSE - 100 is the biggest number', 'TRUE - for example, 101', 'We cannot tell', 'Only in advanced math'],
+                answer: 1
+            },
+            {
+                q: 'Which is EASIER to make true?',
+                choices: ['"For all X, X is blue" (everything is blue)', '"There exists X, X is blue" (something is blue)', 'They are equally hard', 'Neither can be true'],
+                answer: 1
+            },
+            {
+                q: '"For all students in the class, they passed the test." Three students failed. Is this true?',
+                choices: ['TRUE - most students passed', 'FALSE - not ALL students passed', 'TRUE - the majority passed', 'We need the exact numbers'],
+                answer: 1
+            },
+            {
+                q: '"There exists a dog that is friendly." Buddy is a friendly dog. Is the statement proven?',
+                choices: ['No - we need ALL dogs to be friendly', 'Yes - we only need ONE friendly dog and Buddy counts', 'No - one dog is not enough', 'Only if Buddy is always friendly'],
+                answer: 1
+            },
+            {
+                q: 'Which statement is the opposite of "For all X, X is red"?',
+                choices: ['"For all X, X is blue"', '"There exists X, X is NOT red"', '"Nothing is red"', '"There exists X, X is red"'],
+                answer: 1
+            },
+            {
+                q: '"For all fish, they live in water." "For all things that live in water, they are fish." Are these the same?',
+                choices: ['Yes, they say the same thing', 'No - whales live in water but are not fish', 'Yes - water animals are fish', 'Only in the ocean'],
+                answer: 1
+            },
+            {
+                q: '"There exists a shape with exactly 3 sides." What shape proves this true?',
+                choices: ['A square', 'A circle', 'A triangle', 'A pentagon'],
+                answer: 2
+            },
+            {
+                q: '"For all vegetables, they are green." Carrots are orange. What can we say?',
+                choices: ['The statement is TRUE', 'Carrots are not vegetables', 'The statement is FALSE - carrots are a counterexample', 'We need to check more vegetables'],
+                answer: 2
+            }
+        ]
+    },
+    {
+        id: 'logical-proofs',
+        title: 'Proving Things Step by Step',
+        content: `In logic, a PROOF is when you show that something MUST be true by following a chain of steps. It is like a chain of dominoes - if knocking one down always knocks down the next, you can predict exactly what will happen!
+
+The most important proof technique is called MODUS PONENS:
+  Step 1: "If P then Q" (We know this rule)
+  Step 2: "P is true" (The condition happened)
+  Conclusion: "Q must be true!" (So the result must happen)
+
+Example:
+  Rule: "If it is a school day, then I wear my uniform."
+  Fact: "Today is a school day."
+  Therefore: "I wear my uniform today."
+
+Another powerful technique is MODUS TOLLENS (working backwards!):
+  Step 1: "If P then Q" (We know this rule)
+  Step 2: "Q is NOT true" (The result did NOT happen)
+  Conclusion: "P must NOT be true!" (So the condition did not happen either)
+
+Example:
+  Rule: "If it is raining, the ground is wet."
+  Fact: "The ground is NOT wet."
+  Therefore: "It is NOT raining."
+
+You can also build CHAINS (called syllogisms):
+  "If A then B" and "If B then C" together give us "If A then C"!
+
+Example:
+  "If it is a poodle, then it is a dog."
+  "If it is a dog, then it is an animal."
+  Therefore: "If it is a poodle, then it is an animal."
+
+Like linking chains together - the conclusion of one rule feeds into the next!`,
+        questions: [
+            {
+                q: 'What is Modus Ponens?',
+                choices: ['If P then Q, and Q is true, so P is true', 'If P then Q, and P is true, so Q is true', 'If P then Q, and Q is false, so P is false', 'If P then Q, and P is false, so Q is false'],
+                answer: 1
+            },
+            {
+                q: 'Rule: "If you press the button, the bell rings." You press the button. What happens?',
+                choices: ['Nothing', 'The bell rings', 'The button breaks', 'We cannot tell'],
+                answer: 1
+            },
+            {
+                q: 'Rule: "If it is a cat, it has whiskers." Fluffy has NO whiskers. What can we conclude?',
+                choices: ['Fluffy is a cat', 'Fluffy is NOT a cat', 'Fluffy is a dog', 'We cannot tell'],
+                answer: 1
+            },
+            {
+                q: 'What technique lets us reason BACKWARDS from a result NOT happening?',
+                choices: ['Modus Ponens', 'Modus Tollens', 'Guessing', 'Random logic'],
+                answer: 1
+            },
+            {
+                q: '"If A then B" and "If B then C." What can we conclude?',
+                choices: ['"If C then A"', '"If A then C"', '"If B then A"', 'Nothing new'],
+                answer: 1
+            },
+            {
+                q: '"If it rains, I bring an umbrella. If I bring an umbrella, I stay dry." It rains. What happens?',
+                choices: ['I get wet', 'I stay dry', 'I forget my umbrella', 'We cannot tell'],
+                answer: 1
+            },
+            {
+                q: '"If you eat candy, your teeth hurt. If your teeth hurt, you go to the dentist." You ate candy. What happens?',
+                choices: ['Nothing', 'Your teeth are fine', 'You go to the dentist', 'You eat more candy'],
+                answer: 2
+            },
+            {
+                q: '"If it is a rose, it is a flower. If it is a flower, it is a plant." Daisy is NOT a plant. What do we know?',
+                choices: ['Daisy is a rose', 'Daisy is a flower', 'Daisy is NOT a rose and NOT a flower', 'We cannot tell'],
+                answer: 2
+            },
+            {
+                q: 'Rule: "If the alarm goes off, everyone leaves the building." Nobody left. What can we conclude?',
+                choices: ['The alarm went off but nobody heard it', 'The alarm did NOT go off', 'Everyone is deaf', 'The building is empty'],
+                answer: 1
+            },
+            {
+                q: '"If I study, I pass. I passed." Can we conclude I studied?',
+                choices: ['Yes - Modus Ponens says so', 'No - I might have passed another way. This would be bad reasoning!', 'Yes - passing proves studying', 'Only if the test was hard'],
+                answer: 1
+            },
+            {
+                q: '"If A then B. If B then C. If C then D." A is true. What do we know about D?',
+                choices: ['D is false', 'D is true', 'D might be true', 'We cannot tell'],
+                answer: 1
+            },
+            {
+                q: '"If you are a penguin, you are a bird. Tweety is a bird." Can we say Tweety is a penguin?',
+                choices: ['Yes, all birds are penguins', 'No - Tweety could be any kind of bird', 'Yes, by Modus Ponens', 'Only if Tweety cannot fly'],
+                answer: 1
+            },
+            {
+                q: 'A proof in logic is like:',
+                choices: ['A guess that might be right', 'A chain of steps where each step MUST follow from the last', 'An opinion everyone agrees with', 'A really hard math problem'],
+                answer: 1
+            },
+            {
+                q: '"If the battery is dead, the phone will not turn on. The phone turned on." What do we know?',
+                choices: ['The battery is dead', 'The battery is NOT dead', 'The phone is broken', 'We need to charge it'],
+                answer: 1
+            },
+            {
+                q: '"If X then Y. If Y then Z." Z is false. What can we say about X?',
+                choices: ['X is true', 'X is false', 'X could be either', 'We need more information'],
+                answer: 1
+            }
+        ]
+    },
+    {
+        id: 'set-theory',
+        title: 'Collections & Groups: Set Theory',
+        content: `A SET is just a collection or group of things. You can make a set out of anything!
+
+Examples of sets:
+- The set of all fruits: {apple, banana, orange, grape, ...}
+- The set of even numbers: {2, 4, 6, 8, 10, ...}
+- The set of colors in a rainbow: {red, orange, yellow, green, blue, indigo, violet}
+
+MEMBERSHIP means whether something is IN a set or not:
+- Apple IS in the set of fruits (we say apple is a "member")
+- Car is NOT in the set of fruits
+
+UNION means COMBINING two sets (everything in either set):
+- Set A = {cat, dog}  Set B = {fish, dog}
+- Union of A and B = {cat, dog, fish}  (We put them all together! No repeats!)
+- Think of it like putting two toy boxes together.
+
+INTERSECTION means the OVERLAP (only things in BOTH sets):
+- Set A = {cat, dog}  Set B = {fish, dog}
+- Intersection of A and B = {dog}  (Only dog is in both!)
+- Think of the middle part of a Venn diagram!
+
+SUBSET means one set fits ENTIRELY inside another:
+- {cat, dog} is a subset of {cat, dog, fish, bird}
+- Every item in the first set is also in the second set
+- Think of it like a small box inside a bigger box!
+
+The EMPTY SET {} is a set with NOTHING in it. It is a subset of every set!`,
+        questions: [
+            {
+                q: 'What is a set?',
+                choices: ['A type of math problem', 'A collection or group of things', 'A number that is always true', 'A special kind of statement'],
+                answer: 1
+            },
+            {
+                q: 'Set A = {apple, banana, cherry}. Is "banana" a member of Set A?',
+                choices: ['No', 'Yes', 'Only sometimes', 'We cannot tell'],
+                answer: 1
+            },
+            {
+                q: 'Set A = {1, 2, 3} and Set B = {3, 4, 5}. What is the UNION of A and B?',
+                choices: ['{3}', '{1, 2, 3, 4, 5}', '{1, 2, 4, 5}', '{3, 3}'],
+                answer: 1
+            },
+            {
+                q: 'Set A = {1, 2, 3} and Set B = {3, 4, 5}. What is the INTERSECTION of A and B?',
+                choices: ['{1, 2, 3, 4, 5}', '{1, 2, 4, 5}', '{3}', '{}'],
+                answer: 2
+            },
+            {
+                q: 'Is {cat, dog} a subset of {cat, dog, fish}?',
+                choices: ['No - they are different sets', 'Yes - every item in the first set is in the second', 'Only if we add fish', 'We cannot tell'],
+                answer: 1
+            },
+            {
+                q: 'Set A = {red, blue} and Set B = {green, yellow}. What is their intersection?',
+                choices: ['{red, blue, green, yellow}', '{red, green}', '{}  (the empty set - nothing in common!)', '{blue, yellow}'],
+                answer: 2
+            },
+            {
+                q: 'The empty set {} has how many items?',
+                choices: ['One', 'Two', 'Zero', 'Infinity'],
+                answer: 2
+            },
+            {
+                q: 'In a Venn diagram, the overlapping middle part represents:',
+                choices: ['The union', 'The intersection', 'The empty set', 'Everything outside both sets'],
+                answer: 1
+            },
+            {
+                q: 'Set A = {apple, banana}. Set B = {banana, cherry}. Set C = {cherry, date}. What is in the intersection of A and B?',
+                choices: ['{apple}', '{cherry}', '{banana}', '{apple, banana, cherry}'],
+                answer: 2
+            },
+            {
+                q: 'Is {1, 2, 3} a subset of {1, 2, 3}?',
+                choices: ['No - they are the same set, not a subset', 'Yes - every element of the first is in the second', 'Only if we add more numbers', 'That is not allowed'],
+                answer: 1
+            },
+            {
+                q: 'Set A = {dog, cat, bird}. Set B = {dog, fish, cat, bird, snake}. What is A in relation to B?',
+                choices: ['A is a superset of B', 'A is a subset of B', 'A and B are completely different', 'A is the intersection of B'],
+                answer: 1
+            },
+            {
+                q: 'If Set X = {a, b, c} and Set Y = {a, b, c, d, e}, what is the intersection?',
+                choices: ['{d, e}', '{a, b, c, d, e}', '{a, b, c}', '{}'],
+                answer: 2
+            },
+            {
+                q: 'The union of ANY set with the empty set {} gives you:',
+                choices: ['The empty set', 'The original set unchanged', 'A bigger set', 'An error'],
+                answer: 1
+            },
+            {
+                q: 'Set A = {1, 2, 3, 4, 5} and Set B = {2, 4, 6, 8}. How many items are in their intersection?',
+                choices: ['0', '2  (the numbers 2 and 4)', '5', '9'],
+                answer: 1
+            }
+        ]
+    },
+    {
+        id: 'boolean-algebra',
+        title: 'Math with TRUE and FALSE',
+        content: `Just like regular math has shortcuts and rules (5 x 1 = 5, or 0 + 7 = 7), logic has shortcuts too! These rules are called BOOLEAN ALGEBRA and they help us simplify complicated logic expressions.
+
+Here are the most useful rules:
+
+IDENTITY RULES (things that don't change anything):
+- A AND TRUE = A  (AND-ing with TRUE changes nothing!)
+- A OR FALSE = A  (OR-ing with FALSE changes nothing!)
+
+DOMINATION RULES (things that take over):
+- A AND FALSE = FALSE  (AND with FALSE always kills it!)
+- A OR TRUE = TRUE  (OR with TRUE always wins!)
+
+DOUBLE NEGATION (two negatives cancel out):
+- NOT NOT A = A  (flipping twice gets you back!)
+
+IDEMPOTENT RULES (repeating does nothing):
+- A AND A = A  (saying it twice doesn't change it!)
+- A OR A = A  (same thing here!)
+
+COMPLEMENT RULES (opposites):
+- A AND NOT A = FALSE  (something can't be true AND false!)
+- A OR NOT A = TRUE  (something is ALWAYS either true or false!)
+
+ABSORPTION (one part swallows the other):
+- A OR (A AND B) = A  (if A is true, the rest doesn't matter!)
+- A AND (A OR B) = A  (if A is false, the whole thing is false!)
+
+These rules let us take long, messy logic and make it short and clean!`,
+        questions: [
+            {
+                q: 'What does "A AND TRUE" simplify to?',
+                choices: ['TRUE', 'FALSE', 'A', 'NOT A'],
+                answer: 2
+            },
+            {
+                q: 'What does "A OR FALSE" simplify to?',
+                choices: ['FALSE', 'A', 'TRUE', 'NOT A'],
+                answer: 1
+            },
+            {
+                q: 'What does "A AND FALSE" simplify to?',
+                choices: ['A', 'TRUE', 'FALSE', 'NOT A'],
+                answer: 2
+            },
+            {
+                q: 'What does "A OR TRUE" simplify to?',
+                choices: ['A', 'TRUE', 'FALSE', 'NOT A'],
+                answer: 1
+            },
+            {
+                q: 'What does "NOT NOT A" simplify to?',
+                choices: ['NOT A', 'FALSE', 'TRUE', 'A'],
+                answer: 3
+            },
+            {
+                q: 'What does "A AND A" simplify to?',
+                choices: ['A AND A', 'TRUE', 'A', 'FALSE'],
+                answer: 2
+            },
+            {
+                q: 'What does "A AND NOT A" simplify to?',
+                choices: ['A', 'TRUE', 'NOT A', 'FALSE'],
+                answer: 3
+            },
+            {
+                q: 'What does "A OR NOT A" simplify to?',
+                choices: ['A', 'NOT A', 'FALSE', 'TRUE'],
+                answer: 3
+            },
+            {
+                q: '"It is raining AND TRUE." What does this simplify to?',
+                choices: ['TRUE', '"It is raining"', 'FALSE', '"It is not raining"'],
+                answer: 1
+            },
+            {
+                q: '"A OR (A AND B)" simplifies to what? (Absorption rule)',
+                choices: ['B', 'A AND B', 'A', 'A OR B'],
+                answer: 2
+            },
+            {
+                q: '"A AND (A OR B)" simplifies to what? (Absorption rule)',
+                choices: ['A OR B', 'B', 'A AND B', 'A'],
+                answer: 3
+            },
+            {
+                q: 'Which rule says "flipping something twice gets you back to the start"?',
+                choices: ['Identity', 'Double Negation', 'Domination', 'Complement'],
+                answer: 1
+            },
+            {
+                q: '"(P AND TRUE) OR FALSE" simplifies to:',
+                choices: ['TRUE', 'FALSE', 'P', 'NOT P'],
+                answer: 2
+            },
+            {
+                q: '"X OR X OR X" simplifies to:',
+                choices: ['3X', 'TRUE', 'X', 'FALSE'],
+                answer: 2
+            },
+            {
+                q: 'Why is Boolean algebra useful?',
+                choices: ['It makes logic more complicated', 'It lets us simplify messy logic into shorter expressions', 'It only works on computers', 'It replaces regular math'],
+                answer: 1
+            }
+        ]
+    },
+    {
+        id: 'modal-logic',
+        title: 'Possibility & Necessity',
+        content: `So far, everything has been TRUE or FALSE. But what about things that COULD be true, or things that MUST be true? Welcome to MODAL LOGIC!
+
+NECESSARY means something MUST be true - there is no way it could be false:
+- "2 + 2 = 4" is NECESSARILY true. It is always 4, no matter what!
+- "A square has 4 sides" is NECESSARILY true. That is what makes it a square!
+
+POSSIBLE means something COULD be true - it is not guaranteed, but it is not impossible either:
+- "It might rain tomorrow" is POSSIBLE. It could happen or it might not.
+- "You could roll a 6 on a die" is POSSIBLE. It is not guaranteed, but it can happen.
+
+IMPOSSIBLE means something CANNOT be true - there is no way it could happen:
+- "2 + 2 = 7" is IMPOSSIBLE. It will never be true!
+- "A circle has corners" is IMPOSSIBLE. Circles are round!
+
+Here is how they connect:
+- If something is NECESSARY, it is also POSSIBLE (if it must happen, it certainly could happen!)
+- If something is IMPOSSIBLE, it is NOT possible.
+- NOT NECESSARY does not mean IMPOSSIBLE! "It will rain tomorrow" is not necessary, but it is not impossible either.
+
+Think of it like this:
+- NECESSARY = guaranteed to happen, no exceptions
+- POSSIBLE = could happen, not ruled out
+- IMPOSSIBLE = can never happen, totally ruled out
+- CONTINGENT = could go either way (possible but not necessary)`,
+        questions: [
+            {
+                q: '"2 + 2 = 4." Is this necessary, possible, or impossible?',
+                choices: ['Possible but not necessary', 'Necessary - it MUST be true', 'Impossible', 'Contingent'],
+                answer: 1
+            },
+            {
+                q: '"It will snow in July in Hawaii." Is this:',
+                choices: ['Necessary', 'Impossible - it cannot snow in tropical Hawaii', 'Possible but very unlikely', 'Contingent'],
+                answer: 2
+            },
+            {
+                q: '"A triangle has 5 sides." Is this:',
+                choices: ['Necessary', 'Possible', 'Impossible - a triangle always has 3 sides', 'Contingent'],
+                answer: 2
+            },
+            {
+                q: 'If something is NECESSARY, is it also POSSIBLE?',
+                choices: ['No - necessary and possible are opposites', 'Yes - if it must happen then it certainly could happen', 'Only sometimes', 'Only in math'],
+                answer: 1
+            },
+            {
+                q: '"I might get a puppy for my birthday." This is:',
+                choices: ['Necessary', 'Impossible', 'Possible but not necessary', 'Necessarily false'],
+                answer: 2
+            },
+            {
+                q: '"All bachelors are unmarried." Is this:',
+                choices: ['Possible but not necessary', 'Necessary - it is true by definition', 'Impossible', 'Contingent'],
+                answer: 1
+            },
+            {
+                q: 'What does CONTINGENT mean?',
+                choices: ['It must be true', 'It cannot be true', 'It could be true or false - it could go either way', 'It is always false'],
+                answer: 2
+            },
+            {
+                q: '"A number is even AND odd at the same time." Is this:',
+                choices: ['Necessary', 'Possible', 'Impossible - a number cannot be both', 'Contingent'],
+                answer: 2
+            },
+            {
+                q: '"The next coin flip will be heads." Is this:',
+                choices: ['Necessary', 'Impossible', 'Possible but not necessary', 'Necessarily true'],
+                answer: 2
+            },
+            {
+                q: 'Something is NOT necessary. Does that mean it is impossible?',
+                choices: ['Yes - if it is not necessary it cannot happen', 'No - it could still be possible, just not guaranteed', 'Yes - not necessary means false', 'Only in logic'],
+                answer: 1
+            },
+            {
+                q: '"If something is impossible, it is not possible." Is this correct?',
+                choices: ['No - impossible things can still happen', 'Yes - impossible means it cannot happen, so it is not possible', 'Only sometimes', 'It depends on the situation'],
+                answer: 1
+            },
+            {
+                q: '"Water boils at 100 degrees Celsius at sea level." Is this:',
+                choices: ['Impossible', 'Contingent', 'Necessary - it is a law of nature under those conditions', 'Possible but unlikely'],
+                answer: 2
+            },
+            {
+                q: 'Which statement is NECESSARILY true?',
+                choices: ['"The weather is nice today"', '"All circles are round"', '"My favorite color is blue"', '"Tomorrow is Friday"'],
+                answer: 1
+            },
+            {
+                q: '"There is a cat on Mars right now." This is:',
+                choices: ['Necessary', 'Impossible in principle', 'Possible but extremely unlikely', 'Necessarily true'],
+                answer: 2
+            }
+        ]
+    },
+    {
+        id: 'paradoxes',
+        title: 'Mind-Bending Puzzles: Paradoxes',
+        content: `What happens when a statement talks about ITSELF? Sometimes really weird things happen! These are called PARADOXES.
+
+THE LIAR'S PARADOX:
+"This statement is false."
+Think about it: If the statement is TRUE, then what it says must be correct... but it says it is false. So it is false?
+But if it is FALSE, then "this statement is false" is wrong, which means the statement is actually true!
+It flip-flops forever! TRUE leads to FALSE, which leads to TRUE, which leads to FALSE...
+
+THE BARBER PARADOX:
+In a town, a barber shaves everyone who does not shave themselves, and ONLY those people.
+Question: Who shaves the barber?
+- If the barber shaves himself, then he DOES shave himself, so the barber should NOT shave him (the barber only shaves people who don't shave themselves).
+- If the barber does NOT shave himself, then he is someone who doesn't shave himself, so the barber SHOULD shave him!
+There is no good answer!
+
+WHY DO PARADOXES MATTER?
+Paradoxes are not just fun puzzles - they helped mathematicians discover important things:
+- Some statements cannot be simply true or false
+- Self-reference (when something refers to itself) can cause problems
+- We need careful rules to avoid contradictions
+
+THE PINOCCHIO PARADOX:
+"My nose will grow NOW." If Pinocchio says this, what happens? His nose grows only when he lies!
+
+Paradoxes teach us to think carefully about the RULES of logic itself!`,
+        questions: [
+            {
+                q: 'What is a paradox?',
+                choices: ['A statement that is always true', 'A statement that is always false', 'A statement that leads to a contradiction or impossible situation', 'A type of math equation'],
+                answer: 2
+            },
+            {
+                q: '"This statement is false." If we assume it is TRUE, what happens?',
+                choices: ['It stays true', 'It must be false (because it says it is false)', 'Nothing happens', 'It becomes a question'],
+                answer: 1
+            },
+            {
+                q: '"This statement is false." If we assume it is FALSE, what happens?',
+                choices: ['It stays false', 'It must be true (because saying it is false would be wrong)', 'Nothing happens', 'It disappears'],
+                answer: 1
+            },
+            {
+                q: 'In the Barber Paradox, who shaves the barber?',
+                choices: ['The barber shaves himself', 'Someone else shaves him', 'There is no consistent answer - that is the paradox!', 'He does not need to shave'],
+                answer: 2
+            },
+            {
+                q: 'What causes most paradoxes?',
+                choices: ['Bad math', 'Self-reference - when something refers to itself', 'Asking too many questions', 'Using big numbers'],
+                answer: 1
+            },
+            {
+                q: '"The next sentence is true. The previous sentence is false." This is:',
+                choices: ['Both true', 'Both false', 'A paradox - they contradict each other', 'Just confusing but not a paradox'],
+                answer: 2
+            },
+            {
+                q: 'If Pinocchio says "My nose will grow now," what happens?',
+                choices: ['His nose grows because he always lies', 'His nose does not grow because he is telling the truth', 'It is a paradox - neither answer works', 'His nose falls off'],
+                answer: 2
+            },
+            {
+                q: 'Why are paradoxes important in logic?',
+                choices: ['They are just fun games', 'They show us where the rules of logic need to be more careful', 'They prove that logic does not work', 'They are not important at all'],
+                answer: 1
+            },
+            {
+                q: '"I always lie." Is this a paradox?',
+                choices: ['No - the person is just dishonest', 'Yes - if they always lie, then this statement is a lie, meaning they don\'t always lie', 'No - some people do always lie', 'Only if they are Pinocchio'],
+                answer: 1
+            },
+            {
+                q: 'Which of these is a paradox?',
+                choices: ['"The sky is blue"', '"2 + 2 = 5"', '"This sentence has five words"', '"The set of all sets that don\'t contain themselves"'],
+                answer: 3
+            },
+            {
+                q: 'The Barber Paradox is related to which famous paradox in mathematics?',
+                choices: ['The Pinocchio Paradox', 'Russell\'s Paradox about sets', 'The Birthday Paradox', 'The Fermi Paradox'],
+                answer: 1
+            },
+            {
+                q: '"Everything I say is wrong." If this statement is right, then:',
+                choices: ['Everything else they say is also right', 'The statement itself must be wrong, creating a contradiction', 'They are a good person', 'We should believe them'],
+                answer: 1
+            },
+            {
+                q: 'A sign says "IGNORE THIS SIGN." What is paradoxical about it?',
+                choices: ['Signs cannot talk', 'To follow the instruction you must read it, but it tells you to ignore it', 'Nothing is paradoxical', 'The sign is too small'],
+                answer: 1
+            },
+            {
+                q: 'How did mathematicians respond to paradoxes like Russell\'s Paradox?',
+                choices: ['They gave up on math', 'They created more careful rules to prevent contradictions', 'They decided paradoxes are not real', 'They banned self-reference completely'],
+                answer: 1
+            }
+        ]
     }
+
 ];
 
 // --- ELEMENT SYSTEM ---
@@ -2467,7 +3402,14 @@ const state = {
     dialogueOpen: false,
     paused: false,       // pause movement during menus
     animFrame: 0,
-    walkFrame: 0
+    walkFrame: 0,
+    quizMastery: {},     // per-lesson tracking { lessonId: { answered, correct, history[], level } }
+    playTime: 0,         // seconds played
+    currentSaveSlot: null,
+    defeatedArenaTrainers: [],
+    testingMode: false,
+    playerLevel: 1,
+    playerLevelXp: 0   // correct answers toward next level
 };
 
 // ============================================================
@@ -2841,12 +3783,65 @@ function showScreen(screenId) {
 }
 
 // ============================================================
-// TITLE SCREEN
+// TITLE SCREEN (Save Slots)
 // ============================================================
+function renderSaveSlots() {
+    for (let i = 0; i < 3; i++) {
+        const el = document.getElementById('save-slot-' + i);
+        if (!el) continue;
+        const preview = loadSlotPreview(i);
+        if (preview) {
+            const sprite = preview.character ? preview.character.sprite : '';
+            el.innerHTML = `<span class="slot-name">${sprite} ${escapeHtml(preview.name)} <span style="font-size:7px;color:var(--success)">Lv.${preview.playerLevel}</span></span>` +
+                `<span class="slot-info">` +
+                `${escapeHtml(preview.location)} | ${formatPlayTime(preview.playTime)}<br>` +
+                `HP: ${preview.hp}/${preview.maxHp} | Rubies: ${preview.rubies} | Zords: ${preview.zordCount}` +
+                `</span>` +
+                `<span class="slot-delete" data-slot="${i}" title="Delete save">[X]</span>`;
+        } else {
+            el.innerHTML = `<span class="slot-empty">-- Empty Slot ${i + 1} --</span>`;
+        }
+    }
+}
+
+// Handle save slot clicks
+document.getElementById('save-slots-container').addEventListener('click', (e) => {
+    // Handle delete button
+    const delBtn = e.target.closest('.slot-delete');
+    if (delBtn) {
+        e.stopPropagation();
+        const slotIdx = parseInt(delBtn.dataset.slot);
+        const preview = loadSlotPreview(slotIdx);
+        if (preview && confirm(`Delete save "${preview.name}"?`)) {
+            deleteSlot(slotIdx);
+            renderSaveSlots();
+        }
+        return;
+    }
+    // Handle slot click (load)
+    const slot = e.target.closest('.save-slot');
+    if (slot) {
+        const slotIdx = parseInt(slot.dataset.slot);
+        const preview = loadSlotPreview(slotIdx);
+        if (preview) {
+            loadFromSlot(slotIdx);
+        }
+    }
+});
+
 document.getElementById('btn-new-game').addEventListener('click', () => {
+    // Find an empty slot, or default to 0
+    let slot = 0;
+    for (let i = 0; i < 3; i++) {
+        if (!loadSlotPreview(i)) { slot = i; break; }
+    }
+    state.currentSaveSlot = slot;
     showScreen('character');
     renderCharacterSelection();
 });
+
+// Render save slots on page load
+renderSaveSlots();
 
 // ============================================================
 // CHARACTER CREATION (Canvas-rendered)
@@ -3272,9 +4267,21 @@ function beginAdventure() {
     state.location = 'cave';
     state.playerCol = 5;
     state.playerRow = Math.floor(ROWS / 2);
+    state.playTime = 0;
+    state.quizMastery = {};
+    initQuizMastery();
+
+    // Pick first available save slot
+    if (state.currentSaveSlot === null) {
+        for (let i = 0; i < 3; i++) {
+            if (!loadSlotPreview(i)) { state.currentSaveSlot = i; break; }
+        }
+        if (state.currentSaveSlot === null) state.currentSaveSlot = 0;
+    }
 
     showScreen('game');
     updateHUD();
+    autoSave();
     gameLoop();
 }
 
@@ -3302,7 +4309,7 @@ document.getElementById('close-inventory').addEventListener('click', toggleInven
 function toggleInventory() {
     state.inventoryOpen = !state.inventoryOpen;
     document.getElementById('inventory-overlay').style.display = state.inventoryOpen ? 'flex' : 'none';
-    state.paused = state.inventoryOpen || state.dialogueOpen;
+    state.paused = state.inventoryOpen || worldMapOpen || zordListOpen || quizProgressOpen || helpOpen || state.dialogueOpen;
     if (state.inventoryOpen) renderInventory();
 }
 
@@ -3411,7 +4418,7 @@ document.getElementById('close-zordlist').addEventListener('click', toggleZordLi
 function toggleZordList() {
     zordListOpen = !zordListOpen;
     document.getElementById('zordlist-overlay').style.display = zordListOpen ? 'flex' : 'none';
-    state.paused = zordListOpen || state.inventoryOpen || state.dialogueOpen;
+    state.paused = zordListOpen || state.inventoryOpen || worldMapOpen || quizProgressOpen || helpOpen || state.dialogueOpen;
     if (zordListOpen) renderZordList();
 }
 
@@ -3561,7 +4568,7 @@ document.getElementById('close-worldmap').addEventListener('click', toggleWorldM
 function toggleWorldMap() {
     worldMapOpen = !worldMapOpen;
     document.getElementById('worldmap-overlay').style.display = worldMapOpen ? 'flex' : 'none';
-    state.paused = worldMapOpen || state.inventoryOpen || zordListOpen || state.dialogueOpen;
+    state.paused = worldMapOpen || state.inventoryOpen || zordListOpen || quizProgressOpen || helpOpen || state.dialogueOpen;
     if (worldMapOpen) renderWorldMap();
 }
 
@@ -3575,8 +4582,87 @@ document.getElementById('close-help').addEventListener('click', toggleHelp);
 function toggleHelp() {
     helpOpen = !helpOpen;
     document.getElementById('help-overlay').style.display = helpOpen ? 'flex' : 'none';
-    state.paused = helpOpen || worldMapOpen || state.inventoryOpen || zordListOpen || state.dialogueOpen;
+    state.paused = helpOpen || worldMapOpen || state.inventoryOpen || zordListOpen || quizProgressOpen || state.dialogueOpen;
 }
+
+// ============================================================
+// QUIZ PROGRESS PANEL
+// ============================================================
+let quizProgressOpen = false;
+
+document.getElementById('close-quizprogress').addEventListener('click', toggleQuizProgress);
+
+function toggleQuizProgress() {
+    quizProgressOpen = !quizProgressOpen;
+    document.getElementById('quizprogress-overlay').style.display = quizProgressOpen ? 'flex' : 'none';
+    state.paused = quizProgressOpen || helpOpen || worldMapOpen || state.inventoryOpen || zordListOpen || state.dialogueOpen;
+    if (quizProgressOpen) renderQuizProgress();
+}
+
+function renderQuizProgress() {
+    const container = document.getElementById('quizprogress-items');
+    container.innerHTML = '';
+    initQuizMastery();
+
+    // Summary
+    let totalAnswered = 0, totalCorrect = 0;
+    Object.values(state.quizMastery).forEach(m => {
+        totalAnswered += m.answered;
+        totalCorrect += m.correct;
+    });
+    const pct = totalAnswered > 0 ? Math.round(totalCorrect / totalAnswered * 100) : 0;
+    const summary = document.createElement('div');
+    summary.className = 'quiz-progress-summary';
+    summary.innerHTML = `Total Quizzes: <span style="color:var(--gold)">${totalAnswered}</span> | ` +
+        `Correct: <span style="color:var(--success)">${totalCorrect}</span> | ` +
+        `Accuracy: <span style="color:${pct >= 80 ? 'var(--success)' : 'var(--accent)'}">${pct}%</span>`;
+    container.appendChild(summary);
+
+    const unlocked = getUnlockedLessonIds();
+    const levelNames = ['Basic', 'Classifier + Fallacy', 'Truth Tables + Patterns', 'Builder + Circuit'];
+    const tierLabels = {
+        'propositional-basics': 'Tier 1', 'truth-tables': 'Tier 1', 'implication': 'Tier 1',
+        'equivalence': 'Tier 1', 'valid-reasoning': 'Tier 1',
+        'predicate-logic': 'Tier 2', 'logical-proofs': 'Tier 2',
+        'set-theory': 'Tier 3', 'boolean-algebra': 'Tier 3',
+        'modal-logic': 'Tier 4', 'paradoxes': 'Tier 4'
+    };
+
+    LOGIC_LESSONS.forEach(lesson => {
+        const m = state.quizMastery[lesson.id] || { answered: 0, correct: 0, level: 0 };
+        const isUnlocked = unlocked.includes(lesson.id);
+        const div = document.createElement('div');
+        div.className = 'quiz-progress-item' + (isUnlocked ? '' : ' locked');
+
+        const accuracy = m.answered > 0 ? Math.round(m.correct / m.answered * 100) : 0;
+        const tier = tierLabels[lesson.id] || '';
+
+        div.innerHTML = `<span class="qp-title">${isUnlocked ? '' : '\u{1F512} '}${escapeHtml(lesson.title)}</span>` +
+            `<span class="qp-stats">${tier} | Answered: ${m.answered} | Correct: ${m.correct} (${accuracy}%)` +
+            `<span class="qp-level level-${m.level}">Lvl ${m.level}: ${levelNames[m.level] || 'Max'}</span></span>` +
+            `<div class="qp-bar"><div class="qp-bar-fill" style="width:${accuracy}%"></div></div>`;
+        container.appendChild(div);
+    });
+}
+
+// Draw quiz progress icon
+(function drawQuizIcon() {
+    const el = document.getElementById('icon-quiz');
+    if (!el) return;
+    const c = el.getContext('2d');
+    function px(x, y, w, h, color) { c.fillStyle = color; c.fillRect(x, y, w, h); }
+    // Book/clipboard shape
+    px(4, 2, 12, 16, '#5588cc');
+    px(5, 3, 10, 14, '#6a9ae0');
+    // Lines (quiz questions)
+    px(6, 5, 7, 1, '#fff');
+    px(6, 8, 7, 1, '#fff');
+    px(6, 11, 7, 1, '#fff');
+    // Checkmarks
+    px(14, 4, 2, 2, '#4ecca3');
+    px(14, 7, 2, 2, '#4ecca3');
+    px(14, 10, 2, 2, '#f5c842');
+})();
 
 // Track area discovery on transitions
 function discoverArea(loc) {
@@ -3677,6 +4763,22 @@ function renderWorldMap() {
             // Seashells
             c.fillStyle = '#f0d0a0'; c.fillRect(x + 30, y + h * 0.7, 3, 3);
             c.fillStyle = '#e8c090'; c.fillRect(x + 50, y + h * 0.6, 3, 3);
+          }
+        },
+        { id: 'zordarena', name: 'Zord Arena', x: 250, y: 170, w: 80, h: 50,
+          draw: (c, x, y, w, h) => {
+            // Arena floor (reddish carpet)
+            c.fillStyle = '#5a2020'; c.fillRect(x, y, w, h);
+            for (let dy = 0; dy < h; dy += 4) for (let dx = 0; dx < w; dx += 4) {
+                if ((dx + dy) % 8 === 0) { c.fillStyle = '#6a2828'; c.fillRect(x + dx, y + dy, 3, 2); }
+            }
+            // Arena circle
+            c.fillStyle = '#4a1818'; c.beginPath(); c.arc(x + 20, y + h/2, 12, 0, Math.PI*2); c.fill();
+            c.strokeStyle = '#f5c842'; c.lineWidth = 1; c.beginPath(); c.arc(x + 20, y + h/2, 12, 0, Math.PI*2); c.stroke();
+            // Hospital cross
+            c.fillStyle = '#4ecca3'; c.fillRect(x + 52, y + h/2 - 6, 4, 12); c.fillRect(x + 48, y + h/2 - 2, 12, 4);
+            // Pillars
+            c.fillStyle = '#6a5a90'; c.fillRect(x + 2, y + 2, 6, h - 4); c.fillRect(x + w - 8, y + 2, 6, h - 4);
           }
         },
         { id: 'mountains', name: 'Iron Peak Mountains', x: 150, y: 230, w: 130, h: 80,
@@ -3821,7 +4923,7 @@ function renderWorldMap() {
     regions.forEach(a => {
         const nexts = regions.filter(r => {
             if (a.id === 'cave') return r.id === 'town';
-            if (a.id === 'town') return r.id === 'forest' || r.id === 'beach' || r.id === 'mountains';
+            if (a.id === 'town') return r.id === 'forest' || r.id === 'beach' || r.id === 'mountains' || r.id === 'zordarena';
             if (a.id === 'mountains') return r.id === 'peak_1';
             if (a.id === 'forest') return r.id === 'temple_1';
             if (a.id.startsWith('peak_')) {
@@ -3910,6 +5012,141 @@ function renderWorldMap() {
 // INPUT HANDLING
 // ============================================================
 const keys = {};
+
+// ============================================================
+// TESTING MODE
+// ============================================================
+function updateTestingIndicator() {
+    let el = document.getElementById('testing-indicator');
+    if (state.testingMode) {
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'testing-indicator';
+            el.style.cssText = 'position:fixed;bottom:8px;right:8px;z-index:9999;font-family:"Press Start 2P",monospace;font-size:10px;color:#e94560;background:rgba(0,0,0,0.7);padding:4px 10px;border:1px solid #e94560;pointer-events:none;';
+            el.textContent = 'TESTING';
+            document.body.appendChild(el);
+        }
+        el.style.display = 'block';
+    } else if (el) {
+        el.style.display = 'none';
+    }
+}
+
+function showTestWarpMenu() {
+    // Build list of all warp targets
+    const locations = Object.keys(MAPS);
+    const overlay = document.createElement('div');
+    overlay.id = 'test-warp-overlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:10000;display:flex;align-items:center;justify-content:center;';
+
+    const box = document.createElement('div');
+    box.style.cssText = 'background:#0f3460;border:3px solid #e94560;padding:20px;max-width:500px;width:90%;max-height:80vh;overflow-y:auto;font-family:"Press Start 2P",monospace;';
+
+    const title = document.createElement('div');
+    title.style.cssText = 'color:#e94560;font-size:12px;margin-bottom:14px;text-align:center;';
+    title.textContent = 'WARP TO (TESTING)';
+    box.appendChild(title);
+
+    locations.forEach(loc => {
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-choice';
+        btn.style.cssText = 'font-size:9px;padding:8px 12px;margin-bottom:4px;width:100%;text-align:left;';
+        btn.textContent = loc + (loc === state.location ? ' (current)' : '');
+        if (loc === state.location) btn.style.borderColor = '#f5c842';
+        btn.addEventListener('click', () => {
+            overlay.remove();
+            state.location = loc;
+            state.playerCol = Math.floor(COLS / 2);
+            state.playerRow = Math.floor(ROWS / 2);
+            discoverArea(loc);
+            showScreen('game');
+            updateHUD();
+        });
+        box.appendChild(btn);
+    });
+
+    // Cancel
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'btn btn-secondary';
+    cancelBtn.style.cssText = 'font-size:9px;margin-top:10px;width:100%;';
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.addEventListener('click', () => overlay.remove());
+    box.appendChild(cancelBtn);
+
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    // Escape to close
+    const closeHandler = (ev) => {
+        if (ev.key === 'Escape') {
+            overlay.remove();
+            document.removeEventListener('keydown', closeHandler);
+        }
+    };
+    document.addEventListener('keydown', closeHandler);
+}
+
+function showTestZordPicker() {
+    const overlay = document.createElement('div');
+    overlay.id = 'test-zord-overlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:10000;display:flex;align-items:center;justify-content:center;';
+
+    const box = document.createElement('div');
+    box.style.cssText = 'background:#0f3460;border:3px solid #e94560;padding:20px;max-width:500px;width:90%;max-height:80vh;overflow-y:auto;font-family:"Press Start 2P",monospace;';
+
+    const title = document.createElement('div');
+    title.style.cssText = 'color:#e94560;font-size:12px;margin-bottom:14px;text-align:center;';
+    title.textContent = 'ADD ZORD (TESTING)';
+    box.appendChild(title);
+
+    ENEMIES.forEach((enemy, i) => {
+        if (enemy.catchRate <= 0) return; // skip uncatchable bosses
+        const el = ELEMENTS[enemy.element];
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-choice';
+        btn.style.cssText = 'font-size:8px;padding:6px 10px;margin-bottom:3px;width:100%;text-align:left;';
+        btn.innerHTML = `${enemy.sprite} ${escapeHtml(enemy.name)} <span style="color:${el.color}">${el.icon}</span> HP:${enemy.hp} ATK:${enemy.attack}`;
+        btn.addEventListener('click', () => {
+            state.zordList.push({
+                nickname: enemy.name,
+                species: enemy.name,
+                sprite: enemy.sprite,
+                maxHp: enemy.hp,
+                currentHp: enemy.hp,
+                attack: enemy.attack,
+                element: enemy.element,
+                power: { ...enemy.power },
+                level: 1, xp: 0,
+                catchLocation: 'testing'
+            });
+            if (state.zordBench.length < 3) {
+                state.zordBench.push(state.zordList.length - 1);
+            }
+            playSound('gem');
+            overlay.remove();
+        });
+        box.appendChild(btn);
+    });
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'btn btn-secondary';
+    cancelBtn.style.cssText = 'font-size:9px;margin-top:10px;width:100%;';
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.addEventListener('click', () => overlay.remove());
+    box.appendChild(cancelBtn);
+
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    const closeHandler = (ev) => {
+        if (ev.key === 'Escape') {
+            overlay.remove();
+            document.removeEventListener('keydown', closeHandler);
+        }
+    };
+    document.addEventListener('keydown', closeHandler);
+}
+
 document.addEventListener('keydown', (e) => {
     keys[e.key.toLowerCase()] = true;
 
@@ -3943,6 +5180,13 @@ document.addEventListener('keydown', (e) => {
         return;
     }
 
+    // Quiz Progress toggle
+    if (e.key.toLowerCase() === 'q' && state.screen === 'game') {
+        toggleQuizProgress();
+        e.preventDefault();
+        return;
+    }
+
     // Help toggle
     if (e.key.toLowerCase() === 'h' && state.screen === 'game') {
         toggleHelp();
@@ -3960,27 +5204,64 @@ document.addEventListener('keydown', (e) => {
         e.preventDefault();
     }
 
-    // Cheat codes: hold 0 then press 1 or 2
-    if (e.key === '1' && keys['0']) {
-        state.rubies += 100;
-        updateHUD();
-        playSound('gem');
+    // Testing mode toggle: hold Escape + press Delete (or Backspace on Mac)
+    if ((e.key === 'Delete' || e.key === 'Backspace') && keys['escape']) {
+        state.testingMode = !state.testingMode;
+        updateTestingIndicator();
         e.preventDefault();
-        return;
-    }
-    if (e.key === '2' && keys['0'] && state.screen === 'quiz') {
-        state.quizIndex = state.quizTotal;
-        renderQuiz(); // triggers startBattle
-        e.preventDefault();
+        e.stopImmediatePropagation();
         return;
     }
 
-    // Close dialogue with Escape
-    if (e.key === 'Escape') {
+    // Testing commands (0 + number) — only when testing mode is on
+    if (state.testingMode && keys['0']) {
+        if (e.key === '1') {
+            state.rubies += 100;
+            updateHUD();
+            playSound('gem');
+            e.preventDefault();
+            return;
+        }
+        if (e.key === '2') {
+            // Escape battle / skip quiz
+            if (state.screen === 'quiz') {
+                state.quizIndex = state.quizTotal;
+                state._spaTraining = false;
+                renderQuiz();
+            } else if (state.screen === 'battle') {
+                if (battle) { battle.running = false; battle = null; }
+                state.hp = Math.max(state.hp, 1);
+                updateHUD();
+                showScreen('game');
+            } else if (state.screen === 'zordbattle') {
+                if (zordBattle) zordBattle = null;
+                if (battle) { battle.running = false; battle = null; }
+                state.hp = Math.max(state.hp, 1);
+                updateHUD();
+                showScreen('game');
+            }
+            e.preventDefault();
+            return;
+        }
+        if (e.key === '3') {
+            showTestWarpMenu();
+            e.preventDefault();
+            return;
+        }
+        if (e.key === '4') {
+            showTestZordPicker();
+            e.preventDefault();
+            return;
+        }
+    }
+
+    // Close dialogue with Escape (but not if Delete/Backspace is also held for testing toggle)
+    if (e.key === 'Escape' && !keys['delete'] && !keys['backspace']) {
         if (helpOpen) toggleHelp();
         if (worldMapOpen) toggleWorldMap();
         if (state.inventoryOpen) toggleInventory();
         if (zordListOpen) toggleZordList();
+        if (quizProgressOpen) toggleQuizProgress();
         if (state.dialogueOpen) hideDialogue();
     }
 });
@@ -4064,6 +5345,13 @@ function getInteractable() {
     // Water (fishing)?
     if (tile === T.WATER && (state.inventory.fishpole || 0) > 0) return { type: 'fish' };
 
+    // Zord Arena building interactions
+    if (state.location === 'zordarena' && tile === T.TEMPLE_W) {
+        if (col <= 7 && row <= 5) return { type: 'arena_battle' };
+        if (col >= 16 && row <= 5) return { type: 'arena_hospital' };
+        if (col <= 7 && row >= 8) return { type: 'arena_spa' };
+    }
+
     return null;
 }
 
@@ -4081,6 +5369,9 @@ function updateInteractPrompt() {
             case 'sign': text.textContent = '[E/Space] Read Sign'; break;
             case 'door': text.textContent = '[E/Space] Enter'; break;
             case 'fish': text.textContent = '[E/Space] Fish here'; break;
+            case 'arena_battle': text.textContent = '[E/Space] Enter Arena'; break;
+            case 'arena_hospital': text.textContent = '[E/Space] Zord Hospital'; break;
+            case 'arena_spa': text.textContent = '[E/Space] Zord Spa'; break;
         }
     } else {
         prompt.style.display = 'none';
@@ -4097,6 +5388,9 @@ function tryInteract() {
         case 'build': openBuild(); break;
         case 'sign': readSign(interactable.row, interactable.col); break;
         case 'fish': startFishing(); break;
+        case 'arena_battle': openArenaBattle(); break;
+        case 'arena_hospital': openZordHospital(); break;
+        case 'arena_spa': openZordSpa(); break;
         case 'door': {
             const trans = TRANSITIONS[state.location];
             const { row, col } = getFacingTile();
@@ -4114,7 +5408,8 @@ function readSign(row, col) {
         if (col < COLS / 2) text = SIGN_TEXTS.forest_left;
         else text = SIGN_TEXTS.forest_right;
     } else if (state.location === 'town') {
-        if (row < 3) text = SIGN_TEXTS.town_north;
+        if (row === 10 && col === 19) text = SIGN_TEXTS.town_arena;
+        else if (row < 3) text = SIGN_TEXTS.town_north;
         else if (row > ROWS - 4) text = SIGN_TEXTS.town_south;
         else if (col < COLS / 2) text = SIGN_TEXTS.town_left;
         else text = SIGN_TEXTS.town_right;
@@ -4128,6 +5423,12 @@ function readSign(row, col) {
     } else if (state.location === 'beach') {
         if (col > 15 && row < 8) text = SIGN_TEXTS.beach_dock;
         else text = SIGN_TEXTS.beach_south;
+    } else if (state.location === 'zordarena') {
+        if (row >= ROWS - 4) text = SIGN_TEXTS.arena_exit;
+        else if (col < 10 && row < 7) text = SIGN_TEXTS.arena_battle;
+        else if (col < 10 && row >= 7) text = SIGN_TEXTS.arena_spa;
+        else if (col > 15) text = SIGN_TEXTS.arena_hospital;
+        else text = SIGN_TEXTS.arena_exit;
     } else if (state.location.startsWith('temple_')) {
         const floorNum = parseInt(state.location.split('_')[1]);
         text = TEMPLE_FLOORS[floorNum - 1].name;
@@ -4194,6 +5495,7 @@ function doTransition(t) {
     if (t.target.startsWith('temple_')) trackTempleFloor(parseInt(t.target.split('_')[1]));
     updateHUD();
     updateInteractPrompt();
+    autoSave();
 }
 
 // ============================================================
@@ -4222,6 +5524,21 @@ function checkEnemyZone() {
     }
 }
 
+// Advanced lesson assignment for peak/temple enemies
+function getEnemyLessonId(enemyIndex, defaultLessonId) {
+    const unlocked = getUnlockedLessonIds();
+    // Peak enemies (42-49) get advanced lessons if available
+    const advancedMap = {
+        42: 'predicate-logic', 43: 'predicate-logic',
+        44: 'logical-proofs', 45: 'logical-proofs',
+        46: 'set-theory', 47: 'set-theory',
+        48: 'boolean-algebra', 49: 'boolean-algebra'
+    };
+    const advanced = advancedMap[enemyIndex];
+    if (advanced && unlocked.includes(advanced)) return advanced;
+    return defaultLessonId;
+}
+
 function encounterEnemy(enemyIndex) {
     const enemy = ENEMIES[enemyIndex];
     state.currentEnemy = { ...enemy, currentHp: enemy.hp };
@@ -4236,14 +5553,14 @@ function encounterEnemy(enemyIndex) {
         state.quizTotal = 0;
         startBattle();
     } else {
-        const lesson = LOGIC_LESSONS.find(l => l.id === enemy.lessonId);
-        // Pick 4-5 random questions from the pool
-        const numQ = Math.min(lesson.questions.length, 3 + Math.floor(Math.random() * 3));
-        const shuffled = [...lesson.questions].sort(() => Math.random() - 0.5);
-        state.currentLesson = { ...lesson, questions: shuffled.slice(0, numQ) };
+        const lessonId = getEnemyLessonId(enemyIndex, enemy.lessonId);
+        const lesson = LOGIC_LESSONS.find(l => l.id === lessonId);
+        const masteryLevel = getMasteryLevel(lessonId);
+        const questionSet = buildQuizQuestionSet(lesson, masteryLevel);
+        state.currentLesson = { ...lesson, questionSet };
         state.quizIndex = 0;
         state.quizCorrect = 0;
-        state.quizTotal = numQ;
+        state.quizTotal = questionSet.length;
         showScreen('quiz');
         renderQuiz();
     }
@@ -4530,6 +5847,441 @@ document.getElementById('btn-leave-build').addEventListener('click', () => {
 });
 
 // ============================================================
+// ZORD ARENA SYSTEM (Arena, Hospital, Spa)
+// ============================================================
+document.getElementById('btn-leave-zordarena').addEventListener('click', () => {
+    showScreen('game');
+    updateHUD();
+});
+
+function openArenaBattle() {
+    state.paused = true;
+    showScreen('zordarena');
+    document.getElementById('zordarena-title').textContent = 'The Arena';
+    const content = document.getElementById('zordarena-content');
+    content.innerHTML = '';
+
+    if (state.zordList.length === 0) {
+        content.innerHTML = '<div style="font-size:9px;color:var(--text-dim);padding:16px;text-align:center;line-height:2.2;">You need at least 1 Zord to battle in the Arena!<br>Catch Zords in the wild using ZordCages.</div>';
+        return;
+    }
+
+    const benchInfo = document.createElement('div');
+    benchInfo.style.cssText = 'font-size:8px;color:var(--text-dim);margin-bottom:12px;';
+    benchInfo.textContent = `Your bench: ${state.zordBench.length} Zord(s) ready`;
+    content.appendChild(benchInfo);
+
+    ARENA_TRAINERS.forEach((trainer, ti) => {
+        const div = document.createElement('div');
+        div.className = 'arena-trainer';
+        const defeated = (state.defeatedArenaTrainers || []).includes(trainer.name);
+        const hasEnoughZords = state.zordBench.filter(i => state.zordList[i] && state.zordList[i].currentHp > 0).length >= trainer.minZords;
+
+        div.innerHTML = `<div class="arena-trainer-info">
+            <span class="arena-trainer-name">${trainer.sprite} ${escapeHtml(trainer.name)} ${defeated ? '<span style="color:var(--success)">[DEFEATED]</span>' : ''}</span>
+            <span class="arena-trainer-desc">Zords: ${trainer.zords.length} | Reward: ${trainer.reward} rubies | Need ${trainer.minZords}+ bench Zords</span>
+        </div>`;
+
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-primary';
+        btn.textContent = defeated ? 'Rematch' : 'Challenge';
+        btn.disabled = !hasEnoughZords;
+        btn.style.opacity = hasEnoughZords ? '1' : '0.4';
+        btn.addEventListener('click', () => startArenaMatch(ti));
+        div.appendChild(btn);
+        content.appendChild(div);
+    });
+}
+
+function startArenaMatch(trainerIndex) {
+    const trainer = ARENA_TRAINERS[trainerIndex];
+    // Create fresh copies of trainer's Zords
+    const trainerZords = trainer.zords.map(z => ({
+        ...z,
+        currentHp: z.maxHp,
+        power: { ...z.power },
+        xp: 0
+    }));
+
+    // Set up a NPC Zord battle (reuse the zordbattle screen)
+    state._arenaTrainer = trainer;
+    state._arenaTrainerIdx = trainerIndex;
+    state._arenaEnemyZords = trainerZords;
+    state._arenaEnemyIdx = 0;
+
+    // Quiz first, then battle
+    state._arenaPostQuiz = true;
+    const unlocked = getUnlockedLessonIds();
+    const lessonId = unlocked[Math.floor(Math.random() * unlocked.length)];
+    const lesson = LOGIC_LESSONS.find(l => l.id === lessonId);
+    const masteryLevel = getMasteryLevel(lessonId);
+    const questionSet = buildQuizQuestionSet(lesson, masteryLevel);
+    state.currentLesson = { ...lesson, questionSet };
+    state.quizIndex = 0;
+    state.quizCorrect = 0;
+    state.quizTotal = questionSet.length;
+    showScreen('quiz');
+    renderQuiz();
+}
+
+function continueArenaAfterQuiz() {
+    state._arenaPostQuiz = false;
+    const trainer = state._arenaTrainer;
+    const trainerZords = state._arenaEnemyZords;
+
+    // Show trainer dialogue then Zord picker
+    showScreen('zordbattle');
+    const logEl = document.getElementById('zb-log');
+    logEl.innerHTML = `<div class="zb-log-line">${trainer.sprite} ${escapeHtml(trainer.name)}: "${escapeHtml(trainer.dialogue)}"</div>`;
+    const pCanvasArena = document.getElementById('zb-player-sprite');
+    if (pCanvasArena) { const pc = pCanvasArena.getContext('2d'); pc.clearRect(0, 0, pCanvasArena.width, pCanvasArena.height); }
+    document.getElementById('zb-player-name-tag').textContent = 'Choose...';
+    document.getElementById('zb-player-level-tag').textContent = '';
+    document.getElementById('zb-player-hp-bar').style.width = '0%';
+    document.getElementById('zb-player-hp-text').textContent = '';
+
+    // Show enemy first Zord
+    const ez = trainerZords[0];
+    const eEl = ELEMENTS[ez.element];
+    // Draw enemy sprite on canvas
+    const eCanvasA = document.getElementById('zb-enemy-sprite');
+    if (eCanvasA) {
+        const ec = eCanvasA.getContext('2d');
+        ec.clearRect(0, 0, eCanvasA.width, eCanvasA.height);
+        ec.save(); ec.translate(eCanvasA.width, 0); ec.scale(-2, 2);
+        drawBattleEnemy(ec, 60, 65, { name: ez.species || ez.nickname, element: ez.element }, 0);
+        ec.restore();
+    }
+    document.getElementById('zb-enemy-name-tag').textContent = ez.nickname;
+    document.getElementById('zb-enemy-level-tag').textContent = `:L${ez.level}`;
+    document.getElementById('zb-enemy-hp-bar').style.width = '100%';
+    document.getElementById('zb-enemy-hp-bar').className = 'zb-hp-fill';
+    document.getElementById('zb-enemy-hp-text').textContent = `${ez.currentHp}/${ez.maxHp}`;
+
+    // Let player pick a Zord
+    const actionsEl = document.getElementById('zb-actions');
+    actionsEl.innerHTML = '';
+
+    state.zordBench.forEach(idx => {
+        const z = state.zordList[idx];
+        if (!z || z.currentHp <= 0) return;
+        const el = ELEMENTS[z.element];
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-choice';
+        btn.innerHTML = `${escapeHtml(z.nickname)} Lv.${z.level} <span style="color:${el.color}">${el.icon}${el.name}</span> HP:${z.currentHp}/${z.maxHp}`;
+        btn.addEventListener('click', () => startArenaZordBattle(idx));
+        actionsEl.appendChild(btn);
+    });
+
+    const backBtn = document.createElement('button');
+    backBtn.className = 'btn btn-secondary';
+    backBtn.textContent = 'Cancel';
+    backBtn.addEventListener('click', () => openArenaBattle());
+    actionsEl.appendChild(backBtn);
+}
+
+function startArenaZordBattle(playerZordIdx) {
+    const playerZord = state.zordList[playerZordIdx];
+    const enemyZords = state._arenaEnemyZords;
+    const ez = enemyZords[state._arenaEnemyIdx];
+
+    zordBattle = {
+        playerZord: playerZord,
+        playerZordIdx: playerZordIdx,
+        enemyZord: ez,
+        turn: 'player',
+        log: [`${escapeHtml(playerZord.nickname)} vs ${escapeHtml(ez.nickname)}!`],
+        over: false,
+        isArena: true,
+        _frame: 0
+    };
+
+    // Clear action battle reference
+    battle = null;
+    state.currentEnemy = { name: ez.nickname, hp: ez.maxHp, rubies: 0, element: ez.element };
+
+    startZordBattleAnimation();
+    renderZordBattle();
+}
+
+// Override zordBattleEnd to handle arena multi-Zord matches
+const _origZordBattleEnd = typeof zordBattleEnd === 'function' ? zordBattleEnd : null;
+
+function arenaZordBattleEnd(victory) {
+    if (!zordBattle || !zordBattle.isArena) return;
+    const trainer = state._arenaTrainer;
+    const enemyZords = state._arenaEnemyZords;
+
+    renderZordBattle();
+    const actionsEl = document.getElementById('zb-actions');
+    actionsEl.innerHTML = '';
+
+    if (victory) {
+        state._arenaEnemyIdx++;
+        if (state._arenaEnemyIdx < enemyZords.length) {
+            // Next enemy Zord
+            const nextEz = enemyZords[state._arenaEnemyIdx];
+            zordBattle.log.push(`${trainer.sprite} ${escapeHtml(trainer.name)} sends out ${escapeHtml(nextEz.nickname)}!`);
+
+            const continueBtn = document.createElement('button');
+            continueBtn.className = 'btn btn-primary';
+            continueBtn.textContent = 'Continue Battle';
+            continueBtn.addEventListener('click', () => {
+                zordBattle.enemyZord = nextEz;
+                zordBattle.turn = 'player';
+                zordBattle.over = false;
+                zordBattle.log.push(`${escapeHtml(zordBattle.playerZord.nickname)} vs ${escapeHtml(nextEz.nickname)}!`);
+                renderZordBattle();
+            });
+            actionsEl.appendChild(continueBtn);
+
+            // Allow switching Zord
+            const aliveZords = state.zordBench.filter(i => state.zordList[i].currentHp > 0);
+            if (aliveZords.length > 1) {
+                const switchBtn = document.createElement('button');
+                switchBtn.className = 'btn btn-secondary';
+                switchBtn.textContent = 'Switch Zord';
+                switchBtn.addEventListener('click', () => {
+                    actionsEl.innerHTML = '';
+                    aliveZords.forEach(idx => {
+                        const z = state.zordList[idx];
+                        const el = ELEMENTS[z.element];
+                        const btn = document.createElement('button');
+                        btn.className = 'btn btn-choice';
+                        btn.innerHTML = `${z.sprite} ${escapeHtml(z.nickname)} Lv.${z.level} HP:${z.currentHp}/${z.maxHp}`;
+                        btn.addEventListener('click', () => startArenaZordBattle(idx));
+                        actionsEl.appendChild(btn);
+                    });
+                });
+                actionsEl.appendChild(switchBtn);
+            }
+            renderZordBattle();
+            return;
+        }
+
+        // All enemy Zords defeated — player wins!
+        if (!state.defeatedArenaTrainers) state.defeatedArenaTrainers = [];
+        if (!state.defeatedArenaTrainers.includes(trainer.name)) state.defeatedArenaTrainers.push(trainer.name);
+        state.rubies += trainer.reward;
+        trackRubiesEarned(trainer.reward);
+
+        // Grant XP to bench Zords
+        const xpGain = 10 + trainer.zords.length * 5;
+        grantBenchXp(xpGain);
+
+        zordBattle.log.push(`You defeated ${escapeHtml(trainer.name)}! +${trainer.reward} rubies! +${xpGain} XP!`);
+        renderZordBattle();
+        playSound('victory');
+        autoSave();
+
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-primary';
+        btn.textContent = 'Return to Arena';
+        btn.addEventListener('click', () => {
+            zordBattle = null;
+            state._arenaTrainer = null;
+            updateHUD();
+            openArenaBattle();
+        });
+        actionsEl.appendChild(btn);
+    } else {
+        // Player lost
+        zordBattle.log.push(`${escapeHtml(trainer.name)} wins... Better luck next time!`);
+        renderZordBattle();
+        playSound('defeat');
+
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-secondary';
+        btn.textContent = 'Return to Arena';
+        btn.addEventListener('click', () => {
+            zordBattle = null;
+            state._arenaTrainer = null;
+            updateHUD();
+            openArenaBattle();
+        });
+        actionsEl.appendChild(btn);
+    }
+}
+
+// ============================================================
+// ZORD HOSPITAL
+// ============================================================
+function openZordHospital() {
+    state.paused = true;
+    showScreen('zordarena');
+    document.getElementById('zordarena-title').textContent = 'Zord Hospital';
+    const content = document.getElementById('zordarena-content');
+    content.innerHTML = '';
+
+    if (state.zordList.length === 0) {
+        content.innerHTML = '<div style="font-size:9px;color:var(--text-dim);padding:16px;text-align:center;line-height:2.2;">You have no Zords yet!<br>Catch Zords in the wild using ZordCages.</div>';
+        return;
+    }
+
+    // Heal all button
+    const healAllBtn = document.createElement('button');
+    healAllBtn.className = 'btn btn-primary';
+    healAllBtn.style.marginBottom = '12px';
+    const injured = state.zordList.filter(z => z.currentHp < z.maxHp).length;
+    healAllBtn.textContent = `Heal All Zords (${injured} injured) - FREE`;
+    healAllBtn.disabled = injured === 0;
+    healAllBtn.style.opacity = injured > 0 ? '1' : '0.4';
+    healAllBtn.addEventListener('click', () => {
+        state.zordList.forEach(z => { z.currentHp = z.maxHp; });
+        playSound('gem');
+        openZordHospital(); // refresh
+    });
+    content.appendChild(healAllBtn);
+
+    // Show each Zord
+    const title = document.createElement('div');
+    title.className = 'arena-section-title';
+    title.textContent = 'Your Zords';
+    content.appendChild(title);
+
+    state.zordList.forEach((z, i) => {
+        const el = ELEMENTS[z.element];
+        const hpPct = Math.round(z.currentHp / z.maxHp * 100);
+        const isHurt = z.currentHp < z.maxHp;
+        const div = document.createElement('div');
+        div.className = 'arena-zord-card';
+        div.innerHTML = `<div>
+            ${z.sprite} <strong style="color:var(--gold)">${escapeHtml(z.nickname)}</strong>
+            <span style="font-size:8px;color:var(--text-dim)">Lv.${z.level} ${escapeHtml(z.species)}</span>
+            <span style="font-size:8px;color:${el.color}">${el.icon}</span>
+        </div>
+        <div>
+            <span style="font-size:8px;color:${isHurt ? 'var(--accent)' : 'var(--success)'}">HP: ${z.currentHp}/${z.maxHp}</span>
+            <span class="zord-hp-bar"><span class="zord-hp-fill ${hpPct < 30 ? 'low' : ''}" style="width:${hpPct}%"></span></span>
+        </div>`;
+
+        if (isHurt) {
+            const healBtn = document.createElement('button');
+            healBtn.className = 'btn btn-primary';
+            healBtn.style.cssText = 'font-size:7px;padding:5px 10px;';
+            healBtn.textContent = 'Heal';
+            healBtn.addEventListener('click', () => {
+                z.currentHp = z.maxHp;
+                playSound('gem');
+                openZordHospital();
+            });
+            div.appendChild(healBtn);
+        }
+        content.appendChild(div);
+    });
+}
+
+// ============================================================
+// ZORD SPA (Quiz to level up + view all Zords)
+// ============================================================
+function openZordSpa() {
+    state.paused = true;
+    showScreen('zordarena');
+    document.getElementById('zordarena-title').textContent = 'Zord Spa';
+    const content = document.getElementById('zordarena-content');
+    content.innerHTML = '';
+
+    if (state.zordList.length === 0) {
+        content.innerHTML = '<div style="font-size:9px;color:var(--text-dim);padding:16px;text-align:center;line-height:2.2;">You have no Zords yet!<br>Catch Zords in the wild using ZordCages.</div>';
+        return;
+    }
+
+    // Train section
+    const trainTitle = document.createElement('div');
+    trainTitle.className = 'arena-section-title';
+    trainTitle.textContent = 'Train Your Zords (Answer Questions for XP!)';
+    content.appendChild(trainTitle);
+
+    const trainDesc = document.createElement('div');
+    trainDesc.style.cssText = 'font-size:8px;color:var(--text-dim);margin-bottom:10px;line-height:2;';
+    trainDesc.textContent = 'Answer 5 quiz questions correctly to earn XP for all bench Zords. Costs 5 rubies per session.';
+    content.appendChild(trainDesc);
+
+    const benchCount = state.zordBench.filter(i => state.zordList[i] && state.zordList[i].currentHp > 0).length;
+    const trainBtn = document.createElement('button');
+    trainBtn.className = 'btn btn-primary';
+    trainBtn.textContent = `Start Training (5 rubies, ${benchCount} bench Zords)`;
+    trainBtn.disabled = state.rubies < 5 || benchCount === 0;
+    trainBtn.style.opacity = (state.rubies >= 5 && benchCount > 0) ? '1' : '0.4';
+    trainBtn.addEventListener('click', () => {
+        state.rubies -= 5;
+        updateHUD();
+        startSpaTraining();
+    });
+    content.appendChild(trainBtn);
+
+    // View all Zords section
+    const viewTitle = document.createElement('div');
+    viewTitle.className = 'arena-section-title';
+    viewTitle.style.marginTop = '16px';
+    viewTitle.textContent = `All Zords (${state.zordList.length})`;
+    content.appendChild(viewTitle);
+
+    state.zordList.forEach((z, i) => {
+        const el = ELEMENTS[z.element];
+        const hpPct = Math.round(z.currentHp / z.maxHp * 100);
+        const onBench = state.zordBench.includes(i);
+        const div = document.createElement('div');
+        div.className = 'arena-zord-card';
+        div.innerHTML = `<div style="flex:1;">
+            ${z.sprite} <strong style="color:var(--gold)">${escapeHtml(z.nickname)}</strong>
+            <span style="font-size:8px;color:var(--text-dim)">Lv.${z.level} ${escapeHtml(z.species)}</span>
+            <span style="font-size:8px;color:${el.color}">${el.icon}${el.name}</span>
+            <span style="font-size:7px;color:var(--text-dim)">ATK:${z.attack} | XP:${z.xp}/${getZordXpNeeded(z)}</span>
+            ${onBench ? '<span style="font-size:7px;color:var(--success);margin-left:6px;">[BENCH]</span>' : ''}
+        </div>
+        <div>
+            <span style="font-size:8px;">HP:${z.currentHp}/${z.maxHp}</span>
+            <span class="zord-hp-bar"><span class="zord-hp-fill ${hpPct < 30 ? 'low' : ''}" style="width:${hpPct}%"></span></span>
+        </div>`;
+
+        // Bench toggle
+        const benchBtn = document.createElement('button');
+        benchBtn.className = 'btn btn-secondary';
+        benchBtn.style.cssText = 'font-size:7px;padding:5px 10px;margin-left:6px;';
+        if (onBench) {
+            benchBtn.textContent = 'Remove';
+            benchBtn.addEventListener('click', () => {
+                state.zordBench = state.zordBench.filter(idx => idx !== i);
+                openZordSpa();
+            });
+        } else {
+            benchBtn.textContent = state.zordBench.length < 3 ? 'Add to Bench' : 'Bench Full';
+            benchBtn.disabled = state.zordBench.length >= 3;
+            benchBtn.style.opacity = state.zordBench.length < 3 ? '1' : '0.4';
+            benchBtn.addEventListener('click', () => {
+                if (state.zordBench.length < 3) {
+                    state.zordBench.push(i);
+                    openZordSpa();
+                }
+            });
+        }
+        div.appendChild(benchBtn);
+        content.appendChild(div);
+    });
+}
+
+function startSpaTraining() {
+    // Pick a random lesson
+    const unlocked = getUnlockedLessonIds();
+    const lessonId = unlocked[Math.floor(Math.random() * unlocked.length)];
+    const lesson = LOGIC_LESSONS.find(l => l.id === lessonId);
+
+    // Pick 5 random questions
+    const shuffled = [...lesson.questions].sort(() => Math.random() - 0.5);
+    const questions = shuffled.slice(0, 5);
+
+    state.currentLesson = { ...lesson, questionSet: questions.map(q => ({ type: 'mc', data: q })) };
+    state.quizIndex = 0;
+    state.quizCorrect = 0;
+    state.quizTotal = 5;
+    state._spaTraining = true;
+
+    showScreen('quiz');
+    renderQuiz();
+}
+
+// ============================================================
 // QUIZ SYSTEM
 // ============================================================
 function updateQuizScrollArrow() {
@@ -4544,13 +6296,44 @@ function updateQuizScrollArrow() {
 function renderQuiz() {
     const lesson = state.currentLesson;
     const qi = state.quizIndex;
+    const questionSet = lesson.questionSet || lesson.questions.map(q => ({ type: 'mc', data: q }));
 
-    if (qi >= lesson.questions.length) {
+    if (qi >= questionSet.length) {
+        resetInteractiveDisplay();
+        // Check if this was an arena pre-battle quiz
+        if (state._arenaPostQuiz) {
+            continueArenaAfterQuiz();
+            return;
+        }
+        // Check if this was spa training
+        if (state._spaTraining) {
+            state._spaTraining = false;
+            const xpGain = 5 + state.quizCorrect * 5;
+            grantBenchXp(xpGain);
+            autoSave();
+            showScreen('zordarena');
+            document.getElementById('zordarena-title').textContent = 'Zord Spa - Training Complete!';
+            const content = document.getElementById('zordarena-content');
+            content.innerHTML = `<div class="spa-quiz-prompt">
+                <span style="color:var(--gold)">Training Complete!</span><br><br>
+                Score: ${state.quizCorrect}/${state.quizTotal} correct<br>
+                Bench Zords earned <span style="color:var(--success)">+${xpGain} XP</span>!
+            </div>`;
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-primary';
+            btn.textContent = 'Back to Spa';
+            btn.style.marginTop = '10px';
+            btn.addEventListener('click', () => openZordSpa());
+            content.appendChild(btn);
+            playSound('victory');
+            return;
+        }
         startBattle();
         return;
     }
 
-    const question = lesson.questions[qi];
+    const entry = questionSet[qi];
+
     if (qi === 0) {
         const lessonEl = document.getElementById('quiz-lesson');
         lessonEl.innerHTML = `<h3>${lesson.title}</h3><p>${lesson.content.replace(/\n/g, '<br>')}</p>`;
@@ -4559,29 +6342,60 @@ function renderQuiz() {
         lessonEl.onscroll = updateQuizScrollArrow;
     }
 
-    document.getElementById('quiz-question').textContent = `Q${qi + 1}: ${question.q}`;
     document.getElementById('quiz-feedback').textContent = '';
     document.getElementById('quiz-feedback').className = 'quiz-feedback';
-    document.getElementById('quiz-progress').textContent = `Question ${qi + 1} of ${lesson.questions.length} | Correct: ${state.quizCorrect}`;
+    document.getElementById('quiz-progress').textContent = `Question ${qi + 1} of ${questionSet.length} | Correct: ${state.quizCorrect}`;
 
-    const choicesEl = document.getElementById('quiz-choices');
-    choicesEl.innerHTML = '';
+    // Reset interactive display
+    resetInteractiveDisplay();
 
-    // Shuffle choices while tracking the correct answer
-    const indexed = question.choices.map((text, i) => ({ text, isCorrect: i === question.answer }));
-    for (let i = indexed.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [indexed[i], indexed[j]] = [indexed[j], indexed[i]];
+    if (entry.type === 'interactive') {
+        // Render interactive question
+        document.getElementById('quiz-question').textContent = `Q${qi + 1}: Interactive Challenge`;
+        const rendered = renderInteractiveQuestion(entry.lessonId, entry.level, (correct) => {
+            if (correct) {
+                state.quizCorrect++;
+                document.getElementById('quiz-feedback').textContent = 'Correct!';
+                document.getElementById('quiz-feedback').className = 'quiz-feedback correct';
+            } else {
+                document.getElementById('quiz-feedback').textContent = 'Not quite right.';
+                document.getElementById('quiz-feedback').className = 'quiz-feedback incorrect';
+            }
+            document.getElementById('quiz-progress').textContent = `Question ${qi + 1} of ${questionSet.length} | Correct: ${state.quizCorrect}`;
+            tryRespawnGems();
+            setTimeout(() => { state.quizIndex++; renderQuiz(); }, 1500);
+        });
+        if (!rendered) {
+            // Fallback to MC if no interactive questions available
+            entry.type = 'mc';
+            entry.data = lesson.questions[Math.floor(Math.random() * lesson.questions.length)];
+            renderQuiz(); // re-render as MC
+            return;
+        }
+    } else {
+        // Standard MC question
+        const question = entry.data;
+        document.getElementById('quiz-question').textContent = `Q${qi + 1}: ${question.q}`;
+
+        const choicesEl = document.getElementById('quiz-choices');
+        choicesEl.innerHTML = '';
+
+        // Shuffle choices while tracking the correct answer
+        const indexed = question.choices.map((text, i) => ({ text, isCorrect: i === question.answer }));
+        for (let i = indexed.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [indexed[i], indexed[j]] = [indexed[j], indexed[i]];
+        }
+        const correctShuffled = indexed.findIndex(c => c.isCorrect);
+
+        indexed.forEach((choice, i) => {
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-choice';
+            btn.textContent = choice.text;
+            btn.addEventListener('click', () => answerQuiz(i, correctShuffled, btn));
+            choicesEl.appendChild(btn);
+        });
     }
-    const correctShuffled = indexed.findIndex(c => c.isCorrect);
-
-    indexed.forEach((choice, i) => {
-        const btn = document.createElement('button');
-        btn.className = 'btn btn-choice';
-        btn.textContent = choice.text;
-        btn.addEventListener('click', () => answerQuiz(i, correctShuffled, btn));
-        choicesEl.appendChild(btn);
-    });
 }
 
 function answerQuiz(selected, correct, btnEl) {
@@ -4589,8 +6403,13 @@ function answerQuiz(selected, correct, btnEl) {
     buttons.forEach(b => b.style.pointerEvents = 'none');
     buttons[correct].classList.add('correct');
 
-    trackQuizAnswer(selected === correct);
-    if (selected === correct) {
+    const isCorrect = selected === correct;
+    trackQuizAnswer(isCorrect);
+    // Update mastery tracking for this lesson
+    if (state.currentLesson && state.currentLesson.id) {
+        updateMasteryAfterAnswer(state.currentLesson.id, isCorrect);
+    }
+    if (isCorrect) {
         state.quizCorrect++;
         document.getElementById('quiz-feedback').textContent = 'Correct!';
         document.getElementById('quiz-feedback').className = 'quiz-feedback correct';
@@ -4605,6 +6424,1053 @@ function answerQuiz(selected, correct, btnEl) {
     tryRespawnGems();
 
     setTimeout(() => { state.quizIndex++; renderQuiz(); }, 1500);
+}
+
+// ============================================================
+// CATCH QUIZ (quiz question before Zord catch confirms)
+// ============================================================
+function showCatchQuiz(enemy, b) {
+    // Pick a random question from the enemy's lesson
+    const lesson = LOGIC_LESSONS.find(l => l.id === enemy.lessonId);
+    if (!lesson || !lesson.questions.length) {
+        // No questions available — just catch directly
+        completeCatch(enemy, b);
+        return;
+    }
+    const question = lesson.questions[Math.floor(Math.random() * lesson.questions.length)];
+
+    // Show quiz overlay using the existing quiz screen elements
+    // But we need to overlay it on the battle — use a simple HTML overlay approach
+    const overlay = document.createElement('div');
+    overlay.id = 'catch-quiz-overlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:100;display:flex;align-items:center;justify-content:center;';
+
+    const box = document.createElement('div');
+    box.style.cssText = 'background:var(--panel-bg);border:3px solid var(--gold);padding:24px;max-width:550px;width:90%;font-family:"Press Start 2P",monospace;';
+
+    const header = document.createElement('div');
+    header.style.cssText = 'color:var(--gold);font-size:10px;margin-bottom:12px;text-align:center;';
+    header.textContent = `${enemy.sprite} Answer correctly to catch ${enemy.name}!`;
+    box.appendChild(header);
+
+    const qText = document.createElement('div');
+    qText.style.cssText = 'font-size:10px;color:var(--text);line-height:2;margin-bottom:16px;';
+    qText.textContent = question.q;
+    box.appendChild(qText);
+
+    // Shuffle choices
+    const indexed = question.choices.map((text, i) => ({ text, isCorrect: i === question.answer }));
+    for (let i = indexed.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [indexed[i], indexed[j]] = [indexed[j], indexed[i]];
+    }
+    const correctIdx = indexed.findIndex(c => c.isCorrect);
+
+    const choicesDiv = document.createElement('div');
+    choicesDiv.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
+
+    indexed.forEach((choice, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-choice';
+        btn.textContent = choice.text;
+        btn.addEventListener('click', () => {
+            // Disable all buttons
+            choicesDiv.querySelectorAll('.btn-choice').forEach(b2 => b2.style.pointerEvents = 'none');
+            choicesDiv.children[correctIdx].classList.add('correct');
+
+            if (i === correctIdx) {
+                // Correct! Catch succeeds
+                btn.classList.add('correct');
+                trackQuizAnswer(true);
+                if (enemy.lessonId) updateMasteryAfterAnswer(enemy.lessonId, true);
+                const fb = document.createElement('div');
+                fb.style.cssText = 'color:var(--success);font-size:10px;margin-top:12px;text-align:center;';
+                fb.textContent = 'Correct! Catch successful!';
+                box.appendChild(fb);
+                playSound('victory');
+                setTimeout(() => {
+                    overlay.remove();
+                    completeCatch(enemy, b);
+                }, 1200);
+            } else {
+                // Wrong! Catch fails, enemy breaks free
+                btn.classList.add('incorrect');
+                trackQuizAnswer(false);
+                if (enemy.lessonId) updateMasteryAfterAnswer(enemy.lessonId, false);
+                const fb = document.createElement('div');
+                fb.style.cssText = 'color:var(--accent);font-size:10px;margin-top:12px;text-align:center;';
+                fb.textContent = `Wrong! ${enemy.name} broke free!`;
+                box.appendChild(fb);
+                playSound('hurt');
+                setTimeout(() => {
+                    overlay.remove();
+                    // Resume battle — enemy breaks free
+                    b.over = false;
+                    b.cageThrown = false;
+                    b.pendingCatch = null;
+                    b.damageNums.push({ x: b.ex, y: b.ey - 40, text: 'BROKE FREE!', color: '#e94560', life: 50 });
+                }, 1500);
+            }
+        });
+        choicesDiv.appendChild(btn);
+    });
+
+    box.appendChild(choicesDiv);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+}
+
+function completeCatch(enemy, b) {
+    playSound('victory');
+
+    // Show naming overlay
+    document.getElementById('zordname-sprite').textContent = enemy.sprite;
+    document.getElementById('zordname-species').textContent = enemy.name;
+    const nameInput = document.getElementById('zordname-input');
+    nameInput.value = enemy.name;
+    document.getElementById('zordname-overlay').style.display = 'flex';
+    setTimeout(() => { nameInput.focus(); nameInput.select(); }, 100);
+
+    // Handle confirm
+    const confirmBtn = document.getElementById('zordname-confirm');
+    const onConfirm = () => {
+        confirmBtn.removeEventListener('click', onConfirm);
+        nameInput.removeEventListener('keydown', onEnter);
+        const nickname = (nameInput.value.trim() || enemy.name).slice(0, 16);
+        document.getElementById('zordname-overlay').style.display = 'none';
+
+        state.zordList.push({
+            nickname,
+            species: b.pendingCatch.species,
+            sprite: b.pendingCatch.sprite,
+            maxHp: b.pendingCatch.maxHp,
+            currentHp: b.pendingCatch.maxHp,
+            attack: b.pendingCatch.attack,
+            element: b.pendingCatch.element,
+            power: { ...b.pendingCatch.power },
+            level: 1, xp: 0,
+            catchLocation: state.location
+        });
+        trackZordCaught();
+        state.hp = battle.playerHp;
+        state.rubies += b.pendingCatch.rubies;
+        if (!state.defeatedEnemies.includes(enemy.name)) state.defeatedEnemies.push(enemy.name);
+        autoSave();
+
+        const resultEl = document.getElementById('battle-result');
+        const textEl = document.getElementById('battle-result-text');
+        resultEl.style.display = 'flex';
+        textEl.innerHTML = `${escapeHtml(b.pendingCatch.species)} caught!<br><br>Named: <span style="color:var(--gold)">${escapeHtml(nickname)}</span><br>+${b.pendingCatch.rubies} rubies`;
+        document.getElementById('battle-result-btn').textContent = 'Continue';
+        document.getElementById('battle-result-btn').onclick = () => {
+            battle.running = false; battle = null;
+            updateHUD(); showScreen('game');
+        };
+    };
+    const onEnter = (e) => { if (e.key === 'Enter') onConfirm(); };
+    confirmBtn.addEventListener('click', onConfirm);
+    nameInput.addEventListener('keydown', onEnter);
+}
+
+// ============================================================
+// INTERACTIVE QUIZ TYPES (Level 1-3 unlocks)
+// ============================================================
+
+// Interactive question banks per lesson — keyed by lessonId, then by type
+const INTERACTIVE_QUESTIONS = {};
+
+// Type 1: Statement Classifier
+function addClassifierQuestions(lessonId, questions) {
+    if (!INTERACTIVE_QUESTIONS[lessonId]) INTERACTIVE_QUESTIONS[lessonId] = {};
+    INTERACTIVE_QUESTIONS[lessonId].classifier = questions;
+}
+
+// Type 2: Spot the Fallacy
+function addFallacyQuestions(lessonId, questions) {
+    if (!INTERACTIVE_QUESTIONS[lessonId]) INTERACTIVE_QUESTIONS[lessonId] = {};
+    INTERACTIVE_QUESTIONS[lessonId].fallacy = questions;
+}
+
+// Type 3: Truth Table Fill-in
+function addTruthTableQuestions(lessonId, questions) {
+    if (!INTERACTIVE_QUESTIONS[lessonId]) INTERACTIVE_QUESTIONS[lessonId] = {};
+    INTERACTIVE_QUESTIONS[lessonId].truthTable = questions;
+}
+
+// Type 4: Pattern Matching
+function addPatternQuestions(lessonId, questions) {
+    if (!INTERACTIVE_QUESTIONS[lessonId]) INTERACTIVE_QUESTIONS[lessonId] = {};
+    INTERACTIVE_QUESTIONS[lessonId].pattern = questions;
+}
+
+// Type 5: Logic Builder
+function addBuilderQuestions(lessonId, questions) {
+    if (!INTERACTIVE_QUESTIONS[lessonId]) INTERACTIVE_QUESTIONS[lessonId] = {};
+    INTERACTIVE_QUESTIONS[lessonId].builder = questions;
+}
+
+// Type 6: Logic Circuit
+function addCircuitQuestions(lessonId, questions) {
+    if (!INTERACTIVE_QUESTIONS[lessonId]) INTERACTIVE_QUESTIONS[lessonId] = {};
+    INTERACTIVE_QUESTIONS[lessonId].circuit = questions;
+}
+
+// --- CLASSIFIER QUESTIONS (Level 1) ---
+addClassifierQuestions('propositional-basics', [
+    { statement: '"The sky is blue."', answer: 'Proposition', choices: ['Proposition', 'Not a Proposition', 'Tautology', 'Contradiction'] },
+    { statement: '"What time is it?"', answer: 'Not a Proposition', choices: ['Proposition', 'Not a Proposition', 'Tautology', 'Contradiction'] },
+    { statement: '"It is raining OR it is not raining."', answer: 'Tautology', choices: ['Proposition', 'Not a Proposition', 'Tautology', 'Contradiction'] },
+    { statement: '"It is sunny AND it is not sunny."', answer: 'Contradiction', choices: ['Proposition', 'Not a Proposition', 'Tautology', 'Contradiction'] },
+    { statement: '"Please close the door."', answer: 'Not a Proposition', choices: ['Proposition', 'Not a Proposition', 'Tautology', 'Contradiction'] },
+    { statement: '"2 + 2 = 5"', answer: 'Proposition', choices: ['Proposition', 'Not a Proposition', 'Tautology', 'Contradiction'] },
+    { statement: '"Wow, that is amazing!"', answer: 'Not a Proposition', choices: ['Proposition', 'Not a Proposition', 'Tautology', 'Contradiction'] },
+    { statement: '"A cat is a cat."', answer: 'Tautology', choices: ['Proposition', 'Not a Proposition', 'Tautology', 'Contradiction'] },
+    { statement: '"This shape is a circle AND a square at the same time."', answer: 'Contradiction', choices: ['Proposition', 'Not a Proposition', 'Tautology', 'Contradiction'] },
+    { statement: '"Fish live in water."', answer: 'Proposition', choices: ['Proposition', 'Not a Proposition', 'Tautology', 'Contradiction'] }
+]);
+
+addClassifierQuestions('truth-tables', [
+    { statement: '"TRUE AND TRUE"', answer: 'Proposition', choices: ['Proposition', 'Not a Proposition', 'Tautology', 'Contradiction'] },
+    { statement: '"A OR NOT A"', answer: 'Tautology', choices: ['Proposition', 'Not a Proposition', 'Tautology', 'Contradiction'] },
+    { statement: '"A AND NOT A"', answer: 'Contradiction', choices: ['Proposition', 'Not a Proposition', 'Tautology', 'Contradiction'] },
+    { statement: '"How does OR work?"', answer: 'Not a Proposition', choices: ['Proposition', 'Not a Proposition', 'Tautology', 'Contradiction'] },
+    { statement: '"TRUE OR FALSE"', answer: 'Tautology', choices: ['Proposition', 'Not a Proposition', 'Tautology', 'Contradiction'] },
+    { statement: '"FALSE AND FALSE"', answer: 'Proposition', choices: ['Proposition', 'Not a Proposition', 'Tautology', 'Contradiction'] },
+    { statement: '"(A OR B) OR NOT (A OR B)"', answer: 'Tautology', choices: ['Proposition', 'Not a Proposition', 'Tautology', 'Contradiction'] },
+    { statement: '"Please calculate A AND B."', answer: 'Not a Proposition', choices: ['Proposition', 'Not a Proposition', 'Tautology', 'Contradiction'] }
+]);
+
+addClassifierQuestions('implication', [
+    { statement: '"If TRUE then FALSE"', answer: 'Proposition', choices: ['Proposition', 'Not a Proposition', 'Tautology', 'Contradiction'] },
+    { statement: '"If A then A"', answer: 'Tautology', choices: ['Proposition', 'Not a Proposition', 'Tautology', 'Contradiction'] },
+    { statement: '"If TRUE then FALSE AND if FALSE then TRUE"', answer: 'Contradiction', choices: ['Proposition', 'Not a Proposition', 'Tautology', 'Contradiction'] },
+    { statement: '"What does if-then mean?"', answer: 'Not a Proposition', choices: ['Proposition', 'Not a Proposition', 'Tautology', 'Contradiction'] },
+    { statement: '"If it rains, the ground gets wet."', answer: 'Proposition', choices: ['Proposition', 'Not a Proposition', 'Tautology', 'Contradiction'] },
+    { statement: '"If P then P, always."', answer: 'Tautology', choices: ['Proposition', 'Not a Proposition', 'Tautology', 'Contradiction'] }
+]);
+
+addClassifierQuestions('equivalence', [
+    { statement: '"NOT NOT A is the same as A"', answer: 'Tautology', choices: ['Proposition', 'Not a Proposition', 'Tautology', 'Contradiction'] },
+    { statement: '"NOT (A AND B) equals NOT A AND NOT B"', answer: 'Proposition', choices: ['Proposition', 'Not a Proposition', 'Tautology', 'Contradiction'] },
+    { statement: '"A is equivalent to NOT A"', answer: 'Contradiction', choices: ['Proposition', 'Not a Proposition', 'Tautology', 'Contradiction'] },
+    { statement: '"Explain De Morgan\'s rules."', answer: 'Not a Proposition', choices: ['Proposition', 'Not a Proposition', 'Tautology', 'Contradiction'] },
+    { statement: '"NOT (A OR B) means NOT A AND NOT B"', answer: 'Tautology', choices: ['Proposition', 'Not a Proposition', 'Tautology', 'Contradiction'] }
+]);
+
+addClassifierQuestions('valid-reasoning', [
+    { statement: '"If all dogs bark, and Rex is a dog, then Rex barks."', answer: 'Proposition', choices: ['Proposition', 'Not a Proposition', 'Tautology', 'Contradiction'] },
+    { statement: '"All X are Y AND X is Z, therefore Z is Y" - always valid?', answer: 'Proposition', choices: ['Proposition', 'Not a Proposition', 'Tautology', 'Contradiction'] },
+    { statement: '"If P then Q, and P, therefore Q."', answer: 'Tautology', choices: ['Proposition', 'Not a Proposition', 'Tautology', 'Contradiction'] },
+    { statement: '"Is this argument valid?"', answer: 'Not a Proposition', choices: ['Proposition', 'Not a Proposition', 'Tautology', 'Contradiction'] },
+    { statement: '"All cats are dogs AND all dogs are cats."', answer: 'Proposition', choices: ['Proposition', 'Not a Proposition', 'Tautology', 'Contradiction'] }
+]);
+
+// --- FALLACY QUESTIONS (Level 1) ---
+addFallacyQuestions('propositional-basics', [
+    { argument: '"The sky looks blue to me, so it must be blue for everyone everywhere."', answer: 'Hasty Generalization', choices: ['Hasty Generalization', 'False Dilemma', 'Appeal to Authority', 'Circular Reasoning'] },
+    { argument: '"You either love math or you hate it. There is no in between!"', answer: 'False Dilemma', choices: ['Hasty Generalization', 'False Dilemma', 'Ad Hominem', 'Circular Reasoning'] },
+    { argument: '"Logic is true because logic proves it is true."', answer: 'Circular Reasoning', choices: ['Hasty Generalization', 'False Dilemma', 'Appeal to Authority', 'Circular Reasoning'] },
+    { argument: '"My teacher said cats have 5 legs, so it must be true!"', answer: 'Appeal to Authority', choices: ['Hasty Generalization', 'False Dilemma', 'Appeal to Authority', 'Circular Reasoning'] },
+    { argument: '"Your argument is wrong because you are only 10 years old."', answer: 'Ad Hominem', choices: ['Ad Hominem', 'False Dilemma', 'Appeal to Authority', 'Straw Man'] },
+    { argument: '"I said we should eat less candy, and you say I want to ban ALL food!"', answer: 'Straw Man', choices: ['Ad Hominem', 'False Dilemma', 'Appeal to Authority', 'Straw Man'] },
+    { argument: '"Everyone in my class likes pizza, so everyone in the world likes pizza."', answer: 'Hasty Generalization', choices: ['Hasty Generalization', 'Circular Reasoning', 'Straw Man', 'False Dilemma'] },
+    { argument: '"This is right because it is correct, and it is correct because it is right."', answer: 'Circular Reasoning', choices: ['Appeal to Authority', 'Circular Reasoning', 'Ad Hominem', 'Straw Man'] }
+]);
+
+addFallacyQuestions('valid-reasoning', [
+    { argument: '"All birds fly. Penguins are birds. Therefore penguins fly." The clue is wrong but the reasoning pattern is valid.', answer: 'False Premise', choices: ['False Premise', 'Circular Reasoning', 'Hasty Generalization', 'No Fallacy'] },
+    { argument: '"It rained after I washed my car, so washing my car caused the rain."', answer: 'False Cause', choices: ['False Cause', 'Hasty Generalization', 'Ad Hominem', 'Straw Man'] },
+    { argument: '"If you let kids have phones, next they will want to drive cars!"', answer: 'Slippery Slope', choices: ['Slippery Slope', 'False Dilemma', 'Circular Reasoning', 'False Cause'] },
+    { argument: '"We have always done it this way, so it must be the right way."', answer: 'Appeal to Tradition', choices: ['Appeal to Tradition', 'Appeal to Authority', 'Circular Reasoning', 'Hasty Generalization'] },
+    { argument: '"All cats are animals. Buddy is an animal. So Buddy is a cat."', answer: 'Affirming the Consequent', choices: ['Affirming the Consequent', 'Circular Reasoning', 'False Premise', 'No Fallacy'] },
+    { argument: '"If A then B. A is true. Therefore B." This is actually...', answer: 'No Fallacy', choices: ['Circular Reasoning', 'No Fallacy', 'False Cause', 'Hasty Generalization'] },
+    { argument: '"Millions of people believe it, so it must be true!"', answer: 'Appeal to Popularity', choices: ['Appeal to Popularity', 'Appeal to Authority', 'Hasty Generalization', 'False Cause'] },
+    { argument: '"You cannot prove ghosts don\'t exist, so they must exist!"', answer: 'Appeal to Ignorance', choices: ['Appeal to Ignorance', 'Circular Reasoning', 'False Dilemma', 'Straw Man'] }
+]);
+
+addFallacyQuestions('implication', [
+    { argument: '"If it rains, the ground is wet. The ground is wet, so it rained."', answer: 'Affirming the Consequent', choices: ['Affirming the Consequent', 'Denying the Antecedent', 'No Fallacy', 'False Cause'] },
+    { argument: '"If you study, you pass. You did NOT study, so you did NOT pass."', answer: 'Denying the Antecedent', choices: ['Affirming the Consequent', 'Denying the Antecedent', 'No Fallacy', 'Circular Reasoning'] },
+    { argument: '"If it is a dog, it is an animal. Buddy is NOT an animal, so Buddy is NOT a dog."', answer: 'No Fallacy', choices: ['Affirming the Consequent', 'Denying the Antecedent', 'No Fallacy', 'False Cause'] },
+    { argument: '"If you eat candy you get cavities. You got cavities, so you ate candy."', answer: 'Affirming the Consequent', choices: ['Affirming the Consequent', 'Denying the Antecedent', 'No Fallacy', 'Straw Man'] },
+    { argument: '"If it is Tuesday the store is closed. It is NOT Tuesday so the store is NOT closed."', answer: 'Denying the Antecedent', choices: ['Affirming the Consequent', 'Denying the Antecedent', 'No Fallacy', 'False Dilemma'] },
+    { argument: '"If P then Q. P is true. Therefore Q."', answer: 'No Fallacy', choices: ['Affirming the Consequent', 'Denying the Antecedent', 'No Fallacy', 'Circular Reasoning'] }
+]);
+
+addFallacyQuestions('equivalence', [
+    { argument: '"NOT (A AND B) means the same as NOT A AND NOT B."', answer: 'Incorrect Equivalence', choices: ['Incorrect Equivalence', 'No Error', 'Circular Reasoning', 'False Dilemma'] },
+    { argument: '"NOT (A OR B) means NOT A AND NOT B."', answer: 'No Error', choices: ['Incorrect Equivalence', 'No Error', 'Circular Reasoning', 'Appeal to Authority'] },
+    { argument: '"A implies B is the same as B implies A."', answer: 'Incorrect Equivalence', choices: ['Incorrect Equivalence', 'No Error', 'Circular Reasoning', 'False Cause'] },
+    { argument: '"A implies B is the same as NOT B implies NOT A."', answer: 'No Error', choices: ['Incorrect Equivalence', 'No Error', 'False Dilemma', 'Straw Man'] },
+    { argument: '"Since A OR B is true, both A AND B must be true."', answer: 'Incorrect Equivalence', choices: ['Incorrect Equivalence', 'No Error', 'Hasty Generalization', 'False Cause'] }
+]);
+
+// --- TRUTH TABLE QUESTIONS (Level 2) ---
+// Each has: headers, rows (arrays), blanks (array of {row, col} positions), answers (parallel to blanks)
+addTruthTableQuestions('propositional-basics', [
+    {
+        prompt: 'Fill in the AND truth table:',
+        headers: ['A', 'B', 'A AND B'],
+        rows: [['T','T','?'], ['T','F','?'], ['F','T','?'], ['F','F','?']],
+        blanks: [{r:0,c:2},{r:1,c:2},{r:2,c:2},{r:3,c:2}],
+        answers: ['T','F','F','F']
+    },
+    {
+        prompt: 'Fill in the NOT column:',
+        headers: ['A', 'NOT A'],
+        rows: [['T','?'], ['F','?']],
+        blanks: [{r:0,c:1},{r:1,c:1}],
+        answers: ['F','T']
+    },
+    {
+        prompt: 'Complete this AND table (some values given):',
+        headers: ['P', 'Q', 'P AND Q'],
+        rows: [['T','T','T'], ['T','F','?'], ['F','?','F'], ['?','F','F']],
+        blanks: [{r:1,c:2},{r:2,c:1},{r:3,c:0}],
+        answers: ['F','T','F']
+    }
+]);
+
+addTruthTableQuestions('truth-tables', [
+    {
+        prompt: 'Fill in the OR truth table:',
+        headers: ['A', 'B', 'A OR B'],
+        rows: [['T','T','?'], ['T','F','?'], ['F','T','?'], ['F','F','?']],
+        blanks: [{r:0,c:2},{r:1,c:2},{r:2,c:2},{r:3,c:2}],
+        answers: ['T','T','T','F']
+    },
+    {
+        prompt: 'Fill in the missing values:',
+        headers: ['A', 'B', 'A AND B', 'A OR B'],
+        rows: [['T','T','?','?'], ['T','F','?','?'], ['F','T','?','?'], ['F','F','?','?']],
+        blanks: [{r:0,c:2},{r:0,c:3},{r:1,c:2},{r:1,c:3},{r:2,c:2},{r:2,c:3},{r:3,c:2},{r:3,c:3}],
+        answers: ['T','T','F','T','F','T','F','F']
+    },
+    {
+        prompt: 'Complete this mixed table:',
+        headers: ['P', 'Q', 'P OR Q'],
+        rows: [['T','T','T'], ['T','?','T'], ['?','T','T'], ['F','F','?']],
+        blanks: [{r:1,c:1},{r:2,c:0},{r:3,c:2}],
+        answers: ['F','F','F']
+    }
+]);
+
+addTruthTableQuestions('implication', [
+    {
+        prompt: 'Fill in the IF-THEN (implies) truth table:',
+        headers: ['P', 'Q', 'IF P THEN Q'],
+        rows: [['T','T','?'], ['T','F','?'], ['F','T','?'], ['F','F','?']],
+        blanks: [{r:0,c:2},{r:1,c:2},{r:2,c:2},{r:3,c:2}],
+        answers: ['T','F','T','T']
+    },
+    {
+        prompt: 'Complete the implication table:',
+        headers: ['A', 'B', 'A -> B'],
+        rows: [['T','T','T'], ['?','F','F'], ['F','?','T'], ['F','F','?']],
+        blanks: [{r:1,c:0},{r:2,c:1},{r:3,c:2}],
+        answers: ['T','T','T']
+    }
+]);
+
+addTruthTableQuestions('equivalence', [
+    {
+        prompt: 'De Morgan: NOT(A AND B) = NOT A OR NOT B',
+        headers: ['A', 'B', 'NOT(A AND B)', 'NOT A OR NOT B'],
+        rows: [['T','T','?','?'], ['T','F','?','?'], ['F','T','?','?'], ['F','F','?','?']],
+        blanks: [{r:0,c:2},{r:0,c:3},{r:1,c:2},{r:1,c:3},{r:2,c:2},{r:2,c:3},{r:3,c:2},{r:3,c:3}],
+        answers: ['F','F','T','T','T','T','T','T']
+    }
+]);
+
+addTruthTableQuestions('valid-reasoning', [
+    {
+        prompt: 'Modus Ponens: P, P->Q, therefore Q',
+        headers: ['P', 'P->Q', 'Q'],
+        rows: [['T','T','?'], ['T','F','?'], ['F','T','?'], ['F','T','?']],
+        blanks: [{r:0,c:2},{r:1,c:2},{r:2,c:2},{r:3,c:2}],
+        answers: ['T','F','T','T']
+    }
+]);
+
+// --- PATTERN MATCHING QUESTIONS (Level 2) ---
+// Each has: pairs [{left, right}] where left matches right
+addPatternQuestions('propositional-basics', [
+    { prompt: 'Match each statement with its truth value:', pairs: [
+        { left: '"2 + 2 = 4"', right: 'TRUE' },
+        { left: '"Fish can fly"', right: 'FALSE' },
+        { left: '"How are you?"', right: 'NOT A STATEMENT' },
+        { left: '"Close the door!"', right: 'COMMAND' }
+    ]},
+    { prompt: 'Match the operator with its meaning:', pairs: [
+        { left: 'AND', right: 'Both must be true' },
+        { left: 'OR', right: 'At least one true' },
+        { left: 'NOT', right: 'Flips the truth value' },
+        { left: 'IF-THEN', right: 'Promise/implication' }
+    ]}
+]);
+
+addPatternQuestions('truth-tables', [
+    { prompt: 'Match each expression with its result:', pairs: [
+        { left: 'TRUE AND TRUE', right: 'TRUE' },
+        { left: 'TRUE AND FALSE', right: 'FALSE' },
+        { left: 'FALSE OR TRUE', right: 'TRUE' },
+        { left: 'FALSE OR FALSE', right: 'FALSE' }
+    ]},
+    { prompt: 'Match equivalent expressions:', pairs: [
+        { left: 'A AND TRUE', right: 'A' },
+        { left: 'A OR FALSE', right: 'A' },
+        { left: 'A AND FALSE', right: 'FALSE' },
+        { left: 'A OR TRUE', right: 'TRUE' }
+    ]}
+]);
+
+addPatternQuestions('equivalence', [
+    { prompt: 'Match De Morgan equivalences:', pairs: [
+        { left: 'NOT (A AND B)', right: 'NOT A OR NOT B' },
+        { left: 'NOT (A OR B)', right: 'NOT A AND NOT B' },
+        { left: 'NOT NOT A', right: 'A' },
+        { left: 'A implies B', right: 'NOT A OR B' }
+    ]},
+    { prompt: 'Match the statement with its contrapositive:', pairs: [
+        { left: 'If dog then animal', right: 'If not animal then not dog' },
+        { left: 'If rain then wet', right: 'If not wet then not rain' },
+        { left: 'If study then pass', right: 'If not pass then not study' }
+    ]}
+]);
+
+addPatternQuestions('implication', [
+    { prompt: 'Match IF-THEN with TRUE or FALSE:', pairs: [
+        { left: 'If T then T', right: 'TRUE' },
+        { left: 'If T then F', right: 'FALSE' },
+        { left: 'If F then T', right: 'TRUE' },
+        { left: 'If F then F', right: 'TRUE' }
+    ]}
+]);
+
+addPatternQuestions('valid-reasoning', [
+    { prompt: 'Match reasoning pattern with its name:', pairs: [
+        { left: 'P, P->Q, so Q', right: 'Modus Ponens' },
+        { left: 'P->Q, NOT Q, so NOT P', right: 'Modus Tollens' },
+        { left: 'All A are B, x is A, so x is B', right: 'Syllogism' },
+        { left: 'P->Q, Q, so P', right: 'INVALID (affirming consequent)' }
+    ]}
+]);
+
+// --- LOGIC BUILDER QUESTIONS (Level 3) ---
+// Each has: prompt, target (the expression to build), elements available
+addBuilderQuestions('propositional-basics', [
+    { prompt: 'Build: "P AND Q"', target: ['P', 'AND', 'Q'], elements: ['P', 'Q', 'AND', 'OR', 'NOT'] },
+    { prompt: 'Build: "NOT P"', target: ['NOT', 'P'], elements: ['P', 'Q', 'AND', 'OR', 'NOT'] },
+    { prompt: 'Build: "P OR Q"', target: ['P', 'OR', 'Q'], elements: ['P', 'Q', 'AND', 'OR', 'NOT'] },
+    { prompt: 'Build: "NOT P AND Q"', target: ['NOT', 'P', 'AND', 'Q'], elements: ['P', 'Q', 'AND', 'OR', 'NOT'] },
+    { prompt: 'Build: "P AND NOT Q"', target: ['P', 'AND', 'NOT', 'Q'], elements: ['P', 'Q', 'AND', 'OR', 'NOT'] }
+]);
+
+addBuilderQuestions('truth-tables', [
+    { prompt: 'Build: "P AND Q OR R"', target: ['P', 'AND', 'Q', 'OR', 'R'], elements: ['P', 'Q', 'R', 'AND', 'OR', 'NOT'] },
+    { prompt: 'Build: "NOT P OR Q"', target: ['NOT', 'P', 'OR', 'Q'], elements: ['P', 'Q', 'AND', 'OR', 'NOT'] },
+    { prompt: 'Build: "NOT (P AND Q)" using elements', target: ['NOT', '(', 'P', 'AND', 'Q', ')'], elements: ['P', 'Q', 'AND', 'OR', 'NOT', '(', ')'] },
+    { prompt: 'Build: "P OR NOT Q"', target: ['P', 'OR', 'NOT', 'Q'], elements: ['P', 'Q', 'AND', 'OR', 'NOT'] }
+]);
+
+addBuilderQuestions('equivalence', [
+    { prompt: 'Build De Morgan: NOT A OR NOT B', target: ['NOT', 'A', 'OR', 'NOT', 'B'], elements: ['A', 'B', 'AND', 'OR', 'NOT'] },
+    { prompt: 'Build: NOT A AND NOT B', target: ['NOT', 'A', 'AND', 'NOT', 'B'], elements: ['A', 'B', 'AND', 'OR', 'NOT'] },
+    { prompt: 'Build the contrapositive: NOT Q implies NOT P', target: ['NOT', 'Q', 'IMPLIES', 'NOT', 'P'], elements: ['P', 'Q', 'NOT', 'IMPLIES', 'AND', 'OR'] }
+]);
+
+addBuilderQuestions('valid-reasoning', [
+    { prompt: 'Build modus ponens conclusion: Q', target: ['Q'], elements: ['P', 'Q', 'NOT', 'AND', 'OR'] },
+    { prompt: 'Build modus tollens conclusion: NOT P', target: ['NOT', 'P'], elements: ['P', 'Q', 'NOT', 'AND', 'OR'] }
+]);
+
+// --- CIRCUIT QUESTIONS (Level 3) ---
+// Each has: inputs, gates (array of slot objects), targetOutput
+addCircuitQuestions('propositional-basics', [
+    { prompt: 'Make the output TRUE', inputs: [true, true], gates: [{type: null, inputIndices: [0, 1]}], targetOutput: true, hint: 'Both inputs are TRUE...' },
+    { prompt: 'Make the output FALSE', inputs: [true, false], gates: [{type: null, inputIndices: [0, 1]}], targetOutput: false, hint: 'One input is TRUE, one is FALSE...' },
+    { prompt: 'Make the output TRUE', inputs: [false, true], gates: [{type: null, inputIndices: [0, 1]}], targetOutput: true, hint: 'Use an OR gate!' },
+    { prompt: 'Make the output FALSE', inputs: [true, true], gates: [{type: null, inputIndices: [0, 1]}], targetOutput: false, hint: 'What gate makes T,T become F?' },
+    { prompt: 'Make the output TRUE', inputs: [false, false], gates: [{type: null, inputIndices: [0, 1]}], targetOutput: true, hint: 'No standard 2-input gate does this easily... try NOR? (NOT OR gives... hmm)' }
+]);
+
+addCircuitQuestions('truth-tables', [
+    { prompt: 'Chain: make output TRUE', inputs: [true, false, true], gates: [{type: null, inputIndices: [0, 1]}, {type: null, inputIndices: ['g0', 2]}], targetOutput: true, hint: 'First combine inputs 1&2, then combine with input 3' },
+    { prompt: 'Chain: make output FALSE', inputs: [true, true, false], gates: [{type: null, inputIndices: [0, 1]}, {type: null, inputIndices: ['g0', 2]}], targetOutput: false, hint: 'T AND T = T, then T AND F = ?' },
+    { prompt: 'Make output TRUE with these inputs', inputs: [false, false], gates: [{type: null, inputIndices: [0, 1]}], targetOutput: true, hint: 'NOR: NOT(F OR F) = NOT F = T' }
+]);
+
+addCircuitQuestions('equivalence', [
+    { prompt: 'Verify De Morgan: NOT(A AND B) when A=T, B=F', inputs: [true, false], gates: [{type: null, inputIndices: [0, 1]}], targetOutput: true, hint: 'NOT(T AND F) = NOT(F) = T. Use NAND!' },
+    { prompt: 'Make output match NOT A OR NOT B when A=T, B=T', inputs: [true, true], gates: [{type: null, inputIndices: [0, 1]}], targetOutput: false, hint: 'NOT T OR NOT T = F OR F = F. Use NAND!' }
+]);
+
+// ============================================================
+// INTERACTIVE QUIZ RENDERERS
+// ============================================================
+
+// Get available interactive question types for a lesson at a given mastery level
+function getInteractiveTypes(lessonId, level) {
+    const types = [];
+    const bank = INTERACTIVE_QUESTIONS[lessonId];
+    if (!bank) return types;
+    if (level >= 1 && bank.classifier && bank.classifier.length) types.push('classifier');
+    if (level >= 1 && bank.fallacy && bank.fallacy.length) types.push('fallacy');
+    if (level >= 2 && bank.truthTable && bank.truthTable.length) types.push('truthTable');
+    if (level >= 2 && bank.pattern && bank.pattern.length) types.push('pattern');
+    if (level >= 3 && bank.builder && bank.builder.length) types.push('builder');
+    if (level >= 3 && bank.circuit && bank.circuit.length) types.push('circuit');
+    return types;
+}
+
+// Render an interactive question into #quiz-interactive, returns true if rendered
+function renderInteractiveQuestion(lessonId, level, onComplete) {
+    const types = getInteractiveTypes(lessonId, level);
+    if (!types.length) return false;
+
+    const type = types[Math.floor(Math.random() * types.length)];
+    const bank = INTERACTIVE_QUESTIONS[lessonId][type];
+    const q = bank[Math.floor(Math.random() * bank.length)];
+
+    const container = document.getElementById('quiz-interactive');
+    const choicesEl = document.getElementById('quiz-choices');
+    container.innerHTML = '';
+    container.style.display = 'block';
+    choicesEl.style.display = 'none';
+
+    switch (type) {
+        case 'classifier': renderClassifier(q, container, onComplete, lessonId); break;
+        case 'fallacy': renderFallacy(q, container, onComplete, lessonId); break;
+        case 'truthTable': renderTruthTable(q, container, onComplete, lessonId); break;
+        case 'pattern': renderPatternMatch(q, container, onComplete, lessonId); break;
+        case 'builder': renderLogicBuilder(q, container, onComplete, lessonId); break;
+        case 'circuit': renderCircuit(q, container, onComplete, lessonId); break;
+    }
+    return true;
+}
+
+function resetInteractiveDisplay() {
+    const container = document.getElementById('quiz-interactive');
+    if (container) { container.style.display = 'none'; container.innerHTML = ''; }
+    const choicesEl = document.getElementById('quiz-choices');
+    if (choicesEl) choicesEl.style.display = 'flex';
+}
+
+// --- Type 1: Statement Classifier ---
+function renderClassifier(q, container, onComplete, lessonId) {
+    const label = document.createElement('div');
+    label.style.cssText = 'font-size:10px;color:var(--text);margin-bottom:12px;line-height:2;';
+    label.textContent = 'Classify this statement:';
+    container.appendChild(label);
+
+    const stmt = document.createElement('div');
+    stmt.style.cssText = 'font-size:11px;color:var(--gold);margin-bottom:16px;padding:10px;background:var(--bg-dark);border:1px solid var(--border);line-height:2;';
+    stmt.textContent = q.statement;
+    container.appendChild(stmt);
+
+    const btns = document.createElement('div');
+    btns.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;';
+
+    q.choices.forEach(choice => {
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-choice';
+        btn.style.width = 'auto';
+        btn.textContent = choice;
+        btn.addEventListener('click', () => {
+            btns.querySelectorAll('.btn-choice').forEach(b => b.style.pointerEvents = 'none');
+            const correct = choice === q.answer;
+            btn.classList.add(correct ? 'correct' : 'incorrect');
+            if (!correct) {
+                btns.querySelectorAll('.btn-choice').forEach(b => { if (b.textContent === q.answer) b.classList.add('correct'); });
+            }
+            trackQuizAnswer(correct);
+            updateMasteryAfterAnswer(lessonId, correct);
+            onComplete(correct);
+        });
+        btns.appendChild(btn);
+    });
+    container.appendChild(btns);
+}
+
+// --- Type 2: Spot the Fallacy ---
+function renderFallacy(q, container, onComplete, lessonId) {
+    const label = document.createElement('div');
+    label.style.cssText = 'font-size:10px;color:var(--text);margin-bottom:8px;';
+    label.textContent = 'Spot the fallacy in this argument:';
+    container.appendChild(label);
+
+    const quote = document.createElement('blockquote');
+    quote.style.cssText = 'font-size:10px;color:var(--gold);margin:0 0 16px 0;padding:10px 14px;background:var(--bg-dark);border-left:3px solid var(--gold);line-height:2.2;font-style:italic;';
+    quote.textContent = q.argument;
+    container.appendChild(quote);
+
+    const btns = document.createElement('div');
+    btns.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
+
+    // Shuffle choices
+    const shuffled = [...q.choices].sort(() => Math.random() - 0.5);
+
+    shuffled.forEach(choice => {
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-choice';
+        btn.textContent = choice;
+        btn.addEventListener('click', () => {
+            btns.querySelectorAll('.btn-choice').forEach(b => b.style.pointerEvents = 'none');
+            const correct = choice === q.answer;
+            btn.classList.add(correct ? 'correct' : 'incorrect');
+            if (!correct) {
+                btns.querySelectorAll('.btn-choice').forEach(b => { if (b.textContent === q.answer) b.classList.add('correct'); });
+            }
+            trackQuizAnswer(correct);
+            updateMasteryAfterAnswer(lessonId, correct);
+            onComplete(correct);
+        });
+        btns.appendChild(btn);
+    });
+    container.appendChild(btns);
+}
+
+// --- Type 3: Truth Table Fill-in ---
+function renderTruthTable(q, container, onComplete, lessonId) {
+    const label = document.createElement('div');
+    label.style.cssText = 'font-size:10px;color:var(--text);margin-bottom:10px;line-height:2;';
+    label.textContent = q.prompt;
+    container.appendChild(label);
+
+    const table = document.createElement('table');
+    table.className = 'truth-table';
+
+    // Header
+    const thead = document.createElement('tr');
+    q.headers.forEach(h => {
+        const th = document.createElement('th');
+        th.textContent = h;
+        thead.appendChild(th);
+    });
+    table.appendChild(thead);
+
+    // Track user answers
+    const userAnswers = new Array(q.blanks.length).fill(null);
+    const blankCells = [];
+
+    // Rows
+    q.rows.forEach((row, ri) => {
+        const tr = document.createElement('tr');
+        row.forEach((cell, ci) => {
+            const td = document.createElement('td');
+            // Check if this cell is a blank
+            const blankIdx = q.blanks.findIndex(b => b.r === ri && b.c === ci);
+            if (blankIdx >= 0) {
+                td.className = 'truth-cell-input';
+                td.textContent = '?';
+                td.dataset.blankIdx = blankIdx;
+                td.addEventListener('click', () => {
+                    // Toggle: ? -> T -> F -> ?
+                    if (td.textContent === '?') td.textContent = 'T';
+                    else if (td.textContent === 'T') td.textContent = 'F';
+                    else td.textContent = '?';
+                    userAnswers[blankIdx] = td.textContent === '?' ? null : td.textContent;
+                });
+                blankCells.push(td);
+            } else {
+                td.textContent = cell;
+            }
+            tr.appendChild(td);
+        });
+        table.appendChild(tr);
+    });
+    container.appendChild(table);
+
+    // Submit button
+    const submitBtn = document.createElement('button');
+    submitBtn.className = 'btn btn-primary';
+    submitBtn.style.marginTop = '12px';
+    submitBtn.textContent = 'Check Answers';
+    submitBtn.addEventListener('click', () => {
+        submitBtn.style.pointerEvents = 'none';
+        let allCorrect = true;
+        blankCells.forEach(td => {
+            const idx = parseInt(td.dataset.blankIdx);
+            td.style.pointerEvents = 'none';
+            if (userAnswers[idx] === q.answers[idx]) {
+                td.classList.add('correct-cell');
+            } else {
+                td.classList.add('incorrect-cell');
+                td.textContent = q.answers[idx];
+                allCorrect = false;
+            }
+        });
+        trackQuizAnswer(allCorrect);
+        updateMasteryAfterAnswer(lessonId, allCorrect);
+        onComplete(allCorrect);
+    });
+    container.appendChild(submitBtn);
+}
+
+// --- Type 4: Pattern Matching ---
+function renderPatternMatch(q, container, onComplete, lessonId) {
+    const label = document.createElement('div');
+    label.style.cssText = 'font-size:10px;color:var(--text);margin-bottom:10px;line-height:2;';
+    label.textContent = q.prompt;
+    container.appendChild(label);
+
+    const cols = document.createElement('div');
+    cols.className = 'pattern-columns';
+
+    const leftCol = document.createElement('div');
+    leftCol.className = 'pattern-col';
+    const leftLabel = document.createElement('div');
+    leftLabel.className = 'pattern-col-label';
+    leftLabel.textContent = 'Match from:';
+    leftCol.appendChild(leftLabel);
+
+    const rightCol = document.createElement('div');
+    rightCol.className = 'pattern-col';
+    const rightLabel = document.createElement('div');
+    rightLabel.className = 'pattern-col-label';
+    rightLabel.textContent = 'Match to:';
+    rightCol.appendChild(rightLabel);
+
+    // Shuffle right side
+    const shuffledRight = [...q.pairs].sort(() => Math.random() - 0.5);
+
+    let selectedLeft = null;
+    let matchedCount = 0;
+    let correctCount = 0;
+    const totalPairs = q.pairs.length;
+
+    q.pairs.forEach((pair, i) => {
+        const item = document.createElement('div');
+        item.className = 'pattern-item';
+        item.textContent = pair.left;
+        item.dataset.pairIndex = i;
+        item.addEventListener('click', () => {
+            if (item.classList.contains('matched')) return;
+            leftCol.querySelectorAll('.pattern-item').forEach(el => el.classList.remove('selected'));
+            item.classList.add('selected');
+            selectedLeft = i;
+        });
+        leftCol.appendChild(item);
+    });
+
+    shuffledRight.forEach((pair, si) => {
+        const origIdx = q.pairs.indexOf(pair);
+        const item = document.createElement('div');
+        item.className = 'pattern-item';
+        item.textContent = pair.right;
+        item.dataset.origIndex = origIdx;
+        item.addEventListener('click', () => {
+            if (item.classList.contains('matched') || selectedLeft === null) return;
+            matchedCount++;
+            const leftItem = leftCol.querySelectorAll('.pattern-item')[selectedLeft];
+            if (selectedLeft === origIdx) {
+                // Correct match
+                item.classList.add('matched');
+                leftItem.classList.remove('selected');
+                leftItem.classList.add('matched');
+                correctCount++;
+                playSound('gem');
+            } else {
+                // Wrong match
+                item.classList.add('incorrect-match');
+                leftItem.classList.remove('selected');
+                leftItem.classList.add('incorrect-match');
+                setTimeout(() => {
+                    item.classList.remove('incorrect-match');
+                    leftItem.classList.remove('incorrect-match');
+                }, 800);
+                playSound('hurt');
+            }
+            selectedLeft = null;
+            if (matchedCount >= totalPairs || correctCount >= totalPairs) {
+                const allCorrect = correctCount >= totalPairs;
+                trackQuizAnswer(allCorrect);
+                updateMasteryAfterAnswer(lessonId, allCorrect);
+                setTimeout(() => onComplete(allCorrect), 600);
+            }
+        });
+        rightCol.appendChild(item);
+    });
+
+    cols.appendChild(leftCol);
+    cols.appendChild(rightCol);
+    container.appendChild(cols);
+}
+
+// --- Type 5: Logic Builder ---
+function renderLogicBuilder(q, container, onComplete, lessonId) {
+    const label = document.createElement('div');
+    label.style.cssText = 'font-size:10px;color:var(--text);margin-bottom:10px;line-height:2;';
+    label.textContent = q.prompt;
+    container.appendChild(label);
+
+    const bar = document.createElement('div');
+    bar.className = 'logic-bar';
+    const emptyHint = document.createElement('span');
+    emptyHint.className = 'logic-bar-empty';
+    emptyHint.textContent = 'Click elements below to build...';
+    bar.appendChild(emptyHint);
+    container.appendChild(bar);
+
+    const built = [];
+
+    function updateBar() {
+        bar.innerHTML = '';
+        if (built.length === 0) {
+            const hint = document.createElement('span');
+            hint.className = 'logic-bar-empty';
+            hint.textContent = 'Click elements below to build...';
+            bar.appendChild(hint);
+        } else {
+            built.forEach(token => {
+                const span = document.createElement('span');
+                span.textContent = token;
+                span.style.marginRight = '4px';
+                bar.appendChild(span);
+            });
+        }
+    }
+
+    const elements = document.createElement('div');
+    elements.className = 'logic-elements';
+
+    q.elements.forEach(el => {
+        const btn = document.createElement('div');
+        btn.className = 'logic-element' + (['AND','OR','NOT','IMPLIES','XOR','(', ')'].includes(el) ? ' operator' : '');
+        btn.textContent = el;
+        btn.addEventListener('click', () => {
+            built.push(el);
+            updateBar();
+        });
+        elements.appendChild(btn);
+    });
+    container.appendChild(elements);
+
+    const actions = document.createElement('div');
+    actions.className = 'logic-actions';
+
+    const backBtn = document.createElement('button');
+    backBtn.className = 'btn btn-secondary';
+    backBtn.textContent = 'Undo';
+    backBtn.style.fontSize = '9px';
+    backBtn.addEventListener('click', () => {
+        built.pop();
+        updateBar();
+    });
+    actions.appendChild(backBtn);
+
+    const clearBtn = document.createElement('button');
+    clearBtn.className = 'btn btn-secondary';
+    clearBtn.textContent = 'Clear';
+    clearBtn.style.fontSize = '9px';
+    clearBtn.addEventListener('click', () => {
+        built.length = 0;
+        updateBar();
+    });
+    actions.appendChild(clearBtn);
+
+    const submitBtn = document.createElement('button');
+    submitBtn.className = 'btn btn-primary';
+    submitBtn.textContent = 'Submit';
+    submitBtn.style.fontSize = '9px';
+    submitBtn.addEventListener('click', () => {
+        submitBtn.style.pointerEvents = 'none';
+        const correct = built.length === q.target.length && built.every((t, i) => t === q.target[i]);
+        bar.style.borderColor = correct ? 'var(--success)' : 'var(--accent)';
+        if (!correct) {
+            // Show correct answer
+            const hint = document.createElement('div');
+            hint.style.cssText = 'font-size:9px;color:var(--text-dim);margin-top:6px;';
+            hint.textContent = 'Answer: ' + q.target.join(' ');
+            container.appendChild(hint);
+        }
+        trackQuizAnswer(correct);
+        updateMasteryAfterAnswer(lessonId, correct);
+        onComplete(correct);
+    });
+    actions.appendChild(submitBtn);
+    container.appendChild(actions);
+}
+
+// --- Type 6: Logic Circuit ---
+function renderCircuit(q, container, onComplete, lessonId) {
+    const label = document.createElement('div');
+    label.style.cssText = 'font-size:10px;color:var(--text);margin-bottom:6px;line-height:2;';
+    label.textContent = q.prompt;
+    container.appendChild(label);
+
+    if (q.hint) {
+        const hint = document.createElement('div');
+        hint.style.cssText = 'font-size:8px;color:var(--text-dim);margin-bottom:10px;';
+        hint.textContent = q.hint;
+        container.appendChild(hint);
+    }
+
+    const gateTypes = ['AND', 'OR', 'NOT', 'XOR', 'NAND', 'NOR'];
+    const gateState = q.gates.map(() => 0); // index into gateTypes
+
+    const circuitDiv = document.createElement('div');
+    circuitDiv.className = 'circuit-container';
+
+    // Input display
+    const inputRow = document.createElement('div');
+    inputRow.className = 'circuit-row';
+    q.inputs.forEach((val, i) => {
+        const inp = document.createElement('div');
+        inp.className = 'circuit-input';
+        inp.textContent = val ? 'T' : 'F';
+        inp.style.color = val ? 'var(--success)' : 'var(--accent)';
+        inputRow.appendChild(inp);
+        if (i < q.inputs.length - 1) {
+            const wire = document.createElement('div');
+            wire.className = 'circuit-wire';
+            inputRow.appendChild(wire);
+        }
+    });
+    circuitDiv.appendChild(inputRow);
+
+    // Gate slots
+    const gateSlots = [];
+    q.gates.forEach((gate, gi) => {
+        const gateRow = document.createElement('div');
+        gateRow.className = 'circuit-row';
+
+        const wire1 = document.createElement('div');
+        wire1.className = 'circuit-wire';
+        wire1.style.height = '16px';
+        wire1.style.width = '2px';
+        gateRow.appendChild(wire1);
+
+        const slot = document.createElement('div');
+        slot.className = 'circuit-slot';
+        slot.textContent = gateTypes[0];
+        slot.addEventListener('click', () => {
+            gateState[gi] = (gateState[gi] + 1) % gateTypes.length;
+            slot.textContent = gateTypes[gateState[gi]];
+        });
+        gateSlots.push(slot);
+        gateRow.appendChild(slot);
+
+        circuitDiv.appendChild(gateRow);
+    });
+
+    // Output display
+    const outputRow = document.createElement('div');
+    outputRow.className = 'circuit-row';
+    const wireOut = document.createElement('div');
+    wireOut.className = 'circuit-wire';
+    wireOut.style.height = '16px';
+    wireOut.style.width = '2px';
+    outputRow.appendChild(wireOut);
+    const outputEl = document.createElement('div');
+    outputEl.className = 'circuit-output';
+    outputEl.textContent = '?';
+    outputRow.appendChild(outputEl);
+    circuitDiv.appendChild(outputRow);
+
+    const targetDiv = document.createElement('div');
+    targetDiv.className = 'circuit-target';
+    targetDiv.textContent = `Target output: ${q.targetOutput ? 'TRUE' : 'FALSE'}`;
+    circuitDiv.appendChild(targetDiv);
+
+    container.appendChild(circuitDiv);
+
+    // Evaluate circuit
+    function evalGate(type, a, b) {
+        switch (type) {
+            case 'AND': return a && b;
+            case 'OR': return a || b;
+            case 'NOT': return !a;
+            case 'XOR': return a !== b;
+            case 'NAND': return !(a && b);
+            case 'NOR': return !(a || b);
+            default: return false;
+        }
+    }
+
+    function evalCircuit() {
+        const values = [...q.inputs];
+        const gateOutputs = [];
+        for (let gi = 0; gi < q.gates.length; gi++) {
+            const gate = q.gates[gi];
+            const type = gateTypes[gateState[gi]];
+            const inputs = gate.inputIndices.map(idx => {
+                if (typeof idx === 'string' && idx.startsWith('g')) return gateOutputs[parseInt(idx.slice(1))];
+                return values[idx];
+            });
+            gateOutputs.push(evalGate(type, inputs[0], inputs.length > 1 ? inputs[1] : inputs[0]));
+        }
+        return gateOutputs[gateOutputs.length - 1];
+    }
+
+    // Test button
+    const testBtn = document.createElement('button');
+    testBtn.className = 'btn btn-primary';
+    testBtn.textContent = 'Test Circuit';
+    testBtn.style.marginTop = '10px';
+    testBtn.addEventListener('click', () => {
+        const result = evalCircuit();
+        outputEl.textContent = result ? 'TRUE' : 'FALSE';
+        const correct = result === q.targetOutput;
+        outputEl.className = 'circuit-output ' + (correct ? 'pass' : 'fail');
+
+        if (correct) {
+            testBtn.style.pointerEvents = 'none';
+            gateSlots.forEach(s => s.style.pointerEvents = 'none');
+            playSound('victory');
+            trackQuizAnswer(true);
+            updateMasteryAfterAnswer(lessonId, true);
+            onComplete(true);
+        } else {
+            playSound('hurt');
+            // Allow retry — don't finalize yet
+            outputEl.textContent += ' (try again)';
+        }
+    });
+    container.appendChild(testBtn);
+
+    // Give up after 3 tries
+    let tries = 0;
+    const origTestClick = testBtn.onclick;
+    testBtn.onclick = null;
+    testBtn.addEventListener('click', () => {
+        tries++;
+        if (tries >= 4 && !evalCircuit() === q.targetOutput) {
+            // After 4 failed attempts, mark as incorrect and move on
+            testBtn.style.pointerEvents = 'none';
+            gateSlots.forEach(s => s.style.pointerEvents = 'none');
+            trackQuizAnswer(false);
+            updateMasteryAfterAnswer(lessonId, false);
+            onComplete(false);
+        }
+    });
+}
+
+// ============================================================
+// QUIZ SYSTEM INTEGRATION — mix interactive + MC questions
+// ============================================================
+
+// Modified encounterEnemy to consider mastery for question selection
+function buildQuizQuestionSet(lesson, masteryLevel) {
+    const mcQuestions = [...lesson.questions].sort(() => Math.random() - 0.5);
+    const numQ = Math.min(lesson.questions.length, 3 + Math.floor(Math.random() * 3));
+
+    if (masteryLevel <= 0) {
+        // Basic: all MC
+        return mcQuestions.slice(0, numQ).map(q => ({ type: 'mc', data: q }));
+    }
+
+    // Mix: 50% MC, 50% interactive
+    const numMC = Math.ceil(numQ / 2);
+    const numInteractive = numQ - numMC;
+
+    const questions = mcQuestions.slice(0, numMC).map(q => ({ type: 'mc', data: q }));
+    for (let i = 0; i < numInteractive; i++) {
+        questions.push({ type: 'interactive', lessonId: lesson.id, level: masteryLevel });
+    }
+
+    // Shuffle the mix
+    return questions.sort(() => Math.random() - 0.5);
 }
 
 // ============================================================
@@ -4840,11 +7706,8 @@ function battleUpdate() {
             const chance = enemy.catchRate * (2 - hpRatio) * catchMult;
             const roll = Math.random();
             if (roll < chance) {
-                // CAUGHT! Show in-game naming overlay
+                // Cage hit! Now ask a catch quiz question before confirming
                 b.over = true;
-                playSound('victory');
-
-                // Store catch data for after naming
                 b.pendingCatch = {
                     species: enemy.name,
                     sprite: enemy.sprite,
@@ -4854,53 +7717,8 @@ function battleUpdate() {
                     power: { ...enemy.power },
                     rubies: Math.floor(enemy.rubies / 2)
                 };
-
-                // Show naming overlay
-                document.getElementById('zordname-sprite').textContent = enemy.sprite;
-                document.getElementById('zordname-species').textContent = enemy.name;
-                const nameInput = document.getElementById('zordname-input');
-                nameInput.value = enemy.name;
-                document.getElementById('zordname-overlay').style.display = 'flex';
-                setTimeout(() => { nameInput.focus(); nameInput.select(); }, 100);
-
-                // Handle confirm
-                const confirmBtn = document.getElementById('zordname-confirm');
-                const onConfirm = () => {
-                    confirmBtn.removeEventListener('click', onConfirm);
-                    nameInput.removeEventListener('keydown', onEnter);
-                    const nickname = (nameInput.value.trim() || enemy.name).slice(0, 16);
-                    document.getElementById('zordname-overlay').style.display = 'none';
-
-                    state.zordList.push({
-                        nickname,
-                        species: b.pendingCatch.species,
-                        sprite: b.pendingCatch.sprite,
-                        maxHp: b.pendingCatch.maxHp,
-                        currentHp: b.pendingCatch.maxHp,
-                        attack: b.pendingCatch.attack,
-                        element: b.pendingCatch.element,
-                        power: { ...b.pendingCatch.power },
-                        level: 1, xp: 0,
-                        catchLocation: state.location
-                    });
-                    trackZordCaught();
-                    state.hp = battle.playerHp;
-                    state.rubies += b.pendingCatch.rubies;
-                    if (!state.defeatedEnemies.includes(enemy.name)) state.defeatedEnemies.push(enemy.name);
-
-                    const resultEl = document.getElementById('battle-result');
-                    const textEl = document.getElementById('battle-result-text');
-                    resultEl.style.display = 'flex';
-                    textEl.innerHTML = `${escapeHtml(b.pendingCatch.species)} caught!<br><br>Named: <span style="color:var(--gold)">${escapeHtml(nickname)}</span><br>+${b.pendingCatch.rubies} rubies`;
-                    document.getElementById('battle-result-btn').textContent = 'Continue';
-                    document.getElementById('battle-result-btn').onclick = () => {
-                        battle.running = false; battle = null;
-                        updateHUD(); showScreen('game');
-                    };
-                };
-                const onEnter = (e) => { if (e.key === 'Enter') onConfirm(); };
-                confirmBtn.addEventListener('click', onConfirm);
-                nameInput.addEventListener('keydown', onEnter);
+                showCatchQuiz(enemy, b);
+                return; // control passes to catch quiz flow
             } else {
                 b.cageThrown = false;
                 b.damageNums.push({ x: b.ex, y: b.ey - 40, text: 'Broke free!', color: '#e94560', life: 50 });
@@ -6338,6 +9156,7 @@ function endBattle(victory) {
         textEl.innerHTML = `${enemy.name} defeated!<br><br>+${rubiesEarned} rubies<br><span style="font-size:9px;color:var(--text-dim)">(${enemy.rubies} base + ${state.quizCorrect} quiz bonus)</span>`;
         btnEl.textContent = 'Continue';
         playSound('victory');
+        autoSave();
     } else {
         state.hp = 1;
         state._pendingZoneKey = null;
@@ -6692,13 +9511,13 @@ function drawTile(col, row, tileType) {
         return;
     }
     if (tileType === T.CARPET) {
-        ctx.fillStyle = '#8b1a1a'; ctx.fillRect(x, y, S, S);
-        ctx.fillStyle = '#a02020'; ctx.fillRect(x+3, y+3, S-6, S-6);
-        ctx.fillStyle = '#c4a050';
+        ctx.fillStyle = '#3a2040'; ctx.fillRect(x, y, S, S);
+        ctx.fillStyle = '#4a2850'; ctx.fillRect(x+3, y+3, S-6, S-6);
+        ctx.fillStyle = '#6a5030';
         ctx.fillRect(x+6, y, S-12, 3); ctx.fillRect(x+6, y+S-3, S-12, 3);
         ctx.fillRect(x, y+6, 3, S-12); ctx.fillRect(x+S-3, y+6, 3, S-12);
         // Diamond pattern
-        ctx.fillStyle = '#b83030';
+        ctx.fillStyle = '#5a3060';
         for (let dy=8;dy<S-8;dy+=12) for(let dx=8;dx<S-8;dx+=12) ctx.fillRect(x+dx,y+dy,4,4);
         return;
     }
@@ -7173,10 +9992,15 @@ function drawCanvasHUD() {
     ctx.textBaseline = 'middle';
     const y = HUD_H / 2;
 
-    // Name
+    // Name + Level
     ctx.fillStyle = '#f5c842';
     ctx.textAlign = 'left';
     ctx.fillText(state.name, 8, y);
+    const nameW = ctx.measureText(state.name).width;
+    ctx.fillStyle = '#4ecca3';
+    ctx.font = '7px "Press Start 2P", monospace';
+    ctx.fillText(`Lv.${state.playerLevel}`, 12 + nameW, y);
+    ctx.font = '10px "Press Start 2P", monospace';
 
     // HP bar
     const hpBarX = 120, hpBarW = 80;
@@ -7196,7 +10020,7 @@ function drawCanvasHUD() {
     ctx.textAlign = 'center';
     ctx.fillStyle = '#8888aa';
     ctx.font = '8px "Press Start 2P", monospace';
-    const locNames = { cave: 'The Cave', town: 'Logic Land Town', forest: 'Enchanted Forest', beach: 'Coral Cove Beach', mountains: 'Iron Peak Mountains' };
+    const locNames = { cave: 'The Cave', town: 'Logic Land Town', forest: 'Enchanted Forest', beach: 'Coral Cove Beach', mountains: 'Iron Peak Mountains', zordarena: 'Zord Arena' };
     TEMPLE_FLOORS.forEach((f, i) => { locNames['temple_' + (i + 1)] = f.name; });
     PEAK_FLOORS.forEach((f, i) => { locNames['peak_' + (i + 1)] = f.name; });
     ctx.fillText(locNames[state.location] || state.location, CANVAS_W / 2, y);
@@ -7258,8 +10082,12 @@ function showZordPicker() {
     const container = document.getElementById('zb-actions');
     container.innerHTML = '';
     document.getElementById('zb-log').innerHTML = '<div class="zb-log-line">Choose a Zord to deploy!</div>';
-    document.getElementById('zb-player-zord').innerHTML = '<span style="font-size:14px;color:var(--text-dim)">Choose your Zord...</span>';
-    document.getElementById('zb-enemy-zord').innerHTML = '';
+    const pCanvas = document.getElementById('zb-player-sprite');
+    if (pCanvas) { const pc = pCanvas.getContext('2d'); pc.clearRect(0, 0, pCanvas.width, pCanvas.height); }
+    document.getElementById('zb-player-name-tag').textContent = '???';
+    document.getElementById('zb-player-level-tag').textContent = '';
+    document.getElementById('zb-player-hp-bar').style.width = '0%';
+    document.getElementById('zb-player-hp-text').textContent = '';
 
     state.zordBench.forEach(idx => {
         const z = state.zordList[idx];
@@ -7267,7 +10095,7 @@ function showZordPicker() {
         const el = ELEMENTS[z.element];
         const btn = document.createElement('button');
         btn.className = 'btn btn-choice';
-        btn.innerHTML = `${z.sprite} ${escapeHtml(z.nickname)} Lv.${z.level} <span style="color:${el.color}">${el.icon}${el.name}</span> HP:${z.currentHp}/${z.maxHp}`;
+        btn.innerHTML = `${escapeHtml(z.nickname)} Lv.${z.level} <span style="color:${el.color}">${el.icon}${el.name}</span> HP:${z.currentHp}/${z.maxHp}`;
         btn.addEventListener('click', () => deployZord(idx));
         container.appendChild(btn);
     });
@@ -7276,9 +10104,11 @@ function showZordPicker() {
     backBtn.className = 'btn btn-secondary';
     backBtn.textContent = 'Cancel (fight yourself)';
     backBtn.addEventListener('click', () => {
-        showScreen('battle');
-        battle.running = true;
-        battleLoop();
+        if (battle) {
+            showScreen('battle');
+            battle.running = true;
+            battleLoop();
+        }
     });
     container.appendChild(backBtn);
 }
@@ -7307,10 +10137,53 @@ function deployZord(zordIdx) {
         enemyZord: enemyZord,
         turn: 'player',
         log: [`${playerZord.nickname} was deployed against ${enemy.name}!`],
-        over: false
+        over: false,
+        _frame: 0
     };
+    // Start sprite animation loop
+    startZordBattleAnimation();
 
     renderZordBattle();
+}
+
+function getHpClass(pct) {
+    if (pct < 20) return 'low';
+    if (pct < 50) return 'medium';
+    return '';
+}
+
+let _zbAnimId = null;
+function startZordBattleAnimation() {
+    if (_zbAnimId) cancelAnimationFrame(_zbAnimId);
+    function zbAnim() {
+        if (!zordBattle || state.screen !== 'zordbattle') { _zbAnimId = null; return; }
+        zordBattle._frame = (zordBattle._frame || 0) + 1;
+        // Redraw sprites only (not full UI)
+        const ez = zordBattle.enemyZord;
+        const pz = zordBattle.playerZord;
+        const eCanvas = document.getElementById('zb-enemy-sprite');
+        const pCanvas = document.getElementById('zb-player-sprite');
+        if (eCanvas && ez) {
+            const eCtx = eCanvas.getContext('2d');
+            eCtx.clearRect(0, 0, eCanvas.width, eCanvas.height);
+            eCtx.save();
+            // Flip enemy to face left (toward center)
+            eCtx.translate(eCanvas.width, 0); eCtx.scale(-2, 2);
+            drawBattleEnemy(eCtx, 60, 65, { name: ez.species || ez.nickname, element: ez.element }, zordBattle._frame);
+            eCtx.restore();
+        }
+        if (pCanvas && pz) {
+            const pCtx = pCanvas.getContext('2d');
+            pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+            pCtx.save();
+            // Player faces right (toward center) — no flip needed, default faces right
+            pCtx.scale(2, 2);
+            drawBattleEnemy(pCtx, 70, 75, { name: pz.species || pz.nickname, element: pz.element }, zordBattle._frame);
+            pCtx.restore();
+        }
+        _zbAnimId = requestAnimationFrame(zbAnim);
+    }
+    _zbAnimId = requestAnimationFrame(zbAnim);
 }
 
 function renderZordBattle() {
@@ -7320,29 +10193,43 @@ function renderZordBattle() {
     const pEl = ELEMENTS[pz.element];
     const eEl = ELEMENTS[ez.element];
 
-    // Player Zord
-    const pHpPct = Math.max(0, (pz.currentHp / pz.maxHp) * 100);
-    document.getElementById('zb-player-zord').innerHTML = `
-        <span class="zord-sprite">${pz.sprite}</span>
-        <span class="zord-name">${escapeHtml(pz.nickname)}</span>
-        <span class="zord-info">Lv.${pz.level} ${pz.species || ''}</span>
-        <span class="zord-element" style="color:${pEl.color}">${pEl.icon} ${pEl.name}</span>
-        <div class="battle-hp-bar"><div class="battle-hp-fill ${pHpPct < 30 ? 'low' : ''}" style="width:${pHpPct}%"></div></div>
-        <span class="zord-hp-text">${pz.currentHp}/${pz.maxHp}</span>`;
-
-    // Enemy Zord
+    // Enemy info (top-left box)
+    document.getElementById('zb-enemy-name-tag').textContent = ez.nickname;
+    document.getElementById('zb-enemy-level-tag').textContent = `:L${ez.level}`;
     const eHpPct = Math.max(0, (ez.currentHp / ez.maxHp) * 100);
-    document.getElementById('zb-enemy-zord').innerHTML = `
-        <span class="zord-sprite">${ez.sprite}</span>
-        <span class="zord-name">${ez.nickname}</span>
-        <span class="zord-info">Lv.${ez.level}</span>
-        <span class="zord-element" style="color:${eEl.color}">${eEl.icon} ${eEl.name}</span>
-        <div class="battle-hp-bar"><div class="battle-hp-fill ${eHpPct < 30 ? 'low' : ''}" style="width:${eHpPct}%"></div></div>
-        <span class="zord-hp-text">${ez.currentHp}/${ez.maxHp}</span>`;
+    const eBar = document.getElementById('zb-enemy-hp-bar');
+    eBar.style.width = eHpPct + '%';
+    eBar.className = 'zb-hp-fill ' + getHpClass(eHpPct);
+    document.getElementById('zb-enemy-hp-text').textContent = `${ez.currentHp} / ${ez.maxHp}`;
+
+    // Enemy sprite (top-right) — flipped to face left toward center
+    const eCanvas = document.getElementById('zb-enemy-sprite');
+    const eCtx = eCanvas.getContext('2d');
+    eCtx.clearRect(0, 0, eCanvas.width, eCanvas.height);
+    eCtx.save(); eCtx.translate(eCanvas.width, 0); eCtx.scale(-2, 2);
+    drawBattleEnemy(eCtx, 60, 65, { name: ez.species || ez.nickname, element: ez.element }, zb._frame || 0);
+    eCtx.restore();
+
+    // Player info (bottom-right box)
+    document.getElementById('zb-player-name-tag').textContent = escapeHtml(pz.nickname);
+    document.getElementById('zb-player-level-tag').textContent = `:L${pz.level}`;
+    const pHpPct = Math.max(0, (pz.currentHp / pz.maxHp) * 100);
+    const pBar = document.getElementById('zb-player-hp-bar');
+    pBar.style.width = pHpPct + '%';
+    pBar.className = 'zb-hp-fill ' + getHpClass(pHpPct);
+    document.getElementById('zb-player-hp-text').textContent = `${pz.currentHp} / ${pz.maxHp}`;
+
+    // Player sprite (bottom-left) — draw pixel art on canvas (animation loop handles ongoing frames)
+    const pCanvas = document.getElementById('zb-player-sprite');
+    const pCtx = pCanvas.getContext('2d');
+    pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+    pCtx.save(); pCtx.scale(2, 2);
+    drawBattleEnemy(pCtx, 70, 75, { name: pz.species || pz.nickname, element: pz.element }, zb._frame || 0);
+    pCtx.restore();
 
     // Log
     const logEl = document.getElementById('zb-log');
-    logEl.innerHTML = zb.log.slice(-6).map(line => `<div class="zb-log-line">${line}</div>`).join('');
+    logEl.innerHTML = zb.log.slice(-4).map(line => `<div class="zb-log-line">${line}</div>`).join('');
     logEl.scrollTop = logEl.scrollHeight;
 
     // Actions
@@ -7352,48 +10239,105 @@ function renderZordBattle() {
     if (zb.over) return;
     if (zb.turn !== 'player') return;
 
-    // Basic Attack
+    // FIGHT
     const atkBtn = document.createElement('button');
     atkBtn.className = 'btn btn-primary';
-    atkBtn.textContent = `Attack (${pz.attack} dmg)`;
-    atkBtn.addEventListener('click', () => zordDoTurn('attack'));
+    atkBtn.innerHTML = `&#9654;FIGHT`;
+    atkBtn.addEventListener('click', () => {
+        // Show attack sub-menu
+        actionsEl.innerHTML = '';
+        const basicBtn = document.createElement('button');
+        basicBtn.className = 'btn btn-choice';
+        basicBtn.textContent = `Attack (${pz.attack} dmg)`;
+        basicBtn.addEventListener('click', () => zordDoTurn('attack'));
+        actionsEl.appendChild(basicBtn);
+
+        const pwrBtn2 = document.createElement('button');
+        pwrBtn2.className = 'btn btn-choice';
+        pwrBtn2.innerHTML = `${pEl.icon} ${escapeHtml(pz.power.name)} (${pz.power.damage})`;
+        pwrBtn2.addEventListener('click', () => zordDoTurn('power'));
+        actionsEl.appendChild(pwrBtn2);
+
+        const backBtn2 = document.createElement('button');
+        backBtn2.className = 'btn btn-choice';
+        backBtn2.textContent = 'Back';
+        backBtn2.addEventListener('click', () => renderZordBattle());
+        actionsEl.appendChild(backBtn2);
+    });
     actionsEl.appendChild(atkBtn);
 
-    // Special Power
-    const pwrBtn = document.createElement('button');
-    pwrBtn.className = 'btn btn-primary';
-    pwrBtn.style.borderColor = pEl.color;
-    pwrBtn.textContent = `${pEl.icon} ${pz.power.name} (${pz.power.damage} dmg)`;
-    pwrBtn.addEventListener('click', () => zordDoTurn('power'));
-    actionsEl.appendChild(pwrBtn);
-
-    // Switch Zord (if others on bench)
+    // ZORD (switch)
     const otherBench = state.zordBench.filter(i => i !== zb.playerZordIdx && state.zordList[i].currentHp > 0);
-    if (otherBench.length > 0) {
-        const switchBtn = document.createElement('button');
-        switchBtn.className = 'btn btn-secondary';
-        switchBtn.textContent = 'Switch Zord';
-        switchBtn.addEventListener('click', () => {
-            showZordPicker();
-        });
-        actionsEl.appendChild(switchBtn);
-    }
+    const switchBtn = document.createElement('button');
+    switchBtn.className = 'btn btn-secondary';
+    switchBtn.textContent = 'ZORD';
+    switchBtn.disabled = otherBench.length === 0;
+    switchBtn.style.opacity = otherBench.length > 0 ? '1' : '0.4';
+    switchBtn.addEventListener('click', () => {
+        if (otherBench.length > 0) showZordPicker();
+    });
+    actionsEl.appendChild(switchBtn);
 
-    // Retreat (go back to action battle)
-    const retreatBtn = document.createElement('button');
-    retreatBtn.className = 'btn btn-secondary';
-    retreatBtn.textContent = 'Retreat (fight yourself)';
-    retreatBtn.addEventListener('click', () => {
-        // Transfer enemy HP back
-        if (battle) {
+    // ITEM (placeholder / potion)
+    const itemBtn = document.createElement('button');
+    itemBtn.className = 'btn btn-secondary';
+    itemBtn.textContent = 'ITEM';
+    itemBtn.addEventListener('click', () => {
+        actionsEl.innerHTML = '';
+        const potions = state.inventory.potion || 0;
+        if (potions > 0 && pz.currentHp < pz.maxHp) {
+            const potBtn = document.createElement('button');
+            potBtn.className = 'btn btn-choice';
+            potBtn.textContent = `Potion x${potions} (Heal 30 HP)`;
+            potBtn.addEventListener('click', () => {
+                state.inventory.potion--;
+                const healed = Math.min(30, pz.maxHp - pz.currentHp);
+                pz.currentHp += healed;
+                zb.log.push(`Used Potion! ${escapeHtml(pz.nickname)} healed ${healed} HP!`);
+                playSound('gem');
+                // Enemy turn after using item
+                zb.turn = 'enemy';
+                renderZordBattle();
+                setTimeout(() => zordDoEnemyTurn(), 800);
+            });
+            actionsEl.appendChild(potBtn);
+        } else {
+            const emptyBtn = document.createElement('button');
+            emptyBtn.className = 'btn btn-choice';
+            emptyBtn.textContent = potions > 0 ? 'HP is full' : 'No items';
+            emptyBtn.disabled = true;
+            emptyBtn.style.opacity = '0.4';
+            actionsEl.appendChild(emptyBtn);
+        }
+        const backBtn3 = document.createElement('button');
+        backBtn3.className = 'btn btn-choice';
+        backBtn3.textContent = 'Back';
+        backBtn3.addEventListener('click', () => renderZordBattle());
+        actionsEl.appendChild(backBtn3);
+    });
+    actionsEl.appendChild(itemBtn);
+
+    // RUN
+    const runBtn = document.createElement('button');
+    runBtn.className = 'btn btn-secondary';
+    runBtn.textContent = 'RUN';
+    runBtn.addEventListener('click', () => {
+        if (zb.isArena) {
+            zb.log.push('Can\'t run from an Arena battle!');
+            renderZordBattle();
+        } else if (battle) {
             battle.enemyHp = zb.enemyZord.currentHp;
             showScreen('battle');
             battle.running = true;
             battleLoop();
+            zordBattle = null;
+        } else {
+            zordBattle = null;
+            showScreen('game');
+            updateHUD();
         }
-        zordBattle = null;
     });
-    actionsEl.appendChild(retreatBtn);
+    actionsEl.appendChild(runBtn);
 }
 
 function zordDoTurn(action) {
@@ -7431,49 +10375,57 @@ function zordDoTurn(action) {
     // --- ENEMY TURN ---
     zb.turn = 'enemy';
     renderZordBattle();
+    setTimeout(() => zordDoEnemyTurn(), 800);
+}
 
-    setTimeout(() => {
-        // Enemy picks attack or power (50/50)
-        let enemyDmg = 0;
-        if (Math.random() < 0.5) {
-            enemyDmg = Math.max(1, ez.attack + Math.floor(Math.random() * 3) - 1);
-            zb.log.push(`${ez.nickname} attacks for ${enemyDmg} damage!`);
+function zordDoEnemyTurn() {
+    const zb = zordBattle;
+    if (!zb) return;
+    const pz = zb.playerZord;
+    const ez = zb.enemyZord;
+
+    let enemyDmg = 0;
+    if (Math.random() < 0.5) {
+        enemyDmg = Math.max(1, ez.attack + Math.floor(Math.random() * 3) - 1);
+        zb.log.push(`${ez.nickname} attacks for ${enemyDmg} damage!`);
+    } else {
+        const mult = getElementMultiplier(ez.power.element, pz.element);
+        enemyDmg = Math.max(1, Math.floor(ez.power.damage * mult + Math.random() * 3));
+        let effText = '';
+        if (mult > 1) effText = ' Super effective!';
+        else if (mult < 1) effText = ' Not very effective...';
+        zb.log.push(`${ez.nickname} uses ${ez.power.name}! ${enemyDmg} damage!${effText}`);
+    }
+
+    pz.currentHp = Math.max(0, pz.currentHp - enemyDmg);
+    playSound('hurt');
+
+    if (pz.currentHp <= 0) {
+        zb.log.push(`${escapeHtml(pz.nickname)} fainted!`);
+        const alive = state.zordBench.filter(i => state.zordList[i].currentHp > 0);
+        if (alive.length > 0) {
+            zb.log.push('Choose another Zord or retreat!');
+            zb.turn = 'player';
+            renderZordBattle();
+            setTimeout(() => showZordPicker(), 500);
         } else {
-            const mult = getElementMultiplier(ez.power.element, pz.element);
-            enemyDmg = Math.max(1, Math.floor(ez.power.damage * mult + Math.random() * 3));
-            let effText = '';
-            if (mult > 1) effText = ' Super effective!';
-            else if (mult < 1) effText = ' Not very effective...';
-            zb.log.push(`${ez.nickname} uses ${ez.power.name}! ${enemyDmg} damage!${effText}`);
+            zb.log.push('All your Zords fainted!');
+            zb.over = true;
+            zordBattleEnd(false);
         }
+        return;
+    }
 
-        pz.currentHp = Math.max(0, pz.currentHp - enemyDmg);
-        playSound('hurt');
-
-        if (pz.currentHp <= 0) {
-            zb.log.push(`${escapeHtml(pz.nickname)} fainted!`);
-            // Check if other bench Zords are alive
-            const alive = state.zordBench.filter(i => state.zordList[i].currentHp > 0);
-            if (alive.length > 0) {
-                zb.log.push('Choose another Zord or retreat!');
-                zb.turn = 'player';
-                renderZordBattle();
-                // Show picker
-                setTimeout(() => showZordPicker(), 500);
-            } else {
-                zb.log.push('All your Zords fainted!');
-                zb.over = true;
-                zordBattleEnd(false);
-            }
-            return;
-        }
-
-        zb.turn = 'player';
-        renderZordBattle();
-    }, 800);
+    zb.turn = 'player';
+    renderZordBattle();
 }
 
 function zordBattleEnd(victory) {
+    // Arena battles use separate handler
+    if (zordBattle && zordBattle.isArena) {
+        arenaZordBattleEnd(victory);
+        return;
+    }
     const zb = zordBattle;
     renderZordBattle();
 
