@@ -5863,7 +5863,7 @@ function readSign(row, col) {
         else text = SIGN_TEXTS.beach_south;
     } else if (state.location === 'island') {
         if (col <= 5 && row <= 5) text = SIGN_TEXTS.island_ferry;
-        else if (col > 15) text = 'Island Grocery - Buy supplies!';
+        else if (col > 15) text = 'Frugalway - Island Grocery Store';
         else text = SIGN_TEXTS.island_sign;
     } else if (state.location === 'zordarena') {
         if (row >= ROWS - 4) text = SIGN_TEXTS.arena_exit;
@@ -6169,6 +6169,7 @@ function hideDialogue() {
 // ============================================================
 function openStore() {
     state.paused = true;
+    document.getElementById('store-title').textContent = state.location === 'island' ? 'Frugalway' : 'Logic Land General Store';
     showScreen('store');
     renderStore();
 }
