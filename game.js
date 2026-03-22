@@ -4496,7 +4496,7 @@ function renderZordList() {
             if (!z) return;
             const el = ELEMENTS[z.element];
             html += `<div class="inv-item" style="flex-wrap:wrap;gap:4px;background:rgba(245,200,66,0.05);border-left:3px solid ${el ? el.color : '#888'};">
-                <span>${z.sprite} <strong style="color:var(--gold)">${escapeHtml(z.nickname)}</strong> <span style="font-size:8px;color:var(--text-dim)">Lv.${z.level}</span></span>
+                <span>${zordSpriteHTML(z.species || z.nickname, z.element)} <strong style="color:var(--gold)">${escapeHtml(z.nickname)}</strong> <span style="font-size:8px;color:var(--text-dim)">Lv.${z.level}</span></span>
                 <span style="font-size:8px;color:${el ? el.color : '#888'}">${el ? el.icon + ' ' + el.name : ''}</span>
                 <span style="font-size:7px;color:var(--text-dim)">HP:${z.currentHp}/${z.maxHp} ATK:${z.attack} | ${z.power.name} (${z.power.damage}dmg)</span>
                 <span style="font-size:7px;color:var(--text-dim)">XP: ${z.xp}/${getZordXpNeeded(z)}</span>
@@ -4518,7 +4518,7 @@ function renderZordList() {
         div.className = 'inv-item';
         div.style.cssText = 'flex-wrap:wrap;gap:4px;' + (onBench ? 'opacity:0.5;' : '');
         div.innerHTML = `
-            <span>${zord.sprite} <strong style="color:var(--gold)">${escapeHtml(zord.nickname)}</strong> <span style="font-size:8px;color:var(--text-dim)">Lv.${zord.level}</span></span>
+            <span>${zordSpriteHTML(zord.species || zord.nickname, zord.element)} <strong style="color:var(--gold)">${escapeHtml(zord.nickname)}</strong> <span style="font-size:8px;color:var(--text-dim)">Lv.${zord.level}</span></span>
             <span style="font-size:8px;color:${el ? el.color : '#888'}">${el ? el.icon + ' ' + el.name : ''}</span>
             <span style="font-size:7px;color:var(--text-dim)">${zord.species} | HP:${zord.currentHp}/${zord.maxHp} ATK:${zord.attack}</span>
             <span style="font-size:7px;color:var(--text-dim)">${zord.power.name} (${zord.power.damage} ${el ? el.name : ''} dmg)</span>
@@ -4553,7 +4553,10 @@ function removeFromBench(idx) {
 
 function renameZord(index) {
     const zord = state.zordList[index];
-    document.getElementById('zordname-sprite').textContent = zord.sprite;
+    const rCanvas = document.getElementById('zordname-sprite');
+    const rCtx = rCanvas.getContext('2d');
+    rCtx.clearRect(0, 0, rCanvas.width, rCanvas.height);
+    drawBattleEnemy(rCtx, 60, 65, { name: zord.species || zord.nickname, element: zord.element }, 0);
     document.getElementById('zordname-species').textContent = 'Rename ' + zord.species;
     const nameInput = document.getElementById('zordname-input');
     nameInput.value = zord.nickname;
@@ -5122,7 +5125,7 @@ function showTestZordPicker() {
         const btn = document.createElement('button');
         btn.className = 'btn btn-choice';
         btn.style.cssText = 'font-size:8px;padding:6px 10px;margin-bottom:3px;width:100%;text-align:left;';
-        btn.innerHTML = `${enemy.sprite} ${escapeHtml(enemy.name)} <span style="color:${el.color}">${el.icon}</span> HP:${enemy.hp} ATK:${enemy.attack}`;
+        btn.innerHTML = `${zordSpriteHTML(enemy.name, enemy.element, 24)} ${escapeHtml(enemy.name)} <span style="color:${el.color}">${el.icon}</span> HP:${enemy.hp} ATK:${enemy.attack}`;
         btn.addEventListener('click', () => {
             state.zordList.push({
                 nickname: enemy.name,
@@ -6004,7 +6007,7 @@ function continueArenaAfterQuiz() {
         const el = ELEMENTS[z.element];
         const btn = document.createElement('button');
         btn.className = 'btn btn-choice';
-        btn.innerHTML = `${escapeHtml(z.nickname)} Lv.${z.level} <span style="color:${el.color}">${el.icon}${el.name}</span> HP:${z.currentHp}/${z.maxHp}`;
+        btn.innerHTML = `${zordSpriteHTML(z.species||z.nickname, z.element, 24)} ${escapeHtml(z.nickname)} Lv.${z.level} <span style="color:${el.color}">${el.icon}${el.name}</span> HP:${z.currentHp}/${z.maxHp}`;
         btn.addEventListener('click', () => startArenaZordBattle(idx));
         actionsEl.appendChild(btn);
     });
@@ -6084,7 +6087,7 @@ function arenaZordBattleEnd(victory) {
                         const el = ELEMENTS[z.element];
                         const btn = document.createElement('button');
                         btn.className = 'btn btn-choice';
-                        btn.innerHTML = `${z.sprite} ${escapeHtml(z.nickname)} Lv.${z.level} HP:${z.currentHp}/${z.maxHp}`;
+                        btn.innerHTML = `${zordSpriteHTML(z.species||z.nickname, z.element, 24)} ${escapeHtml(z.nickname)} Lv.${z.level} HP:${z.currentHp}/${z.maxHp}`;
                         btn.addEventListener('click', () => startArenaZordBattle(idx));
                         actionsEl.appendChild(btn);
                     });
@@ -6182,7 +6185,7 @@ function openZordHospital() {
         const div = document.createElement('div');
         div.className = 'arena-zord-card';
         div.innerHTML = `<div>
-            ${z.sprite} <strong style="color:var(--gold)">${escapeHtml(z.nickname)}</strong>
+            ${zordSpriteHTML(z.species||z.nickname, z.element, 24)} <strong style="color:var(--gold)">${escapeHtml(z.nickname)}</strong>
             <span style="font-size:8px;color:var(--text-dim)">Lv.${z.level} ${escapeHtml(z.species)}</span>
             <span style="font-size:8px;color:${el.color}">${el.icon}</span>
         </div>
@@ -6260,7 +6263,7 @@ function openZordSpa() {
         const div = document.createElement('div');
         div.className = 'arena-zord-card';
         div.innerHTML = `<div style="flex:1;">
-            ${z.sprite} <strong style="color:var(--gold)">${escapeHtml(z.nickname)}</strong>
+            ${zordSpriteHTML(z.species||z.nickname, z.element, 24)} <strong style="color:var(--gold)">${escapeHtml(z.nickname)}</strong>
             <span style="font-size:8px;color:var(--text-dim)">Lv.${z.level} ${escapeHtml(z.species)}</span>
             <span style="font-size:8px;color:${el.color}">${el.icon}${el.name}</span>
             <span style="font-size:7px;color:var(--text-dim)">ATK:${z.attack} | XP:${z.xp}/${getZordXpNeeded(z)}</span>
@@ -7177,7 +7180,7 @@ function showCatchQuiz(enemy, b) {
 
     const header = document.createElement('div');
     header.style.cssText = 'color:var(--gold);font-size:10px;margin-bottom:12px;text-align:center;';
-    header.textContent = `${enemy.sprite} Answer correctly to catch ${enemy.name}!`;
+    header.textContent = `Answer correctly to catch ${enemy.name}!`;
     box.appendChild(header);
 
     const qText = document.createElement('div');
@@ -7311,8 +7314,11 @@ function completeCatch(enemy, b) {
     console.log('[CATCH] completeCatch called', { enemy: enemy.name, battleExists: !!battle, bOver: b.over, screen: state.screen });
     playSound('victory');
 
-    // Show naming overlay
-    document.getElementById('zordname-sprite').textContent = enemy.sprite;
+    // Show naming overlay — draw pixel sprite on canvas
+    const spriteCanvas = document.getElementById('zordname-sprite');
+    const spriteCtx = spriteCanvas.getContext('2d');
+    spriteCtx.clearRect(0, 0, spriteCanvas.width, spriteCanvas.height);
+    drawBattleEnemy(spriteCtx, 60, 65, { name: enemy.name, element: enemy.element }, 0);
     document.getElementById('zordname-species').textContent = enemy.name;
     const nameInput = document.getElementById('zordname-input');
     nameInput.value = enemy.name;
@@ -9337,6 +9343,26 @@ function getEnemySpriteType(name) {
     return map[name] || 'goblin';
 }
 
+// Create a small inline canvas element with a Zord sprite drawn on it
+function createZordSpriteEl(name, element, size) {
+    const s = size || 32;
+    const canvas = document.createElement('canvas');
+    canvas.width = s; canvas.height = s;
+    canvas.style.cssText = `display:inline-block;vertical-align:middle;image-rendering:pixelated;width:${s}px;height:${s}px;`;
+    const ctx = canvas.getContext('2d');
+    const scale = s / 80; // drawBattleEnemy expects ~80px space
+    ctx.save(); ctx.scale(scale, scale);
+    drawBattleEnemy(ctx, 40, 42, { name, element }, 0);
+    ctx.restore();
+    return canvas;
+}
+
+// Return an HTML string with an inline data-URL image of the Zord sprite
+function zordSpriteHTML(name, element, size) {
+    const el = createZordSpriteEl(name, element, size || 32);
+    return el.outerHTML;
+}
+
 function drawBattleEnemy(c, ex, ey, enemy, frame) {
     const eBob = Math.sin(frame * 0.06) * 5;
     const el = ELEMENTS[enemy.element] || { color: '#804040' };
@@ -10897,7 +10923,7 @@ function showZordPicker() {
         const el = ELEMENTS[z.element];
         const btn = document.createElement('button');
         btn.className = 'btn btn-choice';
-        btn.innerHTML = `${escapeHtml(z.nickname)} Lv.${z.level} <span style="color:${el.color}">${el.icon}${el.name}</span> HP:${z.currentHp}/${z.maxHp}`;
+        btn.innerHTML = `${zordSpriteHTML(z.species||z.nickname, z.element, 24)} ${escapeHtml(z.nickname)} Lv.${z.level} <span style="color:${el.color}">${el.icon}${el.name}</span> HP:${z.currentHp}/${z.maxHp}`;
         btn.addEventListener('click', () => deployZord(idx));
         container.appendChild(btn);
     });
