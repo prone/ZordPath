@@ -7029,11 +7029,9 @@ function showLessonSlideshow(lesson, onComplete) {
         nextBtn.className = 'btn btn-primary';
         nextBtn.style.cssText = 'font-size:11px;padding:10px 24px;';
 
-        // Count lines and delay button by 1 second per line
+        // Hide button until timer expires (1 second per line)
         const lineCount = paragraphs[slideIdx].split('\n').length;
-        nextBtn.textContent = `Read... (${lineCount}s)`;
-        nextBtn.disabled = true;
-        nextBtn.style.opacity = '0.4';
+        nextBtn.style.display = 'none';
 
         let remaining = lineCount;
         const countdown = setInterval(() => {
@@ -7041,10 +7039,7 @@ function showLessonSlideshow(lesson, onComplete) {
             if (remaining <= 0) {
                 clearInterval(countdown);
                 nextBtn.textContent = isLast ? 'View Diagram' : 'Next';
-                nextBtn.disabled = false;
-                nextBtn.style.opacity = '1';
-            } else {
-                nextBtn.textContent = `Read... (${remaining}s)`;
+                nextBtn.style.display = '';
             }
         }, 1000);
 
