@@ -850,7 +850,8 @@ body {
     background: var(--bg-dark);
     border: 1px solid var(--border);
     padding: 16px;
-    margin-bottom: 20px;
+    margin-top: 16px;
+    margin-bottom: 0;
     font-size: 10px;
     line-height: 2.2;
     max-height: none;
