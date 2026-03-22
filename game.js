@@ -1215,6 +1215,37 @@ function findWalkableTile(map, startCol, startRow) {
     return { col: startCol, row: startRow };
 }
 
+// Clear solid tiles near enemy spawn points so they don't get stuck
+function clearEnemySpawnAreas() {
+    for (const loc of Object.keys(ENEMY_ZONES)) {
+        const map = MAPS[loc];
+        if (!map) continue;
+        const zones = ENEMY_ZONES[loc];
+        // Determine the walkable floor tile for this location
+        let floorTile = T.GRASS;
+        if (loc === 'cave') floorTile = T.CAVE_FL;
+        else if (loc.startsWith('temple_')) floorTile = T.TEMPLE_FL;
+        else if (loc === 'beach') floorTile = T.SAND;
+        else if (loc === 'mountains' || loc.startsWith('peak_')) floorTile = T.MTN_GROUND;
+        else if (loc === 'zordarena') floorTile = T.CARPET;
+
+        zones.forEach(z => {
+            // Clear a 2-tile radius around each spawn point
+            for (let dr = -2; dr <= 2; dr++) {
+                for (let dc = -2; dc <= 2; dc++) {
+                    const r = z.row + dr, c = z.col + dc;
+                    if (r >= 1 && r < ROWS - 1 && c >= 1 && c < COLS - 1) {
+                        if (SOLID.has(map[r][c]) && map[r][c] !== T.WALL && map[r][c] !== T.CAVE_W && map[r][c] !== T.TEMPLE_W && map[r][c] !== T.MTN_WALL && map[r][c] !== T.FENCE) {
+                            map[r][c] = floorTile;
+                        }
+                    }
+                }
+            }
+        });
+    }
+}
+clearEnemySpawnAreas();
+
 function initEnemyPositions() {
     const allLocs = ['cave', 'forest', 'beach', 'mountains', 'peak_1', 'peak_2', 'peak_3', 'peak_4', 'peak_5', 'temple_1', 'temple_2', 'temple_3', 'temple_4', 'temple_5', 'temple_6', 'temple_7'];
     for (const loc of allLocs) {
