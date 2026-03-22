@@ -163,8 +163,17 @@ function loadFromSlot(i) {
         state.rubies = d.rubies;
         state.inventory = d.inventory || {};
         state.fish = d.fish || {};
-        state.location = d.location;
-        state.playerCol = d.playerCol; state.playerRow = d.playerRow;
+        // Always spawn at town or island (whichever the player was at or nearest)
+        const savedLoc = d.location;
+        if (savedLoc === 'island') {
+            state.location = 'island';
+            state.playerCol = Math.floor(COLS / 2);
+            state.playerRow = Math.floor(ROWS / 2);
+        } else {
+            state.location = 'town';
+            state.playerCol = Math.floor(COLS / 2);
+            state.playerRow = Math.floor(ROWS / 2);
+        }
         state.facing = d.facing || 'down';
         state.defeatedEnemies = d.defeatedEnemies || [];
         state.defeatedZones = new Set(d.defeatedZones || []);
