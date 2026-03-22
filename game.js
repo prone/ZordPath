@@ -1181,10 +1181,27 @@ const ENEMY_ZONES = {
 const enemyPos = {};
 
 function findWalkableTile(map, startCol, startRow) {
-    // If the start tile is walkable, use it
-    if (startRow >= 0 && startRow < ROWS && startCol >= 0 && startCol < COLS &&
-        !SOLID.has(map[startRow][startCol])) return { col: startCol, row: startRow };
-    // Search outward in a spiral for a walkable tile
+    // Check if a tile and all its neighbors are walkable (no adjacent solids)
+    function isSafeSpawn(r, c) {
+        if (r < 1 || r >= ROWS - 1 || c < 1 || c >= COLS - 1) return false;
+        if (SOLID.has(map[r][c])) return false;
+        // Check all 4 cardinal neighbors
+        if (SOLID.has(map[r-1][c]) || SOLID.has(map[r+1][c]) ||
+            SOLID.has(map[r][c-1]) || SOLID.has(map[r][c+1])) return false;
+        return true;
+    }
+    // If the start tile is safe, use it
+    if (isSafeSpawn(startRow, startCol)) return { col: startCol, row: startRow };
+    // Search outward for a safe tile
+    for (let radius = 1; radius < 8; radius++) {
+        for (let dr = -radius; dr <= radius; dr++) {
+            for (let dc = -radius; dc <= radius; dc++) {
+                const r = startRow + dr, c2 = startCol + dc;
+                if (isSafeSpawn(r, c2)) return { col: c2, row: r };
+            }
+        }
+    }
+    // Fallback: just find any non-solid tile
     for (let radius = 1; radius < 6; radius++) {
         for (let dr = -radius; dr <= radius; dr++) {
             for (let dc = -radius; dc <= radius; dc++) {
@@ -1195,7 +1212,7 @@ function findWalkableTile(map, startCol, startRow) {
             }
         }
     }
-    return { col: startCol, row: startRow }; // fallback
+    return { col: startCol, row: startRow };
 }
 
 function initEnemyPositions() {
@@ -1230,6 +1247,15 @@ function updateEnemyMovement() {
         const key = `${state.location}_${i}`;
         if (state.defeatedZones.has(key)) return;
 
+        // If currently on a solid tile, nudge toward spawn
+        const curCol = Math.floor(ep.x / TILE);
+        const curRow = Math.floor(ep.y / TILE);
+        if (curCol >= 0 && curCol < COLS && curRow >= 0 && curRow < ROWS && SOLID.has(map[curRow][curCol])) {
+            ep.x += (ep.spawnX - ep.x) * 0.1;
+            ep.y += (ep.spawnY - ep.y) * 0.1;
+            return;
+        }
+
         // Direction change timer
         ep.dirTimer--;
         if (ep.dirTimer <= 0) {
@@ -1245,29 +1271,36 @@ function updateEnemyMovement() {
         // Stay within roam radius of spawn
         const distFromSpawn = Math.sqrt((nx - ep.spawnX) ** 2 + (ny - ep.spawnY) ** 2);
         if (distFromSpawn > ep.roam) {
-            // Bounce back toward spawn
             ep.dx = (ep.spawnX - ep.x) * 0.02;
             ep.dy = (ep.spawnY - ep.y) * 0.02;
             nx = ep.x + ep.dx;
             ny = ep.y + ep.dy;
         }
 
-        // Don't walk into walls
+        // Check target tile and adjacent tiles for solids (buffer zone)
         const tileCol = Math.floor(nx / TILE);
         const tileRow = Math.floor(ny / TILE);
-        if (tileCol >= 0 && tileCol < COLS && tileRow >= 0 && tileRow < ROWS) {
-            if (!SOLID.has(map[tileRow][tileCol])) {
+        const inBounds = tileCol >= 0 && tileCol < COLS && tileRow >= 0 && tileRow < ROWS;
+
+        if (inBounds && !SOLID.has(map[tileRow][tileCol])) {
+            // Also check if too close to a solid tile edge (buffer of 6px)
+            const bufCol = Math.floor((nx + Math.sign(ep.dx) * 6) / TILE);
+            const bufRow = Math.floor((ny + Math.sign(ep.dy) * 6) / TILE);
+            const bufSolid = bufCol >= 0 && bufCol < COLS && bufRow >= 0 && bufRow < ROWS && SOLID.has(map[bufRow][bufCol]);
+            if (!bufSolid) {
                 ep.x = nx;
                 ep.y = ny;
             } else {
-                // Reverse direction
-                ep.dx *= -1;
-                ep.dy *= -1;
-                ep.dirTimer = 30;
+                // Near a solid — pick new random direction away from it
+                ep.dx = (ep.spawnX - ep.x) * 0.03 + (Math.random() - 0.5) * 0.4;
+                ep.dy = (ep.spawnY - ep.y) * 0.03 + (Math.random() - 0.5) * 0.4;
+                ep.dirTimer = 60 + Math.floor(Math.random() * 60);
             }
         } else {
-            ep.dx *= -1;
-            ep.dy *= -1;
+            // Hit solid or out of bounds — pick new random direction biased toward spawn
+            ep.dx = (ep.spawnX - ep.x) * 0.03 + (Math.random() - 0.5) * 0.4;
+            ep.dy = (ep.spawnY - ep.y) * 0.03 + (Math.random() - 0.5) * 0.4;
+            ep.dirTimer = 60 + Math.floor(Math.random() * 60);
         }
     });
 }
