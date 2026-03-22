@@ -437,24 +437,62 @@ function createMap(rows, cols, fill) {
 // Cave map
 function buildCaveMap() {
     const m = createMap(ROWS, COLS, T.CAVE_W);
-    // Carve out floor
+    // Carve out main cavern (irregular shape)
     for (let r = 3; r < ROWS - 3; r++) {
         for (let c = 3; c < COLS - 3; c++) {
             m[r][c] = T.CAVE_FL;
         }
     }
-    // Add some cave walls as obstacles
-    for (let i = 0; i < 15; i++) {
-        const r = 5 + Math.floor(Math.random() * (ROWS - 10));
-        const c = 5 + Math.floor(Math.random() * (COLS - 10));
-        m[r][c] = T.ROCK;
-    }
-    // Crystals
-    for (let i = 0; i < 6; i++) {
-        const r = 4 + Math.floor(Math.random() * (ROWS - 8));
-        const c = 4 + Math.floor(Math.random() * (COLS - 8));
-        if (m[r][c] === T.CAVE_FL) m[r][c] = T.CRYSTAL;
-    }
+    // Carve side alcoves for more interesting shape
+    // Left alcove
+    for (let r = 4; r < 8; r++) { m[r][2] = T.CAVE_FL; }
+    // Top alcove
+    for (let c = 8; c < 14; c++) { m[2][c] = T.CAVE_FL; m[2][c] = T.CAVE_FL; }
+    // Bottom alcove
+    for (let c = 14; c < 19; c++) { m[ROWS - 3][c] = T.CAVE_FL; }
+
+    // Underground pool (left area)
+    m[5][5] = T.WATER; m[5][6] = T.WATER; m[5][7] = T.WATER;
+    m[6][5] = T.WATER; m[6][6] = T.WATER;
+    m[6][7] = T.BRIDGE; // stepping stone across pool
+
+    // Lava crack (bottom right)
+    m[ROWS - 5][17] = T.LAVA; m[ROWS - 5][18] = T.LAVA;
+    m[ROWS - 4][18] = T.LAVA;
+
+    // Crystal cluster (center-left)
+    m[4][9] = T.CRYSTAL; m[4][10] = T.CRYSTAL;
+    m[5][10] = T.CRYSTAL;
+
+    // Crystal cluster (right)
+    m[8][19] = T.CRYSTAL; m[7][20] = T.CRYSTAL;
+
+    // Scattered crystals
+    m[3][15] = T.CRYSTAL; m[9][7] = T.CRYSTAL;
+
+    // Rock formations (structured, not random)
+    // Pillar formation (center)
+    m[6][12] = T.ROCK; m[6][13] = T.ROCK;
+    m[5][13] = T.ROCK;
+    // Wall outcrop (upper right)
+    m[3][18] = T.ROCK; m[3][19] = T.ROCK; m[4][19] = T.ROCK;
+    // Scattered rocks
+    m[8][5] = T.ROCK; m[9][15] = T.ROCK; m[4][4] = T.ROCK;
+    m[7][16] = T.ROCK;
+
+    // Stalagmite path (row of rocks creating a passage)
+    m[7][8] = T.ROCK; m[7][10] = T.ROCK;
+
+    // Bookshelf (hidden study nook in upper area)
+    m[3][6] = T.BOOKSHELF; m[3][7] = T.BOOKSHELF;
+
+    // Statue (ancient cave shrine)
+    m[ROWS - 4][8] = T.STATUE;
+
+    // Flowers (bioluminescent cave flowers)
+    m[5][16] = T.FLOWER; m[8][10] = T.FLOWER; m[9][18] = T.FLOWER;
+    m[4][13] = T.FLOWER;
+
     // Exit door to town (right side) - clear a corridor to it
     const midRow = Math.floor(ROWS / 2);
     for (let c = COLS - 5; c <= COLS - 2; c++) {
