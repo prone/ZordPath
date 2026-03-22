@@ -7546,15 +7546,6 @@ function startFerryRide(destination) {
             c.fillRect(g2.x - 1, g2.y, 3, 3);
         });
 
-        // Progress bar at bottom
-        c.fillStyle = 'rgba(0,0,0,0.4)';
-        c.fillRect(W * 0.2, H - 30, W * 0.6, 8);
-        c.fillStyle = '#f5c842';
-        c.fillRect(W * 0.2, H - 30, W * 0.6 * t, 8);
-        c.strokeStyle = '#888';
-        c.lineWidth = 1;
-        c.strokeRect(W * 0.2, H - 30, W * 0.6, 8);
-
         requestAnimationFrame(renderFrame);
     }
 
