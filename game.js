@@ -2933,7 +2933,12 @@ const STORE_ITEMS = [
     { id: 'stone', name: 'Stone Blocks', desc: 'Sturdy building material', price: 30, icon: '\u{1FAA8}', stock: 15, cat: 'build' },
     { id: 'nails', name: 'Iron Nails', desc: 'Holds everything together', price: 10, icon: '\u{1F529}', stock: 25, cat: 'build' },
     { id: 'glass', name: 'Glass Panes', desc: 'For windows', price: 30, icon: '\u{1FA9F}', stock: 10, cat: 'build' },
-    { id: 'rope', name: 'Rope', desc: 'Useful for building', price: 20, icon: '\u{1FAA2}', stock: 8, cat: 'build' }
+    { id: 'rope', name: 'Rope', desc: 'Useful for building', price: 20, icon: '\u{1FAA2}', stock: 8, cat: 'build' },
+    // Island-exclusive (Frugalway)
+    { id: 'islandbar', name: 'Island Bar', desc: 'Sweet snack, restores 25 HP', price: 10, icon: '\u{1F36B}', stock: 20, cat: 'equip', location: 'island' },
+    { id: 'coconut', name: 'Coconut Water', desc: 'Refreshing! Restores 15 HP', price: 5, icon: '\u{1F965}', stock: 30, cat: 'equip', location: 'island' },
+    { id: 'tropiccharm', name: 'Tropic Charm', desc: '+10% catch rate for island Zords', price: 50, icon: '\u{1F3B0}', stock: 3, cat: 'equip', location: 'island' },
+    { id: 'palmwood', name: 'Palm Wood', desc: 'Lightweight island timber', price: 15, icon: '\u{1F334}', stock: 15, cat: 'build', location: 'island' }
 ];
 
 // Track remaining merchant stock
@@ -6181,7 +6186,8 @@ function renderStore() {
     equipCol.innerHTML = '<div style="padding:6px 8px;color:var(--gold);font-size:10px;border-bottom:2px solid var(--border);">-- Equipment --</div>';
     buildCol.innerHTML = '<div style="padding:6px 8px;color:var(--gold);font-size:10px;border-bottom:2px solid var(--border);">-- Building Materials --</div>';
 
-    STORE_ITEMS.forEach(item => {
+    const storeItems = STORE_ITEMS.filter(item => !item.location || item.location === state.location);
+    storeItems.forEach(item => {
         const container = item.cat === 'equip' ? equipCol : buildCol;
         const canAfford = state.rubies >= item.price;
         const div = document.createElement('div');
@@ -9946,13 +9952,21 @@ function battleUpdate() {
         }
     }
 
-    // Potion
-    if (keys['p'] && (state.inventory.potion || 0) > 0 && b.playerHp < b.playerMaxHp) {
+    // Potion / consumables (P key — uses best available healing item)
+    if (keys['p'] && b.playerHp < b.playerMaxHp) {
+        // Pick best healing item available
+        let healItem = null, healAmt = 0;
+        if ((state.inventory.potion || 0) > 0) { healItem = 'potion'; healAmt = 30; }
+        else if ((state.inventory.islandbar || 0) > 0) { healItem = 'islandbar'; healAmt = 25; }
+        else if ((state.inventory.coconut || 0) > 0) { healItem = 'coconut'; healAmt = 15; }
+        if (!healItem) { keys['p'] = false; }
+        else {
         keys['p'] = false;
-        state.inventory.potion--;
-        const healed = Math.min(30, b.playerMaxHp - b.playerHp);
+        state.inventory[healItem]--;
+        const healed = Math.min(healAmt, b.playerMaxHp - b.playerHp);
         b.playerHp += healed;
         b.damageNums.push({ x: b.px, y: b.py - 20, text: `+${healed}`, color: '#4ecca3', life: 40 });
+        }
     }
 
     // Deploy Zord (switch to turn-based)
