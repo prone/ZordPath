@@ -8438,14 +8438,14 @@ function startBattle() {
         escapeRate: enemy.escapeRate !== undefined ? enemy.escapeRate : 0.75
     };
 
-    // Controls hint
-    let hint = 'WASD / Arrows: Move | Space: Attack';
-    if (weapon.type === 'ranged') hint = 'WASD / Arrows: Move | Space: Shoot Fireballs';
-    if (hasShield()) hint += ' | Shift: Block';
-    hint += ' | P: Potion';
-    if ((state.inventory.zordcage || 0) > 0) hint += ` | C: ZordCage (${state.inventory.zordcage})`;
-    if (state.zordBench.length > 0) hint += ' | D: Deploy Zord';
-    document.getElementById('battle-controls-text').textContent = hint;
+    // Controls hint with highlighted Deploy/Catch actions
+    const ctrls = document.getElementById('battle-controls-text');
+    let hint = '<span style="color:#8888aa">WASD: Move | Space: Attack</span>';
+    if (hasShield()) hint += ' <span style="color:#8888aa">| Shift: Block</span>';
+    if ((state.inventory.potion || 0) > 0) hint += ` <span style="color:#4ecca3">| [P] Potion x${state.inventory.potion}</span>`;
+    if ((state.inventory.zordcage || 0) > 0) hint += ` <span style="color:#f5c842;font-size:10px">| [C] Catch Zord (x${state.inventory.zordcage})</span>`;
+    if (state.zordBench.length > 0) hint += ` <span style="color:#e94560;font-size:10px">| [D] Deploy Zord</span>`;
+    ctrls.innerHTML = hint;
 
     // HUD
     document.getElementById('battle-hud-name').textContent = state.name;
