@@ -7289,20 +7289,8 @@ function showFerryMenu(npc) {
     goBtn.textContent = isOnIsland ? 'Sail to Beach' : 'Sail to the Island!';
     goBtn.addEventListener('click', () => {
         hideDialogue();
-        playSound('gem');
-        if (isOnIsland) {
-            state.location = 'beach';
-            state.playerCol = 3;
-            state.playerRow = 6;
-        } else {
-            state.location = 'island';
-            state.playerCol = 4;
-            state.playerRow = 4;
-            discoverArea('island');
-        }
-        updateHUD();
-        updateInteractPrompt();
-        autoSave();
+        const destination = isOnIsland ? 'beach' : 'island';
+        startFerryRide(destination);
     });
     choicesEl.appendChild(goBtn);
 
@@ -7328,6 +7316,249 @@ function showFerryMenu(npc) {
     leaveBtn.textContent = 'Not now';
     leaveBtn.addEventListener('click', () => hideDialogue());
     choicesEl.appendChild(leaveBtn);
+}
+
+function startFerryRide(destination) {
+    showScreen('ferry');
+    const canvas = document.getElementById('ferry-canvas');
+    const c = canvas.getContext('2d');
+    const W = 800, H = 500;
+    canvas.width = W; canvas.height = H;
+
+    const textEl = document.getElementById('ferry-text');
+    textEl.textContent = destination === 'island' ? 'Sailing to Mystery Island...' : 'Sailing back to Coral Cove...';
+
+    let frame = 0;
+    const duration = 600; // 10 seconds at 60fps
+    let ferryX = -200; // ferry starts off-screen left
+
+    // Seagulls
+    const gulls = [];
+    for (let i = 0; i < 4; i++) {
+        gulls.push({ x: Math.random() * W, y: 30 + Math.random() * 60, speed: 0.5 + Math.random() * 0.8, wing: Math.random() * Math.PI * 2 });
+    }
+
+    // Clouds
+    const clouds = [];
+    for (let i = 0; i < 5; i++) {
+        clouds.push({ x: i * 180 + Math.random() * 60, y: 20 + Math.random() * 40, w: 60 + Math.random() * 50 });
+    }
+
+    function drawFerry(c, fx, fy) {
+        // Hull (green, flat-bottomed ferry shape)
+        c.fillStyle = '#1a5a30';
+        c.beginPath();
+        c.moveTo(fx - 80, fy);
+        c.lineTo(fx - 90, fy + 20);
+        c.lineTo(fx + 90, fy + 20);
+        c.lineTo(fx + 100, fy);
+        c.closePath();
+        c.fill();
+        // Hull bottom curve
+        c.fillStyle = '#145028';
+        c.beginPath();
+        c.moveTo(fx - 88, fy + 18);
+        c.quadraticCurveTo(fx, fy + 30, fx + 88, fy + 18);
+        c.lineTo(fx + 88, fy + 20);
+        c.lineTo(fx - 88, fy + 20);
+        c.closePath();
+        c.fill();
+        // Waterline
+        c.fillStyle = '#c03030';
+        c.fillRect(fx - 85, fy + 16, 170, 3);
+
+        // Deck (white)
+        c.fillStyle = '#f0ece0';
+        c.fillRect(fx - 75, fy - 15, 150, 18);
+        c.fillStyle = '#e8e4d8';
+        c.fillRect(fx - 70, fy - 12, 140, 12);
+
+        // Car deck (lower)
+        c.fillStyle = '#d8d4c8';
+        c.fillRect(fx - 65, fy - 4, 130, 6);
+        // Cars on deck
+        for (let i = 0; i < 4; i++) {
+            const cx2 = fx - 50 + i * 28;
+            c.fillStyle = ['#c04040', '#4040c0', '#40a040', '#a0a040'][i];
+            c.fillRect(cx2, fy - 10, 14, 7);
+            c.fillStyle = '#80c8e0';
+            c.fillRect(cx2 + 2, fy - 10, 4, 3);
+            c.fillRect(cx2 + 8, fy - 10, 4, 3);
+        }
+
+        // Bridge / wheelhouse (tall white structure)
+        c.fillStyle = '#f4f0e8';
+        c.fillRect(fx - 20, fy - 45, 40, 32);
+        c.fillStyle = '#e8e4dc';
+        c.fillRect(fx - 16, fy - 42, 32, 26);
+        // Bridge windows (panoramic)
+        c.fillStyle = '#60a8d0';
+        c.fillRect(fx - 18, fy - 40, 36, 10);
+        c.fillStyle = '#80c0e0';
+        c.fillRect(fx - 16, fy - 38, 32, 6);
+        // Window dividers
+        c.fillStyle = '#f0ece0';
+        for (let i = 0; i < 4; i++) c.fillRect(fx - 14 + i * 8, fy - 40, 1, 10);
+
+        // Smokestack
+        c.fillStyle = '#2a2a2a';
+        c.fillRect(fx + 8, fy - 58, 10, 16);
+        c.fillStyle = '#3a3a3a';
+        c.fillRect(fx + 10, fy - 56, 6, 12);
+        // Smoke puffs
+        const smokeT = frame * 0.05;
+        for (let i = 0; i < 3; i++) {
+            const sx = fx + 13 + i * 6 + Math.sin(smokeT + i) * 4;
+            const sy = fy - 60 - i * 8 - (frame * 0.3 + i * 10) % 30;
+            const sa = 0.15 - i * 0.04;
+            if (sa > 0) {
+                c.fillStyle = `rgba(180,180,180,${sa})`;
+                c.beginPath(); c.arc(sx, sy, 5 + i * 2, 0, Math.PI * 2); c.fill();
+            }
+        }
+
+        // Railing posts
+        c.fillStyle = '#c0bca0';
+        for (let i = 0; i < 8; i++) {
+            c.fillRect(fx - 70 + i * 20, fy - 17, 2, 4);
+        }
+
+        // WSF-style green stripe on hull
+        c.fillStyle = '#1a7a3a';
+        c.fillRect(fx - 82, fy + 4, 164, 4);
+    }
+
+    function renderFrame() {
+        if (frame >= duration) {
+            // Arrive at destination
+            if (destination === 'island') {
+                state.location = 'island';
+                state.playerCol = 4;
+                state.playerRow = 4;
+                discoverArea('island');
+            } else {
+                state.location = 'beach';
+                state.playerCol = 3;
+                state.playerRow = 6;
+            }
+            updateHUD();
+            updateInteractPrompt();
+            autoSave();
+            showScreen('game');
+            return;
+        }
+
+        frame++;
+        const t = frame / duration; // 0 to 1
+
+        // Sky gradient (shifts from blue to sunset-ish midway, back to blue)
+        const sunsetT = Math.sin(t * Math.PI);
+        for (let y = 0; y < H * 0.55; y++) {
+            const yt = y / (H * 0.55);
+            const r = Math.floor(60 + yt * 60 + sunsetT * 40);
+            const g = Math.floor(140 + yt * 60 + sunsetT * 20);
+            const b = Math.floor(210 + yt * 20 - sunsetT * 20);
+            c.fillStyle = `rgb(${r},${g},${b})`;
+            c.fillRect(0, y, W, 1);
+        }
+
+        // Sun
+        const sunX = W * 0.75 - t * 100;
+        const sunY = 60 + sunsetT * 20;
+        c.fillStyle = `rgba(255,220,100,${0.3 + sunsetT * 0.2})`;
+        c.beginPath(); c.arc(sunX, sunY, 30, 0, Math.PI * 2); c.fill();
+        c.fillStyle = '#ffe870';
+        c.beginPath(); c.arc(sunX, sunY, 18, 0, Math.PI * 2); c.fill();
+
+        // Clouds
+        clouds.forEach(cl => {
+            cl.x -= 0.3;
+            if (cl.x + cl.w < 0) cl.x = W + 20;
+            c.fillStyle = 'rgba(255,255,255,0.6)';
+            c.fillRect(cl.x, cl.y, cl.w, 14);
+            c.fillStyle = 'rgba(255,255,255,0.4)';
+            c.fillRect(cl.x + 8, cl.y - 6, cl.w * 0.7, 10);
+            c.fillRect(cl.x + 5, cl.y + 12, cl.w * 0.8, 8);
+        });
+
+        // Distant land (if approaching island)
+        if (t > 0.6 && destination === 'island') {
+            const landAlpha = (t - 0.6) * 2.5;
+            c.fillStyle = `rgba(40,100,50,${Math.min(1, landAlpha)})`;
+            c.fillRect(W * 0.6, H * 0.42, W * 0.35, H * 0.13);
+            // Palm silhouettes
+            c.fillStyle = `rgba(30,80,40,${Math.min(1, landAlpha)})`;
+            for (let i = 0; i < 4; i++) {
+                const px2 = W * 0.65 + i * 40;
+                c.fillRect(px2, H * 0.38, 4, 16);
+                c.fillRect(px2 - 6, H * 0.36, 14, 6);
+            }
+        }
+
+        // Ocean
+        for (let y = Math.floor(H * 0.55); y < H; y++) {
+            const yt = (y - H * 0.55) / (H * 0.45);
+            const wave = Math.sin(y * 0.12 + frame * 0.03) * 3;
+            const r = Math.floor(15 + yt * 15 + wave);
+            const g = Math.floor(60 + yt * 30 + wave);
+            const b = Math.floor(120 + yt * 40);
+            c.fillStyle = `rgb(${r},${g},${b})`;
+            c.fillRect(0, y, W, 1);
+        }
+
+        // Wave crests
+        for (let i = 0; i < 8; i++) {
+            const wy = H * 0.58 + i * 12 + Math.sin(frame * 0.02 + i) * 3;
+            const wx = (frame * 0.5 + i * 100) % W;
+            c.fillStyle = 'rgba(200,230,255,0.2)';
+            c.fillRect(wx, wy, 40, 2);
+            c.fillRect(wx + 50, wy + 4, 30, 2);
+        }
+
+        // Foam/wake behind ferry
+        const ferryY = H * 0.55 + Math.sin(frame * 0.04) * 4;
+        ferryX = -150 + t * (W + 300); // moves across screen
+
+        // Wake
+        for (let i = 0; i < 6; i++) {
+            const wakeX = ferryX - 100 - i * 20;
+            const wakeY = ferryY + 18 + Math.sin(frame * 0.06 + i) * 2;
+            const wakeA = 0.15 - i * 0.02;
+            if (wakeA > 0 && wakeX > 0) {
+                c.fillStyle = `rgba(200,230,255,${wakeA})`;
+                c.fillRect(wakeX, wakeY, 15, 3);
+            }
+        }
+
+        // Draw the ferry
+        drawFerry(c, ferryX, ferryY);
+
+        // Seagulls
+        gulls.forEach(g2 => {
+            g2.x -= g2.speed;
+            g2.wing += 0.08;
+            if (g2.x < -20) { g2.x = W + 20; g2.y = 30 + Math.random() * 60; }
+            const wingY = Math.sin(g2.wing) * 4;
+            c.fillStyle = '#f0f0f0';
+            c.fillRect(g2.x - 6, g2.y + wingY, 5, 2);
+            c.fillRect(g2.x + 2, g2.y - wingY, 5, 2);
+            c.fillStyle = '#e0e0e0';
+            c.fillRect(g2.x - 1, g2.y, 3, 3);
+        });
+
+        // Progress bar at bottom
+        c.fillStyle = 'rgba(0,0,0,0.4)';
+        c.fillRect(W * 0.2, H - 30, W * 0.6, 8);
+        c.fillStyle = '#f5c842';
+        c.fillRect(W * 0.2, H - 30, W * 0.6 * t, 8);
+        c.strokeStyle = '#888';
+        c.lineWidth = 1;
+        c.strokeRect(W * 0.2, H - 30, W * 0.6, 8);
+
+        requestAnimationFrame(renderFrame);
+    }
+
+    requestAnimationFrame(renderFrame);
 }
 
 function showChallengeMasterMenu(npc) {
