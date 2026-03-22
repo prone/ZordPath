@@ -6978,9 +6978,9 @@ function showLessonSlideshow(lesson, onComplete) {
     const progressEl = document.getElementById('quiz-progress');
 
     // Hide question area during slideshow
-    questionEl.textContent = '';
-    choicesEl.innerHTML = '';
-    feedbackEl.textContent = '';
+    questionEl.style.display = 'none';
+    choicesEl.style.display = 'none';
+    feedbackEl.style.display = 'none';
     resetInteractiveDisplay();
 
     function showSlide() {
@@ -7120,6 +7120,10 @@ function renderQuiz() {
         return;
     }
 
+    // Restore question elements after slideshow
+    document.getElementById('quiz-question').style.display = '';
+    document.getElementById('quiz-choices').style.display = '';
+    document.getElementById('quiz-feedback').style.display = '';
     document.getElementById('quiz-feedback').textContent = '';
     document.getElementById('quiz-feedback').className = 'quiz-feedback';
     document.getElementById('quiz-progress').textContent = `Question ${qi + 1} of ${questionSet.length} | Correct: ${state.quizCorrect}`;
