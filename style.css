@@ -880,9 +880,10 @@ body {
 
 .quiz-question {
     font-size: 11px;
-    line-height: 2;
+    line-height: 2.4;
     margin-bottom: 16px;
     color: var(--gold);
+    text-align: left;
 }
 
 .quiz-choices {
