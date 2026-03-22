@@ -7426,6 +7426,13 @@ function startFerryRide(destination) {
         // WSF-style green stripe on hull
         c.fillStyle = '#1a7a3a';
         c.fillRect(fx - 82, fy + 4, 164, 4);
+
+        // Ferry name on hull
+        c.font = 'bold 9px "Press Start 2P", monospace';
+        c.fillStyle = '#e0dcc0';
+        c.textAlign = 'center';
+        c.textBaseline = 'middle';
+        c.fillText('HIYU', fx + 40, fy + 10);
     }
 
     function renderFrame() {
