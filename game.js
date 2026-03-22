@@ -138,7 +138,9 @@ function saveToSlot(i) {
         playerLevelXp: state.playerLevelXp,
         challengeBest: state.challengeBest || 0,
         challengeTotalAnswered: state.challengeTotalAnswered || 0,
-        challengeBadge: state.challengeBadge || null
+        challengeBadge: state.challengeBadge || null,
+        collectedRunes: state.collectedRunes || [],
+        searchedRunes: state.searchedRunes || {}
     };
     try {
         localStorage.setItem(SAVE_PREFIX + i, JSON.stringify(data));
@@ -179,6 +181,8 @@ function loadFromSlot(i) {
         state.challengeBest = d.challengeBest || 0;
         state.challengeTotalAnswered = d.challengeTotalAnswered || 0;
         state.challengeBadge = d.challengeBadge || null;
+        state.collectedRunes = d.collectedRunes || [];
+        state.searchedRunes = d.searchedRunes || {};
 
         // Restore discoveredAreas set
         discoveredAreas.clear();
@@ -5421,6 +5425,21 @@ document.addEventListener('keydown', (e) => {
         return;
     }
 
+    // House interior controls
+    if (houseInterior && state.screen === 'game') {
+        if (e.key === ' ' || e.key.toLowerCase() === 'e') {
+            if (state.dialogueOpen) { advanceDialogue(); }
+            else { searchHouseSpot(); }
+            e.preventDefault();
+            return;
+        }
+        if (e.key === 'Escape') {
+            exitHouse();
+            e.preventDefault();
+            return;
+        }
+    }
+
     // Interact
     if ((e.key === ' ' || e.key.toLowerCase() === 'e') && state.screen === 'game') {
         if (state.dialogueOpen) {
@@ -5575,6 +5594,14 @@ function getInteractable() {
             if (npc) return { type: 'npc', data: NPCS[npc.npcIndex] };
         }
 
+        // House? (enterable)
+        if (tile === T.HOUSE) {
+            const houseLocs = HOUSE_LOCATIONS[state.location];
+            if (houseLocs) {
+                const hl = houseLocs.find(h2 => h2.col === col && h2.row === row);
+                if (hl) return { type: 'house', interiorId: hl.interiorId };
+            }
+        }
         // Store?
         if (tile === T.STORE) return { type: 'store' };
         // Build site?
@@ -5606,6 +5633,7 @@ function updateInteractPrompt() {
         prompt.style.display = 'block';
         switch (interactable.type) {
             case 'npc': text.textContent = `[E/Space] Talk to ${interactable.data.name}`; break;
+            case 'house': text.textContent = '[E/Space] Enter House'; break;
             case 'store': text.textContent = '[E/Space] Enter Store'; break;
             case 'build': text.textContent = '[E/Space] Open Build Menu'; break;
             case 'sign': text.textContent = '[E/Space] Read Sign'; break;
@@ -5630,6 +5658,7 @@ function tryInteract() {
         case 'build': openBuild(); break;
         case 'sign': readSign(interactable.row, interactable.col); break;
         case 'fish': startFishing(); break;
+        case 'house': enterHouse(interactable.interiorId); break;
         case 'arena_battle': openArenaBattle(); break;
         case 'arena_hospital': openZordHospital(); break;
         case 'arena_spa': openZordSpa(); break;
@@ -6536,6 +6565,416 @@ function startSpaTraining() {
 
     showScreen('quiz');
     renderQuiz();
+}
+
+// ============================================================
+// LOGIC RUNES — Collectible elements of logic hidden in houses
+// ============================================================
+const LOGIC_RUNES = [
+    { id: 'and',         name: 'AND Rune',         symbol: '&',   color: '#4ecca3', desc: 'Both must be true' },
+    { id: 'or',          name: 'OR Rune',          symbol: '|',   color: '#f5c842', desc: 'At least one true' },
+    { id: 'not',         name: 'NOT Rune',         symbol: '!',   color: '#e94560', desc: 'Flips the truth' },
+    { id: 'ifthen',      name: 'IF-THEN Rune',     symbol: '\u2192', color: '#9b59b6', desc: 'The promise connector' },
+    { id: 'equiv',       name: 'EQUIVALENCE Rune', symbol: '\u2261', color: '#3498db', desc: 'Same meaning, different words' },
+    { id: 'forall',      name: 'FOR-ALL Rune',     symbol: '\u2200', color: '#2ecc71', desc: 'Every single one' },
+    { id: 'exists',      name: 'EXISTS Rune',      symbol: '\u2203', color: '#e67e22', desc: 'At least one exists' },
+    { id: 'true',        name: 'TRUE Rune',        symbol: 'T',   color: '#4ecca3', desc: 'The foundation of truth' },
+    { id: 'false',       name: 'FALSE Rune',       symbol: 'F',   color: '#e94560', desc: 'The absence of truth' },
+    { id: 'xor',         name: 'XOR Rune',         symbol: '\u2295', color: '#f39c12', desc: 'One or the other, not both' },
+    { id: 'nand',        name: 'NAND Rune',        symbol: '\u22BC', color: '#1abc9c', desc: 'Not both at once' },
+    { id: 'contradiction', name: 'CONTRADICTION Rune', symbol: '\u22A5', color: '#c0392b', desc: 'Can never be true' },
+    { id: 'tautology',   name: 'TAUTOLOGY Rune',   symbol: '\u22A4', color: '#27ae60', desc: 'Always true, no matter what' },
+    { id: 'therefore',   name: 'THEREFORE Rune',   symbol: '\u2234', color: '#8e44ad', desc: 'The conclusion follows' },
+    { id: 'because',     name: 'BECAUSE Rune',     symbol: '\u2235', color: '#2980b9', desc: 'The reason why' },
+    { id: 'setunion',    name: 'UNION Rune',        symbol: '\u222A', color: '#e74c3c', desc: 'Combine all together' },
+    { id: 'setintersect', name: 'INTERSECT Rune',   symbol: '\u2229', color: '#16a085', desc: 'Only what overlaps' },
+    { id: 'subset',      name: 'SUBSET Rune',       symbol: '\u2286', color: '#d35400', desc: 'Contained within' },
+    { id: 'possible',    name: 'POSSIBLE Rune',     symbol: '\u25C7', color: '#3498db', desc: 'Could be true' },
+    { id: 'necessary',   name: 'NECESSARY Rune',    symbol: '\u25A0', color: '#2c3e50', desc: 'Must be true' }
+];
+
+// House interior definitions
+// Each house has: id, name, width/height in tiles, a tile grid, and searchable spots with rune rewards
+const H = { FLOOR: 0, WALL: 1, TABLE: 2, BED: 3, SHELF: 4, RUG: 5, CHEST: 6, PLANT: 7, DOOR: 8, CHAIR: 9, FIREPLACE: 10 };
+const HOUSE_SOLID = new Set([H.WALL, H.TABLE, H.SHELF, H.CHEST, H.FIREPLACE]);
+
+const HOUSE_INTERIORS = {
+    // Town house 1 (left house, row 9 col 3-4)
+    town_house_1: {
+        name: 'Cozy Cottage',
+        w: 10, h: 8,
+        map: [
+            [1,1,1,1,1,1,1,1,1,1],
+            [1,4,4,0,0,0,0,4,4,1],
+            [1,0,0,0,0,0,0,0,0,1],
+            [1,2,9,0,5,5,0,3,3,1],
+            [1,0,0,0,5,5,0,3,3,1],
+            [1,7,0,0,0,0,0,0,7,1],
+            [1,0,0,0,0,0,0,0,0,1],
+            [1,1,1,1,8,8,1,1,1,1]
+        ],
+        searchSpots: [
+            { row: 1, col: 1, runeId: 'and', searched: false },
+            { row: 3, col: 1, runeId: 'or', searched: false },
+            { row: 1, col: 8, runeId: 'true', searched: false }
+        ],
+        spawnRow: 6, spawnCol: 4
+    },
+    // Town house 2 (right house, row 9 col 19-20)
+    town_house_2: {
+        name: 'Scholar\'s Study',
+        w: 10, h: 8,
+        map: [
+            [1,1,1,1,1,1,1,1,1,1],
+            [1,4,4,4,0,0,4,4,4,1],
+            [1,0,0,0,0,0,0,0,0,1],
+            [1,6,0,0,5,5,0,0,6,1],
+            [1,0,0,0,5,5,0,0,0,1],
+            [1,10,10,0,0,0,0,7,7,1],
+            [1,0,0,0,0,0,0,0,0,1],
+            [1,1,1,1,8,8,1,1,1,1]
+        ],
+        searchSpots: [
+            { row: 3, col: 1, runeId: 'not', searched: false },
+            { row: 3, col: 8, runeId: 'ifthen', searched: false },
+            { row: 1, col: 2, runeId: 'false', searched: false },
+            { row: 1, col: 7, runeId: 'equiv', searched: false }
+        ],
+        spawnRow: 6, spawnCol: 4
+    },
+    // Island hut 1 (main village hut)
+    island_hut_1: {
+        name: 'Island Hut',
+        w: 10, h: 8,
+        map: [
+            [1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,0,0,0,0,0,1],
+            [1,7,0,0,0,0,0,0,7,1],
+            [1,0,0,5,5,5,5,0,0,1],
+            [1,6,0,0,0,0,0,0,6,1],
+            [1,0,0,0,0,0,0,0,0,1],
+            [1,7,0,0,0,0,0,0,7,1],
+            [1,1,1,1,8,8,1,1,1,1]
+        ],
+        searchSpots: [
+            { row: 4, col: 1, runeId: 'forall', searched: false },
+            { row: 4, col: 8, runeId: 'exists', searched: false },
+            { row: 2, col: 1, runeId: 'xor', searched: false }
+        ],
+        spawnRow: 6, spawnCol: 4
+    },
+    // Island hut 2 (smaller hut)
+    island_hut_2: {
+        name: 'Mystic Shack',
+        w: 10, h: 8,
+        map: [
+            [1,1,1,1,1,1,1,1,1,1],
+            [1,4,0,0,0,0,0,0,4,1],
+            [1,0,0,0,0,0,0,0,0,1],
+            [1,6,0,0,2,2,0,0,6,1],
+            [1,0,0,0,9,9,0,0,0,1],
+            [1,0,0,0,0,0,0,0,0,1],
+            [1,7,0,0,0,0,0,0,7,1],
+            [1,1,1,1,8,8,1,1,1,1]
+        ],
+        searchSpots: [
+            { row: 1, col: 1, runeId: 'nand', searched: false },
+            { row: 1, col: 8, runeId: 'contradiction', searched: false },
+            { row: 3, col: 1, runeId: 'tautology', searched: false },
+            { row: 3, col: 8, runeId: 'therefore', searched: false }
+        ],
+        spawnRow: 6, spawnCol: 4
+    }
+};
+
+// Map house tiles on the overworld to interior IDs
+const HOUSE_LOCATIONS = {
+    town: [
+        { col: 3, row: 9, interiorId: 'town_house_1' },
+        { col: 4, row: 9, interiorId: 'town_house_1' },
+        { col: 19, row: 9, interiorId: 'town_house_2' },
+        { col: 20, row: 9, interiorId: 'town_house_2' }
+    ],
+    island: [
+        { col: 10, row: 4, interiorId: 'island_hut_1' },
+        { col: 11, row: 4, interiorId: 'island_hut_1' },
+        { col: 12, row: 4, interiorId: 'island_hut_1' },
+        { col: 16, row: 4, interiorId: 'island_hut_2' },
+        { col: 17, row: 4, interiorId: 'island_hut_2' }
+    ]
+};
+
+// House interior state
+let houseInterior = null; // { id, playerCol, playerRow }
+
+const HOUSE_TILE_SIZE = 56; // slightly larger tiles for interiors
+
+const HOUSE_TILE_COLORS = {
+    [H.FLOOR]: '#b89868',
+    [H.WALL]: '#6a4a2a',
+    [H.TABLE]: '#8a6a38',
+    [H.BED]: '#4a6a90',
+    [H.SHELF]: '#7a5a30',
+    [H.RUG]: '#8a3030',
+    [H.CHEST]: '#c4a040',
+    [H.PLANT]: '#3a8040',
+    [H.DOOR]: '#a08050',
+    [H.CHAIR]: '#7a6040',
+    [H.FIREPLACE]: '#3a2010'
+};
+
+function enterHouse(interiorId) {
+    const interior = HOUSE_INTERIORS[interiorId];
+    if (!interior) return;
+
+    // Initialize search spots from save data
+    if (state.searchedRunes && state.searchedRunes[interiorId]) {
+        interior.searchSpots.forEach(s => {
+            if (state.searchedRunes[interiorId].includes(s.runeId)) s.searched = true;
+        });
+    }
+
+    houseInterior = {
+        id: interiorId,
+        interior: interior,
+        playerCol: interior.spawnCol,
+        playerRow: interior.spawnRow
+    };
+    state._prevLocation = state.location;
+    state._prevCol = state.playerCol;
+    state._prevRow = state.playerRow;
+    // Stay on the game screen, just switch rendering
+    state.paused = false;
+}
+
+function exitHouse() {
+    if (!houseInterior) return;
+    state.location = state._prevLocation;
+    state.playerCol = state._prevCol;
+    state.playerRow = state._prevRow;
+    houseInterior = null;
+}
+
+function drawHouseInterior() {
+    if (!houseInterior) return;
+    const interior = houseInterior.interior;
+    const TS = HOUSE_TILE_SIZE;
+    const mapW = interior.w * TS;
+    const mapH = interior.h * TS;
+
+    // Center the house on the canvas
+    const offX = (CANVAS_W - mapW) / 2;
+    const offY = (CANVAS_H - mapH) / 2;
+
+    // Dark background
+    ctx.fillStyle = '#0a0a1a';
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+    // Draw tiles
+    for (let r = 0; r < interior.h; r++) {
+        for (let c = 0; c < interior.w; c++) {
+            const tile = interior.map[r][c];
+            const x = offX + c * TS;
+            const y = offY + r * TS;
+
+            // Floor under everything
+            ctx.fillStyle = HOUSE_TILE_COLORS[H.FLOOR];
+            ctx.fillRect(x, y, TS, TS);
+
+            if (tile === H.WALL) {
+                ctx.fillStyle = '#6a4a2a'; ctx.fillRect(x, y, TS, TS);
+                ctx.fillStyle = '#5a3a1a'; ctx.fillRect(x + 2, y + 2, TS - 4, TS - 4);
+                // Brick pattern
+                ctx.fillStyle = '#604020';
+                for (let by = 0; by < TS; by += 10) {
+                    const bOff = (by / 10) % 2 === 0 ? 0 : TS / 2;
+                    ctx.fillRect(x + bOff, y + by, TS / 2, 1);
+                    ctx.fillRect(x, y + by, TS, 1);
+                }
+            } else if (tile === H.TABLE) {
+                ctx.fillStyle = '#8a6a38'; ctx.fillRect(x + 4, y + 4, TS - 8, TS - 8);
+                ctx.fillStyle = '#9a7a48'; ctx.fillRect(x + 6, y + 6, TS - 12, TS - 12);
+                // Legs
+                ctx.fillStyle = '#6a4a20';
+                ctx.fillRect(x + 6, y + 6, 4, 4); ctx.fillRect(x + TS - 12, y + 6, 4, 4);
+                ctx.fillRect(x + 6, y + TS - 12, 4, 4); ctx.fillRect(x + TS - 12, y + TS - 12, 4, 4);
+            } else if (tile === H.BED) {
+                ctx.fillStyle = '#4a6a90'; ctx.fillRect(x + 4, y + 4, TS - 8, TS - 8);
+                ctx.fillStyle = '#6a8ab0'; ctx.fillRect(x + 6, y + 6, TS - 12, TS - 16);
+                // Pillow
+                ctx.fillStyle = '#e8e0d0'; ctx.fillRect(x + 8, y + 6, TS - 18, 10);
+                ctx.fillStyle = '#f0e8e0'; ctx.fillRect(x + 10, y + 8, TS - 22, 6);
+            } else if (tile === H.SHELF) {
+                ctx.fillStyle = '#7a5a30'; ctx.fillRect(x + 2, y + 2, TS - 4, TS - 4);
+                ctx.fillStyle = '#8a6a40'; ctx.fillRect(x + 4, y + 4, TS - 8, TS - 8);
+                // Books
+                ctx.fillStyle = '#c03030'; ctx.fillRect(x + 8, y + 6, 6, 14);
+                ctx.fillStyle = '#3050a0'; ctx.fillRect(x + 16, y + 6, 5, 12);
+                ctx.fillStyle = '#308030'; ctx.fillRect(x + 24, y + 6, 6, 14);
+                ctx.fillStyle = '#c0a030'; ctx.fillRect(x + 8, y + 24, 5, 12);
+                ctx.fillStyle = '#8030a0'; ctx.fillRect(x + 16, y + 24, 6, 14);
+            } else if (tile === H.RUG) {
+                ctx.fillStyle = '#8a3030'; ctx.fillRect(x + 4, y + 4, TS - 8, TS - 8);
+                ctx.fillStyle = '#a04040'; ctx.fillRect(x + 8, y + 8, TS - 16, TS - 16);
+                ctx.fillStyle = '#c4a050'; ctx.fillRect(x + 6, y + TS / 2 - 1, TS - 12, 2);
+                ctx.fillRect(x + TS / 2 - 1, y + 6, 2, TS - 12);
+            } else if (tile === H.CHEST) {
+                ctx.fillStyle = '#8a6a30'; ctx.fillRect(x + 8, y + 10, TS - 16, TS - 16);
+                ctx.fillStyle = '#a07a40'; ctx.fillRect(x + 10, y + 12, TS - 20, TS - 20);
+                ctx.fillStyle = '#6a5020'; ctx.fillRect(x + 8, y + 8, TS - 16, 6);
+                // Clasp
+                ctx.fillStyle = '#f5c842'; ctx.fillRect(x + TS / 2 - 2, y + TS / 2, 4, 4);
+            } else if (tile === H.PLANT) {
+                ctx.fillStyle = '#5a3a18'; ctx.fillRect(x + TS / 2 - 4, y + TS / 2, 8, TS / 2 - 4);
+                ctx.fillStyle = '#3a8040'; ctx.fillRect(x + TS / 2 - 10, y + 8, 20, 16);
+                ctx.fillStyle = '#4a9050'; ctx.fillRect(x + TS / 2 - 6, y + 4, 12, 12);
+            } else if (tile === H.DOOR) {
+                ctx.fillStyle = '#a08050'; ctx.fillRect(x + 4, y, TS - 8, TS);
+                ctx.fillStyle = '#b09060'; ctx.fillRect(x + 8, y + 4, TS - 16, TS - 4);
+                ctx.fillStyle = '#f0c040'; ctx.fillRect(x + TS - 14, y + TS / 2, 3, 3);
+            } else if (tile === H.CHAIR) {
+                ctx.fillStyle = '#7a6040'; ctx.fillRect(x + 10, y + 10, TS - 20, TS - 14);
+                ctx.fillStyle = '#8a7050'; ctx.fillRect(x + 12, y + 12, TS - 24, TS - 18);
+                ctx.fillStyle = '#6a5030'; ctx.fillRect(x + 12, y + 4, TS - 24, 10);
+            } else if (tile === H.FIREPLACE) {
+                ctx.fillStyle = '#3a2010'; ctx.fillRect(x + 2, y + 2, TS - 4, TS - 4);
+                ctx.fillStyle = '#1a1008'; ctx.fillRect(x + 8, y + 10, TS - 16, TS - 14);
+                // Fire
+                const fh = 8 + Math.sin(state.animFrame * 0.15) * 4;
+                ctx.fillStyle = '#e06020'; ctx.fillRect(x + 14, y + TS - 10 - fh, 10, fh);
+                ctx.fillStyle = '#f0a030'; ctx.fillRect(x + 16, y + TS - 8 - fh, 6, fh - 2);
+                ctx.fillStyle = '#f0d040'; ctx.fillRect(x + 18, y + TS - 6 - fh / 2, 3, fh / 2);
+            }
+
+            // Search spot sparkle
+            const spot = interior.searchSpots.find(s => s.row === r && s.col === c && !s.searched);
+            if (spot) {
+                const sparkle = Math.sin(state.animFrame * 0.1 + r * 2 + c * 3) * 0.3 + 0.5;
+                ctx.fillStyle = `rgba(245,200,66,${sparkle})`;
+                ctx.fillRect(x + TS / 2 - 3, y + 4, 6, 6);
+                ctx.fillRect(x + TS / 2 - 1, y + 2, 2, 10);
+                ctx.fillRect(x + TS / 2 - 5, y + 6, 10, 2);
+            }
+        }
+    }
+
+    // Draw player
+    const px2 = offX + houseInterior.playerCol * TS;
+    const py2 = offY + houseInterior.playerRow * TS;
+    drawCharSprite(ctx, px2 + TS / 2, py2 + TS / 2 + 4, state.character, state.walkFrame, 1.2, false);
+
+    // HUD overlay
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(0, 0, CANVAS_W, 22);
+    ctx.font = '9px "Press Start 2P", monospace';
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#f5c842';
+    ctx.fillText(interior.name, 8, 12);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#8888aa';
+    ctx.fillText('Space: Search | Esc: Exit', CANVAS_W - 8, 12);
+
+    // Runes found counter
+    const found = (state.collectedRunes || []).length;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#4ecca3';
+    ctx.fillText(`Runes: ${found}/${LOGIC_RUNES.length}`, CANVAS_W / 2, 12);
+}
+
+function handleHouseInput() {
+    if (!houseInterior) return false;
+    const interior = houseInterior.interior;
+
+    // Movement
+    let dr = 0, dc = 0;
+    if (keys['arrowup'] || keys['w']) dr = -1;
+    if (keys['arrowdown'] || keys['s']) dr = 1;
+    if (keys['arrowleft'] || keys['a']) dc = -1;
+    if (keys['arrowright'] || keys['d']) dc = 1;
+
+    if (dr !== 0 || dc !== 0) {
+        const nr = houseInterior.playerRow + dr;
+        const nc = houseInterior.playerCol + dc;
+        if (nr >= 0 && nr < interior.h && nc >= 0 && nc < interior.w) {
+            const tile = interior.map[nr][nc];
+            if (!HOUSE_SOLID.has(tile)) {
+                houseInterior.playerRow = nr;
+                houseInterior.playerCol = nc;
+                state.walkFrame++;
+            }
+            // Door = exit
+            if (tile === H.DOOR) {
+                exitHouse();
+                return true;
+            }
+        }
+    }
+
+    return true; // consume input
+}
+
+function searchHouseSpot() {
+    if (!houseInterior) return;
+    const interior = houseInterior.interior;
+    const pr = houseInterior.playerRow;
+    const pc = houseInterior.playerCol;
+
+    // Check all adjacent tiles for searchable spots
+    for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+            const r = pr + dr, c = pc + dc;
+            const spot = interior.searchSpots.find(s => s.row === r && s.col === c && !s.searched);
+            if (spot) {
+                spot.searched = true;
+                // Track in state
+                if (!state.collectedRunes) state.collectedRunes = [];
+                if (!state.searchedRunes) state.searchedRunes = {};
+                if (!state.searchedRunes[houseInterior.id]) state.searchedRunes[houseInterior.id] = [];
+                state.searchedRunes[houseInterior.id].push(spot.runeId);
+
+                if (!state.collectedRunes.includes(spot.runeId)) {
+                    state.collectedRunes.push(spot.runeId);
+                    const rune = LOGIC_RUNES.find(r2 => r2.id === spot.runeId);
+                    playSound('gem');
+                    showRuneFound(rune);
+                } else {
+                    showDialogue('\u{1F50D}', 'Search', 'Nothing new here.');
+                }
+                autoSave();
+                return;
+            }
+        }
+    }
+    showDialogue('\u{1F50D}', 'Search', 'Nothing to find here.');
+}
+
+function showRuneFound(rune) {
+    if (!rune) return;
+    // Show a centered overlay
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:100;display:flex;align-items:center;justify-content:center;';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:var(--panel-bg);border:3px solid var(--gold);padding:30px 40px;text-align:center;font-family:"Press Start 2P",monospace;max-width:400px;';
+    box.innerHTML = `
+        <div style="font-size:48px;margin-bottom:12px;color:${rune.color};text-shadow:0 0 20px ${rune.color};">${rune.symbol}</div>
+        <div style="font-size:14px;color:var(--gold);margin-bottom:8px;">${escapeHtml(rune.name)}</div>
+        <div style="font-size:9px;color:var(--text);margin-bottom:6px;line-height:2;">${escapeHtml(rune.desc)}</div>
+        <div style="font-size:8px;color:var(--text-dim);margin-bottom:16px;">Logic Rune ${(state.collectedRunes || []).length}/${LOGIC_RUNES.length}</div>
+    `;
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-primary';
+    btn.textContent = 'Collect!';
+    btn.addEventListener('click', () => overlay.remove());
+    box.appendChild(btn);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    // Also close on Space
+    const closeHandler = (e) => {
+        if (e.key === ' ' || e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', closeHandler); }
+    };
+    setTimeout(() => document.addEventListener('keydown', closeHandler), 200);
 }
 
 // ============================================================
@@ -12669,9 +13108,15 @@ function gameLoop() {
     state.animFrame++;
 
     if (state.screen === 'game') {
-        handleMovement(now);
-        updateEnemyMovement();
-        render();
+        if (houseInterior) {
+            // House interior mode
+            if (!state.paused) handleHouseInput();
+            drawHouseInterior();
+        } else {
+            handleMovement(now);
+            updateEnemyMovement();
+            render();
+        }
     }
 
     requestAnimationFrame(gameLoop);
