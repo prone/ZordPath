@@ -13284,13 +13284,20 @@ function fishingUpdate() {
             const rippleDist = Math.sqrt((f.bobberX - f.rippleX) ** 2 + (f.bobberY - f.rippleY) ** 2);
             if (rippleDist < 50) {
                 f.hookTimer = 20 + Math.floor(Math.random() * 20);
+                f.castAccuracy = 'perfect';
+                f.reelPerTap = 32; // 25% of normal taps needed
             } else if (rippleDist < 100) {
                 f.hookTimer = 50 + Math.floor(Math.random() * 40);
+                f.castAccuracy = 'good';
+                f.reelPerTap = 16; // 50% of normal taps
             } else {
                 f.hookTimer = 150;
+                f.castAccuracy = 'far';
+                f.reelPerTap = 8; // normal
             }
             playSound('step');
-            document.getElementById('fishing-status').textContent = 'Waiting for a bite...';
+            const castMsg = f.castAccuracy === 'perfect' ? 'Perfect cast! ' : f.castAccuracy === 'good' ? 'Good cast! ' : '';
+            document.getElementById('fishing-status').textContent = castMsg + 'Waiting for a bite...';
         } else {
             f.bobberX += (dx / dist) * 10;
             f.bobberY += (dy / dist) * 10;
@@ -13304,9 +13311,10 @@ function fishingUpdate() {
             const rippleDist = Math.sqrt((f.bobberX - f.rippleX) ** 2 + (f.bobberY - f.rippleY) ** 2);
             if (rippleDist < 100) {
                 f.phase = 'hooked';
-                f.reelProgress = 20; // start with some progress
+                f.reelProgress = f.castAccuracy === 'perfect' ? 50 : f.castAccuracy === 'good' ? 30 : 20;
                 f.frame = 0; // reset frame for timeout
-                document.getElementById('fishing-status').textContent = 'FISH ON! Mash Space to reel in!';
+                const reelMsg = f.castAccuracy === 'perfect' ? 'FISH ON! Perfect cast - easy reel!' : f.castAccuracy === 'good' ? 'FISH ON! Good cast - reel in!' : 'FISH ON! Mash Space to reel in!';
+                document.getElementById('fishing-status').textContent = reelMsg;
                 playSound('hit');
             } else {
                 f.phase = 'missed';
@@ -13486,7 +13494,7 @@ document.addEventListener('keydown', (e) => {
             resetFishingCast();
             document.getElementById('fishing-status').textContent = 'Reeled in. Aim and cast again!';
         } else if (fishing.phase === 'hooked') {
-            fishing.reelProgress += 8;
+            fishing.reelProgress += (fishing.reelPerTap || 8);
             playSound('step');
         } else if (fishing.phase === 'missed') {
             resetFishingCast();
