@@ -10909,7 +10909,11 @@ function showZordPicker() {
     showScreen('zordbattle');
     const container = document.getElementById('zb-actions');
     container.innerHTML = '';
-    document.getElementById('zb-log').innerHTML = '<div class="zb-log-line">Choose a Zord to deploy!</div>';
+
+    const currentFainted = zordBattle && zordBattle.playerZord && zordBattle.playerZord.currentHp <= 0;
+    const isArena = zordBattle && zordBattle.isArena;
+
+    document.getElementById('zb-log').innerHTML = `<div class="zb-log-line">${currentFainted ? 'Your Zord fainted! Choose another!' : 'Choose a Zord to deploy!'}</div>`;
     const pCanvas = document.getElementById('zb-player-sprite');
     if (pCanvas) { const pc = pCanvas.getContext('2d'); pc.clearRect(0, 0, pCanvas.width, pCanvas.height); }
     document.getElementById('zb-player-name-tag').textContent = '???';
@@ -10917,28 +10921,39 @@ function showZordPicker() {
     document.getElementById('zb-player-hp-bar').style.width = '0%';
     document.getElementById('zb-player-hp-text').textContent = '';
 
-    state.zordBench.forEach(idx => {
+    const aliveOnBench = state.zordBench.filter(idx => {
         const z = state.zordList[idx];
-        if (!z || z.currentHp <= 0) return;
+        return z && z.currentHp > 0;
+    });
+
+    aliveOnBench.forEach(idx => {
+        const z = state.zordList[idx];
         const el = ELEMENTS[z.element];
         const btn = document.createElement('button');
         btn.className = 'btn btn-choice';
         btn.innerHTML = `${zordSpriteHTML(z.species||z.nickname, z.element, 24)} ${escapeHtml(z.nickname)} Lv.${z.level} <span style="color:${el.color}">${el.icon}${el.name}</span> HP:${z.currentHp}/${z.maxHp}`;
-        btn.addEventListener('click', () => deployZord(idx));
+        btn.addEventListener('click', () => {
+            if (isArena) {
+                startArenaZordBattle(idx);
+            } else {
+                deployZord(idx);
+            }
+        });
         container.appendChild(btn);
     });
 
-    const backBtn = document.createElement('button');
-    backBtn.className = 'btn btn-secondary';
-    backBtn.textContent = 'Cancel (fight yourself)';
-    backBtn.addEventListener('click', () => {
-        if (battle) {
+    // Only show cancel if the current Zord is still alive (voluntary switch) and not arena
+    if (!currentFainted && !isArena && battle) {
+        const backBtn = document.createElement('button');
+        backBtn.className = 'btn btn-secondary';
+        backBtn.textContent = 'Cancel (fight yourself)';
+        backBtn.addEventListener('click', () => {
             showScreen('battle');
             battle.running = true;
             battleLoop();
-        }
-    });
-    container.appendChild(backBtn);
+        });
+        container.appendChild(backBtn);
+    }
 }
 
 function deployZord(zordIdx) {
@@ -11230,10 +11245,14 @@ function zordDoEnemyTurn() {
 
     if (pz.currentHp <= 0) {
         zb.log.push(`${escapeHtml(pz.nickname)} fainted!`);
-        const alive = state.zordBench.filter(i => state.zordList[i].currentHp > 0);
+        console.log('[ZORD] Fainted! Bench:', state.zordBench, 'Alive:', state.zordBench.filter(i => state.zordList[i] && state.zordList[i].currentHp > 0));
+        const alive = state.zordBench.filter(i => {
+            const z = state.zordList[i];
+            return z && z.currentHp > 0 && i !== zb.playerZordIdx;
+        });
         if (alive.length > 0) {
-            zb.log.push('Choose another Zord or retreat!');
-            zb.turn = 'player';
+            zb.log.push('Choose another Zord!');
+            zb.turn = 'switching'; // prevent normal menu from showing
             renderZordBattle();
             setTimeout(() => showZordPicker(), 500);
         } else {
