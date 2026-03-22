@@ -771,10 +771,11 @@ function buildIslandMap() {
     m[2][4] = T.DOCK; m[3][4] = T.DOCK; m[2][5] = T.DOCK;
     m[4][4] = T.PATH;
     m[4][3] = T.SIGN; // ferry back sign
-    // Store
-    m[midR - 1][midC + 7] = T.STORE; m[midR][midC + 7] = T.STORE;
-    m[midR][midC + 7] = T.PATH; // store entrance
-    m[midR - 1][midC + 7] = T.STORE;
+    // Island Grocery Store
+    m[midR - 2][midC + 6] = T.STORE; m[midR - 2][midC + 7] = T.STORE; m[midR - 2][midC + 8] = T.STORE;
+    m[midR - 1][midC + 6] = T.STORE; m[midR - 1][midC + 8] = T.STORE;
+    m[midR - 1][midC + 7] = T.PATH; // store entrance
+    m[midR - 2][midC + 9] = T.SIGN;
     return m;
 }
 
@@ -5862,6 +5863,7 @@ function readSign(row, col) {
         else text = SIGN_TEXTS.beach_south;
     } else if (state.location === 'island') {
         if (col <= 5 && row <= 5) text = SIGN_TEXTS.island_ferry;
+        else if (col > 15) text = 'Island Grocery - Buy supplies!';
         else text = SIGN_TEXTS.island_sign;
     } else if (state.location === 'zordarena') {
         if (row >= ROWS - 4) text = SIGN_TEXTS.arena_exit;
