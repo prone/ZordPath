@@ -5596,6 +5596,7 @@ function encounterEnemy(enemyIndex) {
         state.quizIndex = 0;
         state.quizCorrect = 0;
         state.quizTotal = questionSet.length;
+        state._lessonSlidesShown = false;
         showScreen('quiz');
         renderQuiz();
     }
@@ -5959,6 +5960,7 @@ function startArenaMatch(trainerIndex) {
     state.quizIndex = 0;
     state.quizCorrect = 0;
     state.quizTotal = questionSet.length;
+    state._lessonSlidesShown = false;
     showScreen('quiz');
     renderQuiz();
 }
@@ -6315,6 +6317,7 @@ function startSpaTraining() {
     state.quizCorrect = 0;
     state.quizTotal = 5;
     state._spaTraining = true;
+    state._lessonSlidesShown = false;
 
     showScreen('quiz');
     renderQuiz();
@@ -6963,6 +6966,87 @@ function updateQuizScrollArrow() {
     arrow.classList.toggle('hidden', !canScroll || atBottom);
 }
 
+function showLessonSlideshow(lesson, onComplete) {
+    // Split content into slides by double newline
+    const paragraphs = lesson.content.split(/\n\n+/).filter(p => p.trim());
+    let slideIdx = 0;
+
+    const lessonEl = document.getElementById('quiz-lesson');
+    const questionEl = document.getElementById('quiz-question');
+    const choicesEl = document.getElementById('quiz-choices');
+    const feedbackEl = document.getElementById('quiz-feedback');
+    const progressEl = document.getElementById('quiz-progress');
+
+    // Hide question area during slideshow
+    questionEl.textContent = '';
+    choicesEl.innerHTML = '';
+    feedbackEl.textContent = '';
+    resetInteractiveDisplay();
+
+    function showSlide() {
+        const isLast = slideIdx >= paragraphs.length - 1;
+        const hasDiagram = slideIdx === paragraphs.length; // diagram is the final "slide"
+
+        if (hasDiagram) {
+            // Show diagram slide, then done
+            lessonEl.innerHTML = `<h3>${escapeHtml(lesson.title)}</h3>`;
+            drawLessonDiagram(lesson.id, lessonEl);
+            // Check if diagram was actually drawn (some lessons don't have one)
+            if (lessonEl.querySelectorAll('canvas').length === 0) {
+                // No diagram — go straight to questions
+                onComplete();
+                return;
+            }
+            progressEl.innerHTML = '';
+            const doneBtn = document.createElement('button');
+            doneBtn.className = 'btn btn-primary';
+            doneBtn.style.cssText = 'font-size:11px;padding:10px 24px;margin-top:8px;';
+            doneBtn.textContent = 'Start Quiz!';
+            doneBtn.addEventListener('click', () => {
+                // Show full lesson content for reference during questions
+                lessonEl.innerHTML = `<h3>${escapeHtml(lesson.title)}</h3><p>${lesson.content.replace(/\n/g, '<br>')}</p>`;
+                drawLessonDiagram(lesson.id, lessonEl);
+                lessonEl.scrollTop = 0;
+                onComplete();
+            });
+            choicesEl.innerHTML = '';
+            choicesEl.appendChild(doneBtn);
+            return;
+        }
+
+        // Show current slide
+        lessonEl.innerHTML = `<h3>${escapeHtml(lesson.title)}</h3><p>${paragraphs[slideIdx].replace(/\n/g, '<br>')}</p>`;
+        lessonEl.scrollTop = 0;
+        progressEl.textContent = `Slide ${slideIdx + 1} of ${paragraphs.length + 1}`;
+
+        choicesEl.innerHTML = '';
+        const nextBtn = document.createElement('button');
+        nextBtn.className = 'btn btn-primary';
+        nextBtn.style.cssText = 'font-size:11px;padding:10px 24px;';
+        nextBtn.textContent = isLast ? 'View Diagram' : 'Next';
+        nextBtn.addEventListener('click', () => {
+            slideIdx++;
+            showSlide();
+        });
+        choicesEl.appendChild(nextBtn);
+
+        // Add back button if not first slide
+        if (slideIdx > 0) {
+            const backBtn = document.createElement('button');
+            backBtn.className = 'btn btn-secondary';
+            backBtn.style.cssText = 'font-size:9px;padding:8px 16px;margin-left:8px;';
+            backBtn.textContent = 'Back';
+            backBtn.addEventListener('click', () => {
+                slideIdx--;
+                showSlide();
+            });
+            choicesEl.appendChild(backBtn);
+        }
+    }
+
+    showSlide();
+}
+
 function renderQuiz() {
     const lesson = state.currentLesson;
     const qi = state.quizIndex;
@@ -7004,11 +7088,13 @@ function renderQuiz() {
 
     const entry = questionSet[qi];
 
-    if (qi === 0) {
-        const lessonEl = document.getElementById('quiz-lesson');
-        lessonEl.innerHTML = `<h3>${lesson.title}</h3><p>${lesson.content.replace(/\n/g, '<br>')}</p>`;
-        drawLessonDiagram(lesson.id, lessonEl);
-        lessonEl.scrollTop = 0;
+    if (qi === 0 && !state._lessonSlidesShown) {
+        // Split lesson into slides and show slideshow before questions
+        showLessonSlideshow(lesson, () => {
+            state._lessonSlidesShown = true;
+            renderQuiz(); // re-enter to show first question
+        });
+        return;
     }
 
     document.getElementById('quiz-feedback').textContent = '';

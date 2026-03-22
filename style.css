@@ -891,6 +891,11 @@ body {
     margin-bottom: 12px;
 }
 
+.quiz-choices .btn-primary,
+.quiz-choices .btn-secondary {
+    align-self: flex-start;
+}
+
 .quiz-feedback {
     font-size: 10px;
     padding: 8px;
