@@ -700,6 +700,77 @@ function buildBeachMap() {
     m[ROWS - 3][midC + 1] = T.SIGN;
     // Fishing spot sign near dock
     m[6][17] = T.SIGN;
+    // Ferry dock on the left side (to island)
+    for (let r = 3; r < 7; r++) m[r][2] = T.DOCK;
+    m[3][1] = T.DOCK; m[3][3] = T.DOCK;
+    m[6][2] = T.PATH;
+    m[7][2] = T.SIGN; // ferry sign
+    return m;
+}
+
+// Island map
+function buildIslandMap() {
+    const m = createMap(ROWS, COLS, T.SAND);
+    // Ocean border (top and sides)
+    for (let c = 0; c < COLS; c++) { m[0][c] = T.WATER; m[1][c] = T.WATER; }
+    for (let r = 0; r < ROWS; r++) { m[r][0] = T.WATER; m[r][COLS - 1] = T.WATER; }
+    for (let r = 0; r < ROWS; r++) { m[r][1] = T.WATER; m[r][COLS - 2] = T.WATER; }
+    // Bottom ocean
+    for (let c = 0; c < COLS; c++) { m[ROWS - 1][c] = T.WATER; m[ROWS - 2][c] = T.WATER; }
+    // Wavy shoreline
+    for (let c = 2; c < COLS - 2; c++) {
+        if (Math.sin(c * 0.6) > 0.2) m[2][c] = T.WATER;
+        if (Math.sin(c * 0.8 + 1) > 0.3) m[ROWS - 3][c] = T.WATER;
+    }
+    // Clear walkable island interior
+    for (let r = 3; r < ROWS - 3; r++) for (let c = 3; c < COLS - 3; c++) m[r][c] = T.SAND;
+    // Grass patches in center
+    for (let r = 5; r < ROWS - 5; r++) for (let c = 6; c < COLS - 6; c++) {
+        if (Math.random() < 0.4) m[r][c] = T.GRASS;
+    }
+    // Central path
+    const midC = Math.floor(COLS / 2);
+    const midR = Math.floor(ROWS / 2);
+    for (let r = 3; r < ROWS - 3; r++) m[r][midC] = T.PATH;
+    for (let c = 4; c < COLS - 4; c++) m[midR][c] = T.PATH;
+    // Island village hut (top area)
+    m[4][midC - 2] = T.HOUSE; m[4][midC - 1] = T.HOUSE; m[4][midC] = T.HOUSE;
+    m[5][midC - 2] = T.HOUSE; m[5][midC] = T.HOUSE;
+    m[5][midC - 1] = T.PATH; // door
+    // Second hut (right)
+    m[4][midC + 4] = T.HOUSE; m[4][midC + 5] = T.HOUSE;
+    m[5][midC + 4] = T.HOUSE; m[5][midC + 5] = T.PATH;
+    // Palm trees
+    const palms = [[3,5],[3,18],[6,4],[6,19],[8,3],[8,20],[10,5],[10,18],[4,8],[4,15]];
+    for (const [pr, pc] of palms) {
+        if (pr < ROWS - 3 && pc < COLS - 2 && m[pr][pc] === T.SAND) m[pr][pc] = T.PALM;
+    }
+    // Flowers
+    for (let i = 0; i < 8; i++) {
+        const r = 4 + Math.floor(Math.random() * (ROWS - 8));
+        const c = 4 + Math.floor(Math.random() * (COLS - 8));
+        if (m[r][c] === T.SAND || m[r][c] === T.GRASS) m[r][c] = T.FLOWER;
+    }
+    // Seashells along shore
+    for (let i = 0; i < 6; i++) {
+        const c = 3 + Math.floor(Math.random() * (COLS - 6));
+        if (m[3][c] === T.SAND) m[3][c] = T.SEASHELL;
+        if (m[ROWS - 4][c] === T.SAND) m[ROWS - 4][c] = T.SEASHELL;
+    }
+    // Rocks
+    m[midR + 2][6] = T.ROCK; m[midR - 1][17] = T.ROCK;
+    // Fishing pond (small)
+    m[8][midC + 3] = T.WATER; m[8][midC + 4] = T.WATER;
+    m[9][midC + 3] = T.WATER; m[9][midC + 4] = T.WATER;
+    m[8][midC + 2] = T.BRIDGE;
+    // Ferry dock (top-left, arrival point)
+    m[2][4] = T.DOCK; m[3][4] = T.DOCK; m[2][5] = T.DOCK;
+    m[4][4] = T.PATH;
+    m[4][3] = T.SIGN; // ferry back sign
+    // Store
+    m[midR - 1][midC + 7] = T.STORE; m[midR][midC + 7] = T.STORE;
+    m[midR][midC + 7] = T.PATH; // store entrance
+    m[midR - 1][midC + 7] = T.STORE;
     return m;
 }
 
@@ -950,7 +1021,8 @@ const MAPS = {
     forest: buildForestMap(),
     beach: buildBeachMap(),
     mountains: buildMountainMap(),
-    zordarena: buildZordArenaMap()
+    zordarena: buildZordArenaMap(),
+    island: buildIslandMap()
 };
 
 // Build peak floors
@@ -1004,6 +1076,9 @@ const TRANSITIONS = {
     zordarena: [
         { col: Math.floor(COLS / 2), row: ROWS - 2, target: 'town', spawnCol: 19, spawnRow: 10 }
     ],
+    island: [
+        // Ferry dock back to beach (top-left area)
+    ],
     forest: [
         { col: 1, row: Math.floor(ROWS / 2), target: 'town', spawnCol: COLS - 3, spawnRow: Math.floor(ROWS / 2) },
         { col: COLS - 2, row: Math.floor(ROWS / 2), target: 'temple_1', spawnCol: Math.floor(COLS / 2), spawnRow: ROWS - 4 }
@@ -1052,6 +1127,9 @@ const SIGN_TEXTS = {
     mtn_deep: 'Beware! Strong creatures dwell deeper in the peaks.',
     mtn_south: 'v The Peak Climb (5 levels to the summit!)',
     peak_sign: 'The air grows thinner... keep climbing!',
+    beach_ferry: 'Ferry to the Island! Talk to Captain Finn.',
+    island_ferry: 'Ferry back to Coral Cove Beach. Talk to Captain Finn.',
+    island_sign: 'Welcome to the Island! Rare Zords roam here.',
     town_arena: 'Zord Arena v (Battle, Heal & Train!)',
     arena_battle: 'The Arena - Battle Town Trainers!',
     arena_hospital: 'Zord Hospital - Heal your Zords!',
@@ -1070,7 +1148,12 @@ const MAP_NPCS = {
         { npcIndex: 7, col: 15, row: 8 }    // Challenge Master Rho
     ],
     beach: [
-        { npcIndex: 5, col: 16, row: 8 }   // Captain Coral (near dock)
+        { npcIndex: 5, col: 16, row: 8 },  // Captain Coral (near dock)
+        { npcIndex: 8, col: 3, row: 7 }    // Ferry Captain Finn (near ferry dock)
+    ],
+    island: [
+        { npcIndex: 9, col: Math.floor(COLS / 2), row: 6 },  // Island Elder Kai
+        { npcIndex: 8, col: 5, row: 5 }                       // Ferry Captain Finn (near ferry dock)
     ],
     mountains: [
         { npcIndex: 6, col: 14, row: 6 }   // Ranger Flint
@@ -1112,6 +1195,14 @@ const ENEMY_ZONES = {
         { col: 16, row: 7, enemyIndex: 39, roam: 2 },
         { col: 4, row: 8, enemyIndex: 40, roam: 2 },
         { col: 19, row: 10, enemyIndex: 41, roam: 2 }
+    ],
+    island: [
+        { col: 6, row: 8, enemyIndex: 50, roam: 2 },    // Coconut Crab
+        { col: 14, row: 6, enemyIndex: 51, roam: 3 },   // Reef Serpent
+        { col: 18, row: 9, enemyIndex: 52, roam: 2 },   // Tropic Parrot
+        { col: 8, row: 10, enemyIndex: 53, roam: 2 },   // Lava Turtle
+        { col: 16, row: 10, enemyIndex: 54, roam: 3 },  // Tiki Spirit
+        { col: 11, row: 5, enemyIndex: 55, roam: 2 }    // Storm Manta
     ],
     peak_1: [
         { col: 6, row: 5, enemyIndex: 42, roam: 3 },
@@ -1247,7 +1338,7 @@ function clearEnemySpawnAreas() {
 clearEnemySpawnAreas();
 
 function initEnemyPositions() {
-    const allLocs = ['cave', 'forest', 'beach', 'mountains', 'peak_1', 'peak_2', 'peak_3', 'peak_4', 'peak_5', 'temple_1', 'temple_2', 'temple_3', 'temple_4', 'temple_5', 'temple_6', 'temple_7'];
+    const allLocs = ['cave', 'forest', 'beach', 'mountains', 'island', 'peak_1', 'peak_2', 'peak_3', 'peak_4', 'peak_5', 'temple_1', 'temple_2', 'temple_3', 'temple_4', 'temple_5', 'temple_6', 'temple_7'];
     for (const loc of allLocs) {
         if (!ENEMY_ZONES[loc] || !MAPS[loc]) continue;
         const map = MAPS[loc];
@@ -2557,7 +2648,14 @@ const ENEMIES = [
     { name: 'Storm Condor',   sprite: '\u{1F985}', hp: 100,attack: 16, rubies: 14, lessonId: 'valid-reasoning',      catchRate: 0.2,  element: 'electric',power: { name: 'Thunder Dive', damage: 28, element: 'electric' },moveType: 'fly', attackType: 'laser', speed: 1.6 },
     { name: 'Obsidian Golem', sprite: '\u{1F5FF}', hp: 130,attack: 17, rubies: 16, lessonId: 'equivalence',          catchRate: 0.15, element: 'earth',   power: { name: 'Tectonic Slam', damage: 30, element: 'earth' },  moveType: 'slow', attackType: 'bomb', speed: 0.5 },
     // === PEAK BOSS (49) ===
-    { name: 'Titan Frostclaw', sprite: '\u{1F409}', hp: 250, attack: 24, rubies: 60, lessonId: 'valid-reasoning', catchRate: 0, element: 'ice', power: { name: 'Glacial Annihilation', damage: 50, element: 'ice' }, moveType: 'fly', attackType: 'laser', speed: 1.6, escapeRate: 0.1 }
+    { name: 'Titan Frostclaw', sprite: '\u{1F409}', hp: 250, attack: 24, rubies: 60, lessonId: 'valid-reasoning', catchRate: 0, element: 'ice', power: { name: 'Glacial Annihilation', damage: 50, element: 'ice' }, moveType: 'fly', attackType: 'laser', speed: 1.6, escapeRate: 0.1 },
+    // === ISLAND ZORDS (50-55) ===
+    { name: 'Coconut Crab',   sprite: '\u{1F980}', hp: 55, attack: 9,  rubies: 6,  lessonId: 'propositional-basics', catchRate: 0.55, element: 'earth',   power: { name: 'Shell Crush', damage: 16, element: 'earth' },     moveType: 'roam', attackType: 'bite', speed: 0.7 },
+    { name: 'Reef Serpent',   sprite: '\u{1F40D}', hp: 65, attack: 11, rubies: 8,  lessonId: 'truth-tables',         catchRate: 0.45, element: 'water',   power: { name: 'Tidal Fang', damage: 20, element: 'water' },      moveType: 'roam', attackType: 'spread', speed: 1.2 },
+    { name: 'Tropic Parrot',  sprite: '\u{1F99C}', hp: 45, attack: 10, rubies: 7,  lessonId: 'implication',          catchRate: 0.5,  element: 'electric',power: { name: 'Squawk Bolt', damage: 18, element: 'electric' },  moveType: 'fly', attackType: 'electric', speed: 1.6 },
+    { name: 'Lava Turtle',    sprite: '\u{1F422}', hp: 85, attack: 12, rubies: 10, lessonId: 'equivalence',          catchRate: 0.35, element: 'fire',    power: { name: 'Magma Shell', damage: 22, element: 'fire' },      moveType: 'slow', attackType: 'fireball', speed: 0.4 },
+    { name: 'Tiki Spirit',    sprite: '\u{1F3AD}', hp: 70, attack: 13, rubies: 9,  lessonId: 'valid-reasoning',      catchRate: 0.4,  element: 'arcane',  power: { name: 'Tribal Hex', damage: 24, element: 'arcane' },     moveType: 'fly', attackType: 'shadow', speed: 1.0 },
+    { name: 'Storm Manta',    sprite: '\u{1F41F}', hp: 95, attack: 14, rubies: 12, lessonId: 'predicate-logic',      catchRate: 0.3,  element: 'water',   power: { name: 'Tempest Wave', damage: 26, element: 'water' },    moveType: 'fly', attackType: 'spread', speed: 1.4 }
 ];
 
 // --- NPCs ---
@@ -2631,6 +2729,25 @@ const NPCS = [
             'The Crystal Yeti is the mightiest creature in these peaks. Few have caught one!',
             'Frost Wolves hunt in the snowfields. They are fast and hit hard with ice attacks.',
             'There is a small alpine lake deeper in — good for fishing if you have a pole.'
+        ]
+    },
+    {
+        name: 'Ferry Captain Finn', sprite: '\u{26F5}',
+        isFerry: true,
+        dialogue: [
+            'Ahoy! I sail the ferry to the mysterious island across the sea!',
+            'The island has creatures you will not find anywhere else on the mainland.',
+            'Some say a Storm Manta lurks in the deep waters around the island. Very rare!',
+            'The island folk are friendly. They have their own store and fishing spots.'
+        ]
+    },
+    {
+        name: 'Island Elder Kai', sprite: '\u{1F9D3}',
+        dialogue: [
+            'Welcome to our island, traveler! Few from the mainland find their way here.',
+            'The creatures here are unique — Coconut Crabs, Reef Serpents, and the legendary Storm Manta.',
+            'Our Tiki Spirits guard ancient knowledge. Defeat them to learn the deepest logic!',
+            'The ferry dock is to the north if you wish to return to the beach.'
         ]
     }
 ];
@@ -4818,6 +4935,31 @@ function renderWorldMap() {
             }
           }
         },
+        { id: 'island', name: 'Mystery Island', x: 30, y: 5, w: 90, h: 65,
+          draw: (c, x, y, w, h) => {
+            // Ocean
+            c.fillStyle = '#1a6090'; c.fillRect(x, y, w, h);
+            for (let dx = 0; dx < w; dx += 8) {
+                c.fillStyle = '#2080b0'; c.fillRect(x + dx, y + h * 0.2, 6, 2);
+                c.fillStyle = '#3098c8'; c.fillRect(x + dx + 3, y + h * 0.6, 5, 2);
+            }
+            // Island landmass (rounded)
+            c.fillStyle = '#e0c888';
+            c.fillRect(x + 15, y + 15, w - 30, h - 25);
+            c.fillRect(x + 20, y + 12, w - 40, 5);
+            c.fillRect(x + 20, y + h - 12, w - 40, 5);
+            // Grass center
+            c.fillStyle = '#3a8044';
+            c.fillRect(x + 22, y + 20, w - 44, h - 38);
+            // Palm trees
+            c.fillStyle = '#2a5020';
+            c.fillRect(x + 20, y + 18, 5, 8); c.fillRect(x + 18, y + 16, 9, 5);
+            c.fillRect(x + w - 25, y + 20, 5, 8); c.fillRect(x + w - 27, y + 18, 9, 5);
+            // Hut
+            c.fillStyle = '#8e6e53'; c.fillRect(x + 35, y + 22, 12, 8);
+            c.fillStyle = '#a07a50'; c.fillRect(x + 36, y + 20, 10, 4);
+          }
+        },
         { id: 'beach', name: 'Coral Cove Beach', x: 160, y: 10, w: 110, h: 60,
           draw: (c, x, y, w, h) => {
             // Sand base
@@ -5008,6 +5150,7 @@ function renderWorldMap() {
         const nexts = regions.filter(r => {
             if (a.id === 'cave') return r.id === 'town';
             if (a.id === 'town') return r.id === 'forest' || r.id === 'beach' || r.id === 'mountains' || r.id === 'zordarena';
+            if (a.id === 'beach') return r.id === 'island';
             if (a.id === 'mountains') return r.id === 'peak_1';
             if (a.id === 'forest') return r.id === 'temple_1';
             if (a.id.startsWith('peak_')) {
@@ -5520,8 +5663,12 @@ function readSign(row, col) {
         const floorNum = parseInt(state.location.split('_')[1]);
         text = PEAK_FLOORS[floorNum - 1].name;
     } else if (state.location === 'beach') {
-        if (col > 15 && row < 8) text = SIGN_TEXTS.beach_dock;
+        if (col <= 4 && row >= 6) text = SIGN_TEXTS.beach_ferry;
+        else if (col > 15 && row < 8) text = SIGN_TEXTS.beach_dock;
         else text = SIGN_TEXTS.beach_south;
+    } else if (state.location === 'island') {
+        if (col <= 5 && row <= 5) text = SIGN_TEXTS.island_ferry;
+        else text = SIGN_TEXTS.island_sign;
     } else if (state.location === 'zordarena') {
         if (row >= ROWS - 4) text = SIGN_TEXTS.arena_exit;
         else if (col < 10 && row < 7) text = SIGN_TEXTS.arena_battle;
@@ -5678,6 +5825,10 @@ function talkToNPC(npc) {
     }
     if (npc.isChallengeMaster) {
         showChallengeMasterMenu(npc);
+        return;
+    }
+    if (npc.isFerry) {
+        showFerryMenu(npc);
         return;
     }
     if (!state.npcDialogueIndex[npc.name]) state.npcDialogueIndex[npc.name] = 0;
@@ -6399,6 +6550,70 @@ const CHALLENGE_BADGES = [
     { name: 'Platinum',  minQ: 50,  class: 'platinum' },
     { name: 'Legendary', minQ: 80,  class: 'legendary' }
 ];
+
+function showFerryMenu(npc) {
+    state.dialogueOpen = true;
+    state.paused = true;
+    const panel = document.getElementById('dialogue-panel');
+    panel.style.display = 'flex';
+    document.getElementById('dialogue-portrait').textContent = npc.sprite;
+    document.getElementById('dialogue-speaker').textContent = npc.name;
+    document.getElementById('interact-prompt').style.display = 'none';
+
+    const isOnIsland = state.location === 'island';
+    document.getElementById('dialogue-text').textContent = isOnIsland
+        ? 'Ready to head back to Coral Cove Beach?'
+        : 'Ahoy! Want to take the ferry to the mysterious island?';
+
+    const choicesEl = document.getElementById('dialogue-choices');
+    choicesEl.innerHTML = '';
+
+    const goBtn = document.createElement('button');
+    goBtn.className = 'btn btn-choice';
+    goBtn.style.borderColor = 'var(--gold)';
+    goBtn.textContent = isOnIsland ? 'Sail to Beach' : 'Sail to the Island!';
+    goBtn.addEventListener('click', () => {
+        hideDialogue();
+        playSound('gem');
+        if (isOnIsland) {
+            state.location = 'beach';
+            state.playerCol = 3;
+            state.playerRow = 6;
+        } else {
+            state.location = 'island';
+            state.playerCol = 4;
+            state.playerRow = 4;
+            discoverArea('island');
+        }
+        updateHUD();
+        updateInteractPrompt();
+        autoSave();
+    });
+    choicesEl.appendChild(goBtn);
+
+    // Chat
+    const chatBtn = document.createElement('button');
+    chatBtn.className = 'btn btn-choice';
+    chatBtn.textContent = 'Tell me about the island';
+    chatBtn.addEventListener('click', () => {
+        if (!state.npcDialogueIndex[npc.name]) state.npcDialogueIndex[npc.name] = 0;
+        currentDialogueNPC = npc;
+        const idx = state.npcDialogueIndex[npc.name];
+        const line = npc.dialogue[idx % npc.dialogue.length];
+        const hasMore = ((idx + 1) % npc.dialogue.length) !== 0;
+        document.getElementById('dialogue-text').textContent = line;
+        choicesEl.innerHTML = hasMore
+            ? '<span style="color:var(--text-dim);font-size:9px">[Space] ...</span>'
+            : '<span style="color:var(--text-dim);font-size:9px">[Space] Close</span>';
+    });
+    choicesEl.appendChild(chatBtn);
+
+    const leaveBtn = document.createElement('button');
+    leaveBtn.className = 'btn btn-choice';
+    leaveBtn.textContent = 'Not now';
+    leaveBtn.addEventListener('click', () => hideDialogue());
+    choicesEl.appendChild(leaveBtn);
+}
 
 function showChallengeMasterMenu(npc) {
     state.dialogueOpen = true;
@@ -9572,7 +9787,9 @@ function getEnemySpriteType(name) {
         'Granite Hound': 'fox', 'Gale Hawk': 'bat', 'Rime Spider': 'spider', 'Blizzard Wraith': 'ghost',
         'Magma Mole': 'slime', 'Storm Condor': 'bat', 'Obsidian Golem': 'golem',
         'Titan Frostclaw': 'dragon',
-        'Arch-Logician Zephyr': 'wizard'
+        'Arch-Logician Zephyr': 'wizard',
+        'Coconut Crab': 'spider', 'Reef Serpent': 'snake', 'Tropic Parrot': 'bat',
+        'Lava Turtle': 'golem', 'Tiki Spirit': 'ghost', 'Storm Manta': 'jelly'
     };
     return map[name] || 'goblin';
 }
@@ -10493,7 +10710,10 @@ function drawTile(col, row, tileType) {
 
             // Door frame color by area
             let frameColor, frameDark, frameLt, handleColor;
-            if (isBeach) {
+            const isIsland = loc === 'island';
+            if (isIsland) {
+                frameColor = '#6a8040'; frameDark = '#4a6028'; frameLt = '#8aa058'; handleColor = '#f0d040';
+            } else if (isBeach) {
                 frameColor = '#2a6a90'; frameDark = '#1a4a6a'; frameLt = '#4a90b8'; handleColor = '#f0d040';
             } else if (isMtn) {
                 frameColor = '#5a5a50'; frameDark = '#3a3a34'; frameLt = '#7a7a70'; handleColor = '#c0b080';
@@ -11107,7 +11327,7 @@ function drawCanvasHUD() {
     ctx.textAlign = 'center';
     ctx.fillStyle = '#8888aa';
     ctx.font = '8px "Press Start 2P", monospace';
-    const locNames = { cave: 'The Cave', town: 'Logic Land Town', forest: 'Enchanted Forest', beach: 'Coral Cove Beach', mountains: 'Iron Peak Mountains', zordarena: 'Zord Arena' };
+    const locNames = { cave: 'The Cave', town: 'Logic Land Town', forest: 'Enchanted Forest', beach: 'Coral Cove Beach', mountains: 'Iron Peak Mountains', zordarena: 'Zord Arena', island: 'Mystery Island' };
     TEMPLE_FLOORS.forEach((f, i) => { locNames['temple_' + (i + 1)] = f.name; });
     PEAK_FLOORS.forEach((f, i) => { locNames['peak_' + (i + 1)] = f.name; });
     ctx.fillText(locNames[state.location] || state.location, CANVAS_W / 2, y);
@@ -11295,7 +11515,8 @@ function getZordBattleBackground(loc) {
         forest:     'linear-gradient(180deg, #4a7848 0%, #3a6838 35%, #2d5a27 55%, #5a7040 60%, #4a6030 100%)',
         beach:      'linear-gradient(180deg, #4aa0d0 0%, #60b8e0 30%, #e0c888 55%, #e8d5a3 60%, #d4c090 100%)',
         mountains:  'linear-gradient(180deg, #708898 0%, #8898a8 30%, #6a6a5a 55%, #7a7a6a 60%, #5a5a50 100%)',
-        zordarena:  'linear-gradient(180deg, #3a2040 0%, #4a2850 30%, #5a3060 55%, #4a2850 60%, #3a2040 100%)'
+        zordarena:  'linear-gradient(180deg, #3a2040 0%, #4a2850 30%, #5a3060 55%, #4a2850 60%, #3a2040 100%)',
+        island:     'linear-gradient(180deg, #40a0d0 0%, #60c0e0 30%, #3a8044 50%, #e0c888 60%, #d0b878 100%)'
     };
     // Peak floors
     if (loc && loc.startsWith('peak_')) return 'linear-gradient(180deg, #90a0b0 0%, #a0b0c0 30%, #6a6a5a 55%, #808878 60%, #5a5a50 100%)';
