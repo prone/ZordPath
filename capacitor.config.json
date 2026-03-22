@@ -1,0 +1,13 @@
+{
+  "appId": "com.zordpath.app",
+  "appName": "ZordPath",
+  "webDir": "www",
+  "ios": {
+    "contentInset": "always",
+    "preferredContentMode": "mobile",
+    "backgroundColor": "#1a1a2e"
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}
