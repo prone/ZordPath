@@ -11509,28 +11509,175 @@ function drawTile(col, row, tileType) {
 
     // === BUILDINGS ===
     if (tileType === T.HOUSE || tileType === T.STORE || tileType === T.BUILD) {
-        ctx.fillStyle = '#3a8044'; ctx.fillRect(x, y, S, S);
-        const wc = tileType===T.STORE?'#c4a060':tileType===T.BUILD?'#6a8a50':'#b0885a';
-        const rc = tileType===T.STORE?'#2060a0':tileType===T.BUILD?'#506838':'#a04030';
-        // Wall
-        ctx.fillStyle = wc; ctx.fillRect(x+3, y+16, S-6, S-18);
-        // Wall detail
+        const map = MAPS[state.location];
+        const bgColor = state.location === 'beach' || state.location === 'island' ? '#e0c888' : '#3a8044';
+        ctx.fillStyle = bgColor; ctx.fillRect(x, y, S, S);
+
+        // For STORE and BUILD, draw standalone
+        if (tileType === T.STORE || tileType === T.BUILD) {
+            const wc = tileType===T.STORE?'#c4a060':'#6a8a50';
+            const rc = tileType===T.STORE?'#2060a0':'#506838';
+            ctx.fillStyle = wc; ctx.fillRect(x+3, y+16, S-6, S-18);
+            ctx.fillStyle = 'rgba(0,0,0,0.06)';
+            for (let dy = 18; dy < S; dy += 6) ctx.fillRect(x+3, y+dy, S-6, 1);
+            ctx.fillStyle = rc; ctx.fillRect(x-1, y+4, S+2, 16);
+            ctx.fillStyle = 'rgba(0,0,0,0.15)'; ctx.fillRect(x-1, y+18, S+2, 2);
+            ctx.fillStyle = '#3a2010'; ctx.fillRect(x+S/2-6, y+30, 12, 18);
+            ctx.fillStyle = '#4a3020'; ctx.fillRect(x+S/2-5, y+31, 10, 16);
+            ctx.fillStyle = '#f0c040'; ctx.fillRect(x+S/2+3, y+38, 2, 2);
+            ctx.fillStyle = '#80c0e0'; ctx.fillRect(x+8, y+22, 8, 8); ctx.fillRect(x+S-16, y+22, 8, 8);
+            ctx.fillStyle = '#5a8aa0'; ctx.fillRect(x+11, y+22, 2, 8); ctx.fillRect(x+8, y+25, 8, 2);
+            return;
+        }
+
+        // For HOUSE: detect if this is the leftmost tile of a connected group
+        const hasLeft = col > 0 && map[row][col-1] === T.HOUSE;
+        if (hasLeft) return; // skip — leftmost tile draws the whole building
+
+        // Count connected house tiles to the right
+        let houseWidth = 1;
+        while (col + houseWidth < COLS && map[row][col + houseWidth] === T.HOUSE) houseWidth++;
+
+        // Also check if there's a row above that's also houses (2-story)
+        let houseHeight = 1;
+        if (row > 0) {
+            let aboveAll = true;
+            for (let dc = 0; dc < houseWidth; dc++) {
+                if (map[row-1][col+dc] !== T.HOUSE) { aboveAll = false; break; }
+            }
+            if (aboveAll) houseHeight = 2;
+        }
+
+        const bw = houseWidth * S; // total building width in pixels
+        const bh = houseHeight * S;
+        const bx = x; // building starts at this tile
+        const by = houseHeight === 2 ? y - S : y;
+
+        // Draw merged building
+        const wc = state.location === 'island' ? '#c4a070' : '#b0885a';
+        const wcDk = state.location === 'island' ? '#a08050' : '#906840';
+        const rc = state.location === 'island' ? '#8a6040' : '#a04030';
+        const rcLt = state.location === 'island' ? '#a07050' : '#c06048';
+
+        // Background behind building
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(bx, by, bw, bh);
+
+        // Main wall
+        ctx.fillStyle = wc;
+        ctx.fillRect(bx + 3, by + 14, bw - 6, bh - 16);
+        // Wall detail lines
         ctx.fillStyle = 'rgba(0,0,0,0.06)';
-        for (let dy = 18; dy < S; dy += 6) ctx.fillRect(x+3, y+dy, S-6, 1);
-        // Roof
-        ctx.fillStyle = rc; ctx.fillRect(x-1, y+4, S+2, 16);
-        ctx.fillStyle = rc.replace(/[0-9a-f]{2}/gi, m=>Math.min(255,parseInt(m,16)+25).toString(16).padStart(2,'0'));
-        ctx.fillRect(x+1, y+4, S-2, 8);
-        // Roof edge
-        ctx.fillStyle = 'rgba(0,0,0,0.15)'; ctx.fillRect(x-1, y+18, S+2, 2);
-        // Door
-        ctx.fillStyle = '#3a2010'; ctx.fillRect(x+S/2-6, y+30, 12, 18);
-        ctx.fillStyle = '#4a3020'; ctx.fillRect(x+S/2-5, y+31, 10, 16);
-        ctx.fillStyle = '#f0c040'; ctx.fillRect(x+S/2+3, y+38, 2, 2);
-        // Window
-        ctx.fillStyle = '#80c0e0'; ctx.fillRect(x+8, y+22, 8, 8);
-        ctx.fillRect(x+S-16, y+22, 8, 8);
-        ctx.fillStyle = '#5a8aa0'; ctx.fillRect(x+11, y+22, 2, 8); ctx.fillRect(x+8, y+25, 8, 2);
+        for (let dy = 16; dy < bh; dy += 6) ctx.fillRect(bx + 3, by + dy, bw - 6, 1);
+        // Darker wall base
+        ctx.fillStyle = wcDk;
+        ctx.fillRect(bx + 3, by + bh - 6, bw - 6, 6);
+
+        // Roof (extends past walls slightly)
+        ctx.fillStyle = rc;
+        ctx.fillRect(bx - 2, by + 2, bw + 4, 16);
+        ctx.fillStyle = rcLt;
+        ctx.fillRect(bx, by + 2, bw, 8);
+        // Roof ridge
+        ctx.fillStyle = 'rgba(0,0,0,0.15)';
+        ctx.fillRect(bx - 2, by + 16, bw + 4, 2);
+        // Roof peak triangle hint
+        ctx.fillStyle = rc;
+        ctx.fillRect(bx + bw / 2 - 4, by, 8, 4);
+
+        // Door (centered)
+        const doorX = bx + bw / 2 - 6;
+        const doorY = by + bh - 18;
+        ctx.fillStyle = '#3a2010'; ctx.fillRect(doorX, doorY, 12, 18);
+        ctx.fillStyle = '#4a3020'; ctx.fillRect(doorX + 1, doorY + 1, 10, 16);
+        ctx.fillStyle = '#f0c040'; ctx.fillRect(doorX + 8, doorY + 7, 2, 2);
+
+        // Windows — one per tile width, skipping the door tile
+        for (let wi = 0; wi < houseWidth; wi++) {
+            const winX = bx + wi * S + S / 2 - 5;
+            const winY = by + 22;
+            // Skip window if it overlaps the door area
+            if (Math.abs(winX - doorX) < 14 && doorY - winY < 16) continue;
+            ctx.fillStyle = '#80c0e0';
+            ctx.fillRect(winX, winY, 10, 10);
+            // Window cross
+            ctx.fillStyle = '#5a8aa0';
+            ctx.fillRect(winX + 4, winY, 2, 10);
+            ctx.fillRect(winX, winY + 4, 10, 2);
+
+            // Second floor windows (if 2-story)
+            if (houseHeight === 2) {
+                ctx.fillStyle = '#80c0e0';
+                ctx.fillRect(winX, winY + S, 10, 10);
+                ctx.fillStyle = '#5a8aa0';
+                ctx.fillRect(winX + 4, winY + S, 2, 10);
+                ctx.fillRect(winX, winY + S + 4, 10, 2);
+            }
+        }
+
+        // Chimney for larger buildings (3+ tiles)
+        if (houseWidth >= 3 && houseWidth < 5) {
+            ctx.fillStyle = '#704030';
+            ctx.fillRect(bx + bw - 16, by - 6, 8, 10);
+            ctx.fillStyle = '#805040';
+            ctx.fillRect(bx + bw - 14, by - 4, 4, 6);
+        }
+
+        // Tower for 5+ tiles — draw vertical tower instead
+        if (houseWidth >= 5) {
+            // Tower body (tall, narrower than full width)
+            const tw = S * 2; // tower is 2 tiles wide
+            const th = S * 3; // tower is 3 tiles tall visually
+            const tx = bx + bw / 2 - tw / 2;
+            const ty = by - S * 2; // extends above
+
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(tx - 2, ty, tw + 4, th);
+
+            // Tower stone walls
+            ctx.fillStyle = '#808070';
+            ctx.fillRect(tx, ty + 12, tw, th - 12);
+            ctx.fillStyle = '#909080';
+            ctx.fillRect(tx + 3, ty + 14, tw - 6, th - 16);
+            // Brick pattern
+            ctx.fillStyle = 'rgba(0,0,0,0.08)';
+            for (let dy = 16; dy < th; dy += 8) {
+                const brickOff = (dy / 8) % 2 === 0 ? 0 : tw / 4;
+                ctx.fillRect(tx + brickOff, ty + dy, tw / 2, 1);
+                ctx.fillRect(tx, ty + dy, tw, 1);
+            }
+
+            // Tower roof (pointed)
+            ctx.fillStyle = '#6a3020';
+            ctx.fillRect(tx - 4, ty + 4, tw + 8, 12);
+            ctx.fillStyle = '#7a4030';
+            ctx.fillRect(tx, ty + 4, tw, 8);
+            // Spire
+            ctx.fillStyle = '#6a3020';
+            ctx.fillRect(tx + tw / 2 - 3, ty - 8, 6, 14);
+            ctx.fillStyle = '#f0c040';
+            ctx.fillRect(tx + tw / 2 - 1, ty - 10, 2, 6); // flag pole tip
+
+            // Tower windows (stacked)
+            for (let floor = 0; floor < 3; floor++) {
+                const wy = ty + 20 + floor * (th / 3 - 4);
+                ctx.fillStyle = '#80c0e0';
+                ctx.fillRect(tx + 10, wy, 10, 12);
+                ctx.fillRect(tx + tw - 20, wy, 10, 12);
+                ctx.fillStyle = '#5a8aa0';
+                ctx.fillRect(tx + 14, wy, 2, 12);
+                ctx.fillRect(tx + 10, wy + 5, 10, 2);
+            }
+
+            // Tower door at base
+            ctx.fillStyle = '#3a2010';
+            ctx.fillRect(tx + tw / 2 - 6, ty + th - 18, 12, 18);
+            ctx.fillStyle = '#4a3020';
+            ctx.fillRect(tx + tw / 2 - 5, ty + th - 17, 10, 16);
+            ctx.fillStyle = '#f0c040';
+            ctx.fillRect(tx + tw / 2 + 3, ty + th - 10, 2, 2);
+        }
+
         return;
     }
 
