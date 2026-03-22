@@ -10053,7 +10053,7 @@ function endBattle(victory) {
     const btnEl = document.getElementById('battle-result-btn');
 
     if (victory) {
-        const quizBonus = state.character.perk === 'scholar' ? state.quizCorrect * 2 : state.quizCorrect;
+        const quizBonus = state.character.perk === 'scholar' ? state.quizCorrect * 4 : state.quizCorrect * 2;
         const rubiesEarned = enemy.rubies + quizBonus;
         state.rubies += rubiesEarned;
         state.hp = battle.playerHp;
@@ -10067,7 +10067,7 @@ function endBattle(victory) {
         trackRubiesEarned(rubiesEarned);
         if (enemy.name === 'Arch-Logician Zephyr') stats.bossDefeated = true;
 
-        textEl.innerHTML = `${enemy.name} defeated!<br><br>+${rubiesEarned} rubies<br><span style="font-size:9px;color:var(--text-dim)">(${enemy.rubies} base + ${state.quizCorrect} quiz bonus)</span>`;
+        textEl.innerHTML = `${enemy.name} defeated!<br><br>+${rubiesEarned} rubies<br><span style="font-size:9px;color:var(--text-dim)">(${enemy.rubies} base + ${quizBonus} quiz bonus)</span>`;
         btnEl.textContent = 'Continue';
         playSound('victory');
         autoSave();
@@ -11367,7 +11367,7 @@ function zordBattleEnd(victory) {
 
     if (victory) {
         const enemy = state.currentEnemy;
-        const rubiesEarned = enemy.rubies + (state.quizCorrect || 0);
+        const rubiesEarned = enemy.rubies + (state.quizCorrect || 0) * 2;
         state.rubies += rubiesEarned;
         if (!state.defeatedEnemies.includes(enemy.name)) state.defeatedEnemies.push(enemy.name);
         if (state._pendingZoneKey && !state.defeatedZones.has(state._pendingZoneKey)) {
