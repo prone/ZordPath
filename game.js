@@ -9742,6 +9742,102 @@ function drawBattleBackground(c) {
             c.fillRect(px2 + 2, BH * 0.24, 18, 8);
             c.fillRect(px2 - 8, BH * 0.22, 14, 6);
         }
+    } else if (loc === 'island') {
+        // --- ISLAND TROPICAL ENVIRONMENT ---
+        // Bright tropical sky
+        for (let y2 = 0; y2 < BH * 0.3; y2++) {
+            const t = y2 / (BH * 0.3);
+            c.fillStyle = `rgb(${Math.floor(60 + t * 80)},${Math.floor(180 + t * 50)},${Math.floor(230 + t * 15)})`;
+            c.fillRect(0, y2, BW, 1);
+        }
+        // Fluffy clouds
+        for (let i = 0; i < 4; i++) {
+            const cx3 = (f * 0.08 + i * 170) % (BW + 120) - 60;
+            const cy3 = 15 + i * 15 + Math.sin(i * 2) * 5;
+            c.fillStyle = 'rgba(255,255,255,0.7)'; c.fillRect(cx3, cy3, 70, 12);
+            c.fillStyle = 'rgba(255,255,255,0.5)'; c.fillRect(cx3 + 8, cy3 - 6, 50, 10);
+            c.fillRect(cx3 + 12, cy3 + 10, 45, 8);
+        }
+        // Distant ocean
+        for (let y2 = Math.floor(BH * 0.3); y2 < Math.floor(BH * 0.45); y2++) {
+            const t = (y2 - BH * 0.3) / (BH * 0.15);
+            const wave = Math.sin(y2 * 0.12 + f * 0.025) * 3;
+            c.fillStyle = `rgb(${Math.floor(30 + t * 20 + wave)},${Math.floor(120 + t * 30 + wave)},${Math.floor(180 + t * 30)})`;
+            c.fillRect(0, y2, BW, 1);
+        }
+        // Wave crests on ocean
+        for (let i = 0; i < 6; i++) {
+            const wy = BH * 0.33 + i * 6;
+            const wx = Math.sin(f * 0.015 + i * 1.8) * 20;
+            c.fillStyle = 'rgba(200,235,255,0.25)';
+            c.fillRect(wx + i * 100, wy, 35, 2);
+        }
+        // Sandy beach strip
+        for (let y2 = Math.floor(BH * 0.45); y2 < Math.floor(BH * 0.55); y2++) {
+            const t = (y2 - BH * 0.45) / (BH * 0.1);
+            c.fillStyle = `rgb(${Math.floor(230 - t * 10)},${Math.floor(210 - t * 15)},${Math.floor(160 - t * 10)})`;
+            c.fillRect(0, y2, BW, 1);
+        }
+        // Foam at shoreline
+        for (let fx2 = 0; fx2 < BW; fx2 += 7) {
+            const fwy = Math.sin(fx2 * 0.08 + f * 0.03) * 2;
+            c.fillStyle = 'rgba(220,240,255,0.6)'; c.fillRect(fx2, BH * 0.45 - 2 + fwy, 5, 2);
+        }
+        // Grassy ground
+        for (let y2 = Math.floor(BH * 0.55); y2 < BH; y2++) {
+            const t = (y2 - BH * 0.55) / (BH * 0.45);
+            c.fillStyle = `rgb(${Math.floor(40 + t * 15)},${Math.floor(100 - t * 15)},${Math.floor(35 + t * 10)})`;
+            c.fillRect(0, y2, BW, 1);
+        }
+        // Grass texture
+        for (let gx = 0; gx < BW; gx += 10) {
+            c.fillStyle = '#2a7a30'; c.fillRect(gx, BH * 0.55, 8, 3);
+        }
+        // Palm trees (left and right)
+        for (const px2 of [40, BW - 60]) {
+            // Trunk (curved)
+            c.fillStyle = '#7a5a30';
+            for (let ty = 0; ty < 8; ty++) {
+                const lean = Math.sin(ty * 0.3) * 3;
+                c.fillRect(px2 + lean, BH * 0.25 + ty * 10, 6, 10);
+            }
+            c.fillStyle = '#8a6a38';
+            for (let ty = 0; ty < 8; ty++) {
+                const lean = Math.sin(ty * 0.3) * 3;
+                c.fillRect(px2 + lean + 2, BH * 0.25 + ty * 10, 3, 10);
+            }
+            // Fronds (drooping leaves)
+            c.fillStyle = '#1a6a20';
+            c.fillRect(px2 - 20, BH * 0.22, 30, 6);
+            c.fillRect(px2 + 4, BH * 0.20, 28, 6);
+            c.fillRect(px2 - 14, BH * 0.18, 22, 5);
+            c.fillStyle = '#2a8a30';
+            c.fillRect(px2 - 16, BH * 0.24, 24, 4);
+            c.fillRect(px2 + 8, BH * 0.22, 20, 4);
+            // Coconuts
+            c.fillStyle = '#6a4a20';
+            c.fillRect(px2 + 2, BH * 0.24, 4, 4);
+            c.fillRect(px2 - 2, BH * 0.26, 3, 3);
+        }
+        // Tiki torch (center background)
+        c.fillStyle = '#5a3a10'; c.fillRect(BW / 2, BH * 0.38, 4, 20);
+        const fh = 5 + Math.sin(f * 0.12) * 3;
+        c.fillStyle = `rgb(${220 + Math.floor(Math.sin(f * 0.18) * 25)},${100 + Math.floor(Math.sin(f * 0.12) * 30)},20)`;
+        c.fillRect(BW / 2 - 1, BH * 0.38 - fh, 6, fh);
+        c.fillStyle = `rgba(255,140,40,${0.05 + Math.sin(f * 0.08) * 0.02})`;
+        c.beginPath(); c.arc(BW / 2 + 2, BH * 0.38, 18, 0, Math.PI * 2); c.fill();
+        // Seashells on sand
+        c.fillStyle = '#f0d0a0'; c.fillRect(180, BH * 0.52, 4, 3);
+        c.fillStyle = '#e8c090'; c.fillRect(380, BH * 0.50, 3, 3);
+        c.fillStyle = '#f0b878'; c.fillRect(280, BH * 0.53, 4, 3);
+        // Flowers on grass
+        for (let i = 0; i < 4; i++) {
+            const fx3 = 120 + i * 130;
+            const fy3 = BH * 0.6 + (i * 19) % 25;
+            c.fillStyle = '#1a6020'; c.fillRect(fx3 + 1, fy3 + 3, 1, 4);
+            c.fillStyle = ['#ff6b6b', '#ffd93d', '#ff69b4', '#ff8c42'][i];
+            c.fillRect(fx3, fy3, 4, 3);
+        }
     } else {
         // --- DEFAULT / TOWN ---
         for (let y = 0; y < BH * 0.55; y++) {
