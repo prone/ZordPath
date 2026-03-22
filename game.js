@@ -285,8 +285,8 @@ function allTierLessonsAtLevel(tierIds, level) {
 function getUnlockedLessonIds() {
     const base = ['propositional-basics', 'truth-tables', 'implication', 'equivalence', 'valid-reasoning'];
     const unlocked = [...base];
-    const tier2 = ['predicate-logic', 'logical-proofs'];
-    const tier3 = ['set-theory', 'boolean-algebra'];
+    const tier2 = ['predicate-logic', 'logical-proofs', 'analyzing-arguments', 'language-ambiguity'];
+    const tier3 = ['set-theory', 'boolean-algebra', 'categorical-syllogisms', 'causal-reasoning'];
     const tier4 = ['modal-logic', 'paradoxes'];
 
     if (allBaseLessonsAtLevel(1)) {
@@ -2562,6 +2562,169 @@ Paradoxes teach us to think carefully about the RULES of logic itself!`,
                 answer: 1
             }
         ]
+    },
+    // === NEW LESSONS (from Copi/Cohen/McMahon) ===
+    {
+        id: 'analyzing-arguments',
+        title: 'Building Blocks: Premises & Conclusions',
+        content: `Every argument has two parts: PREMISES (the reasons) and a CONCLUSION (what you are trying to prove).
+
+Think of it like building blocks:
+- PREMISES are the blocks at the bottom - they support everything
+- The CONCLUSION is the block on top - it is what the premises hold up
+
+Example:
+  Premise: All dogs are animals.
+  Premise: Rex is a dog.
+  Conclusion: Therefore, Rex is an animal.
+
+How to spot them:
+- CONCLUSION WORDS: therefore, so, thus, hence, it follows that
+- PREMISE WORDS: because, since, for, given that, as
+
+Not everything with sentences is an argument! A report, a description, or a list of facts is NOT an argument unless one claim is supported by others.
+
+"It is raining and I am wet" = just two facts (NOT an argument)
+"It is raining, THEREFORE I am wet" = an argument! (rain supports wetness)`,
+        questions: [
+            { q: 'In an argument, the CONCLUSION is:', choices: ['The reason given', 'What you are trying to prove', 'A question', 'A feeling'], answer: 1 },
+            { q: 'In an argument, PREMISES are:', choices: ['The final answer', 'The reasons that support the conclusion', 'Questions about the topic', 'Opinions only'], answer: 1 },
+            { q: '"All cats are animals. Whiskers is a cat. Therefore Whiskers is an animal." What is the conclusion?', choices: ['All cats are animals', 'Whiskers is a cat', 'Whiskers is an animal', 'Cats and animals are the same'], answer: 2 },
+            { q: 'Which word signals a CONCLUSION?', choices: ['Because', 'Since', 'Therefore', 'Given that'], answer: 2 },
+            { q: 'Which word signals a PREMISE?', choices: ['Therefore', 'So', 'Hence', 'Because'], answer: 3 },
+            { q: '"I am tired because I stayed up late." Which is the premise?', choices: ['I am tired', 'I stayed up late', 'Both', 'Neither'], answer: 1 },
+            { q: '"It is sunny today. I like pizza." Is this an argument?', choices: ['Yes - two statements', 'No - one does not support the other', 'Yes - both are true', 'Only on sunny days'], answer: 1 },
+            { q: '"Since all birds have feathers, and penguins are birds, penguins have feathers." How many premises?', choices: ['One', 'Two', 'Three', 'Zero'], answer: 1 },
+            { q: 'A news report listing facts without drawing a conclusion is:', choices: ['A strong argument', 'Not an argument', 'A weak argument', 'A hidden argument'], answer: 1 },
+            { q: '"You should wear a coat, for it is very cold outside." The conclusion is:', choices: ['It is very cold outside', 'You should wear a coat', 'Coats are warm', 'It is winter'], answer: 1 },
+            { q: 'An argument must have:', choices: ['At least one premise and a conclusion', 'Exactly two premises', 'Only facts', 'A question and answer'], answer: 0 },
+            { q: '"Dogs are loyal. Dogs are friendly. Dogs make great pets." The conclusion is most likely:', choices: ['Dogs are loyal', 'Dogs are friendly', 'Dogs make great pets', 'All three are conclusions'], answer: 2 },
+            { q: '"Thus, the experiment proves the theory." The word "thus" tells us this is:', choices: ['A premise', 'A conclusion', 'A question', 'A definition'], answer: 1 },
+            { q: 'Can a single sentence be an argument?', choices: ['Never', 'Yes, if it contains a premise and conclusion connected by a word like "because"', 'Only if it is very long', 'Only in writing'], answer: 1 }
+        ]
+    },
+    {
+        id: 'language-ambiguity',
+        title: 'Tricky Words: Language & Ambiguity',
+        content: `Words can be TRICKY! Sometimes the same words can mean completely different things. This causes confusion in logic.
+
+AMBIGUITY means a word or sentence has MORE THAN ONE meaning:
+- "I saw the man with the telescope" - Who has the telescope? You or the man?
+- "Flying planes can be dangerous" - Is flying them dangerous, or are the planes themselves dangerous?
+
+VAGUENESS means a word is not precise enough:
+- "She is tall" - How tall? Tall for a 5-year-old or tall for a basketball player?
+- "That is a lot of money" - $100? $1,000? $1,000,000?
+
+EQUIVOCATION is when someone uses the same word with TWO different meanings in an argument:
+- "A bank is beside a river. I keep money in a bank. Therefore I keep money beside a river." WRONG! Two different meanings of "bank"!
+
+DEFINITIONS help us be precise:
+- A good definition tells you EXACTLY what a word means
+- It should not be too broad (includes too much) or too narrow (leaves things out)
+- "A dog is an animal" is too BROAD - cats are animals too!
+- "A dog is a golden retriever" is too NARROW - what about poodles?`,
+        questions: [
+            { q: '"I saw the man with the telescope." This sentence is:', choices: ['Clear and precise', 'Ambiguous - it has two meanings', 'Vague', 'A definition'], answer: 1 },
+            { q: 'What is AMBIGUITY?', choices: ['When a word is too precise', 'When a word has more than one meaning', 'When a word is unknown', 'When a sentence is long'], answer: 1 },
+            { q: 'What is VAGUENESS?', choices: ['Having two meanings', 'Being too precise', 'Not being precise enough', 'Using big words'], answer: 2 },
+            { q: '"She is young." This is an example of:', choices: ['Ambiguity', 'Vagueness - how young?', 'A definition', 'An argument'], answer: 1 },
+            { q: '"A plane is something that flies. A carpenter uses a plane. So a carpenter uses something that flies." This error is called:', choices: ['Ambiguity', 'Vagueness', 'Equivocation', 'A paradox'], answer: 2 },
+            { q: '"A dog is a golden retriever." This definition is:', choices: ['Too broad', 'Too narrow - leaves out other dog breeds', 'Perfect', 'Ambiguous'], answer: 1 },
+            { q: '"A dog is a living thing." This definition is:', choices: ['Too broad - cats and trees are living things too', 'Too narrow', 'Perfect', 'Vague'], answer: 0 },
+            { q: '"Nothing is better than pizza. A sandwich is better than nothing. So a sandwich is better than pizza." What went wrong?', choices: ['The logic is correct', '"Nothing" means two different things (equivocation)', 'Sandwiches are better', 'Pizza is not food'], answer: 1 },
+            { q: '"Visiting relatives can be boring." How many meanings does this have?', choices: ['One', 'Two - visiting them OR relatives who visit', 'Three', 'None - it is clear'], answer: 1 },
+            { q: 'A good definition should be:', choices: ['As short as possible', 'Neither too broad nor too narrow', 'As long as possible', 'The same as an example'], answer: 1 },
+            { q: '"That movie was cool." Is this precise enough for a logical argument?', choices: ['Yes - everyone knows what cool means', 'No - "cool" is vague and means different things', 'Only for action movies', 'Yes - it means the temperature was low'], answer: 1 },
+            { q: '"All stars are famous people." Is this true?', choices: ['Yes', 'No - "star" is ambiguous (celestial objects vs celebrities)', 'Only at night', 'Only in Hollywood'], answer: 1 },
+            { q: 'To avoid ambiguity in an argument, you should:', choices: ['Use the shortest words possible', 'Define your key terms clearly', 'Use as many words as possible', 'Avoid using any nouns'], answer: 1 }
+        ]
+    },
+    {
+        id: 'categorical-syllogisms',
+        title: 'All, No, Some: Categorical Syllogisms',
+        content: `A CATEGORICAL SYLLOGISM is an argument with exactly two premises and a conclusion, using words like ALL, NO, and SOME.
+
+The four types of categorical statements:
+- ALL S are P (Universal Affirmative): "All dogs are animals"
+- NO S are P (Universal Negative): "No fish are birds"
+- SOME S are P (Particular Affirmative): "Some students are athletes"
+- SOME S are not P (Particular Negative): "Some animals are not pets"
+
+A valid syllogism follows rules. Here is a classic one:
+  All humans are mortal. (All M are P)
+  All Greeks are humans. (All S are M)
+  Therefore, all Greeks are mortal. (All S are P)
+
+The MIDDLE TERM (humans/M) connects the two premises but does NOT appear in the conclusion.
+
+INVALID example (the "undistributed middle"):
+  All dogs are animals.
+  All cats are animals.
+  Therefore, all cats are dogs. WRONG!
+
+The middle term "animals" is never used for ALL animals, so it fails to connect properly.
+
+Venn diagrams help us SEE whether a syllogism is valid by drawing circles for each category.`,
+        questions: [
+            { q: '"All dogs are animals" is which type?', choices: ['Universal Negative', 'Universal Affirmative', 'Particular Affirmative', 'Particular Negative'], answer: 1 },
+            { q: '"No fish are mammals" is which type?', choices: ['Universal Affirmative', 'Universal Negative', 'Particular Affirmative', 'Particular Negative'], answer: 1 },
+            { q: '"Some birds can swim" is which type?', choices: ['Universal Affirmative', 'Universal Negative', 'Particular Affirmative', 'Particular Negative'], answer: 2 },
+            { q: '"Some animals are not pets" is which type?', choices: ['Universal Affirmative', 'Universal Negative', 'Particular Affirmative', 'Particular Negative'], answer: 3 },
+            { q: 'A categorical syllogism has how many premises?', choices: ['One', 'Two', 'Three', 'Any number'], answer: 1 },
+            { q: '"All M are P. All S are M. Therefore all S are P." This is:', choices: ['Invalid', 'Valid', 'Only sometimes valid', 'A paradox'], answer: 1 },
+            { q: 'The MIDDLE TERM in a syllogism:', choices: ['Appears in the conclusion', 'Connects the two premises but not the conclusion', 'Is always the subject', 'Is optional'], answer: 1 },
+            { q: '"All dogs are animals. All cats are animals. So all cats are dogs." This is:', choices: ['Valid', 'Invalid - the middle term is undistributed', 'Valid but false', 'A tautology'], answer: 1 },
+            { q: '"No reptiles have fur. Dogs have fur. So dogs are not reptiles." Is this valid?', choices: ['No', 'Yes', 'Only for dogs', 'We need more information'], answer: 1 },
+            { q: '"Some students are athletes. Some athletes are tall. So some students are tall." Is this valid?', choices: ['Yes - it makes sense', 'No - "some" does not guarantee overlap', 'Only in sports', 'Always valid'], answer: 1 },
+            { q: '"All A are B. No B are C. Therefore no A are C." Is this valid?', choices: ['No', 'Yes', 'Only if A exists', 'It depends'], answer: 1 },
+            { q: 'Venn diagrams help us with syllogisms by:', choices: ['Making them look pretty', 'Showing visually whether categories overlap correctly', 'Replacing the need for logic', 'Only working with numbers'], answer: 1 },
+            { q: '"All heroes are brave. Some firefighters are heroes. Therefore some firefighters are brave." Valid?', choices: ['No', 'Yes', 'Only in emergencies', 'We cannot tell'], answer: 1 },
+            { q: 'If "All A are B" is true, what must also be true?', choices: ['"Some A are B"', '"All B are A"', '"No A are B"', '"Some B are not A"'], answer: 0 }
+        ]
+    },
+    {
+        id: 'causal-reasoning',
+        title: 'Cause or Coincidence?',
+        content: `Just because two things happen together does NOT mean one CAUSES the other! This is one of the most important lessons in logic.
+
+CORRELATION means two things tend to happen together:
+- Ice cream sales go up AND drowning rates go up in summer
+- Does ice cream CAUSE drowning? NO! Both are caused by hot weather!
+
+CAUSATION means one thing actually MAKES another happen:
+- Dropping a glass CAUSES it to break
+- Pressing a light switch CAUSES the light to turn on
+
+Common mistakes:
+POST HOC FALLACY: "After X happened, Y happened, so X caused Y"
+- "I wore my lucky socks and we won the game!" Did the socks cause the win? No!
+- "A rooster crows before sunrise, so the rooster causes the sun to rise!" Obviously not!
+
+CONFOUNDING VARIABLES: A hidden third thing causes both:
+- Kids who eat breakfast do better in school. Does breakfast cause good grades?
+- Maybe: families that provide breakfast ALSO provide study support (the hidden cause)
+
+To prove causation you need:
+1. The cause comes BEFORE the effect
+2. Changing the cause CHANGES the effect
+3. No other explanation works better`,
+        questions: [
+            { q: 'Correlation means:', choices: ['One thing causes another', 'Two things happen together', 'Nothing is related', 'Everything is random'], answer: 1 },
+            { q: 'Causation means:', choices: ['Two things are unrelated', 'One thing actually makes another happen', 'Things happen at the same time', 'A coincidence'], answer: 1 },
+            { q: '"Ice cream sales and drowning both increase in summer." This is an example of:', choices: ['Causation', 'Correlation without causation', 'Pure coincidence', 'A paradox'], answer: 1 },
+            { q: '"I wore my lucky socks and we won!" This is an example of:', choices: ['Good reasoning', 'Post hoc fallacy', 'Causation', 'Science'], answer: 1 },
+            { q: 'The POST HOC fallacy is:', choices: ['Assuming something that happened after X was caused by X', 'Proving causation correctly', 'A type of argument', 'Always correct'], answer: 0 },
+            { q: 'A CONFOUNDING VARIABLE is:', choices: ['A variable that proves causation', 'A hidden third factor that causes both things', 'The effect in an experiment', 'An unrelated fact'], answer: 1 },
+            { q: '"Countries that eat more chocolate win more Nobel Prizes." Does chocolate cause genius?', choices: ['Yes - chocolate is brain food', 'No - wealthy countries have both more chocolate AND more research funding', 'Only dark chocolate', 'We need more data'], answer: 1 },
+            { q: 'To prove causation, the cause must come:', choices: ['After the effect', 'Before the effect', 'At the same time', 'It does not matter'], answer: 1 },
+            { q: '"A rooster crows, then the sun rises. The rooster causes sunrise." What is wrong?', choices: ['Nothing - roosters do cause sunrise', 'The rooster crowing and sunrise are both caused by the time of day', 'Roosters are not loud enough', 'The sun causes the rooster'], answer: 1 },
+            { q: '"Students who read more get better grades." To prove reading CAUSES better grades, what would you need?', choices: ['Just the correlation', 'A controlled experiment where some students read more and others do not', 'Ask the students', 'Nothing - it is obvious'], answer: 1 },
+            { q: '"Crime increases when ice cream sales increase." The hidden variable is probably:', choices: ['Ice cream', 'Crime', 'Hot weather (summer)', 'The police'], answer: 2 },
+            { q: '"Every time I wash my car, it rains the next day." This is:', choices: ['Causation', 'Probably coincidence or selective memory', 'Proof that car washing causes rain', 'Science'], answer: 1 },
+            { q: 'Which is the STRONGEST evidence for causation?', choices: ['Two things happen together once', 'Two things always happen together', 'A controlled experiment shows changing one reliably changes the other', 'Many people believe it'], answer: 2 },
+            { q: '"Kids who play video games are more aggressive." A possible confounding variable is:', choices: ['The video games themselves', 'Kids who are already aggressive may prefer violent games', 'The TV screen', 'Nothing - games cause aggression'], answer: 1 }
+        ]
     }
 
 ];
@@ -4829,7 +4992,9 @@ function renderQuizProgress() {
         'propositional-basics': 'Tier 1', 'truth-tables': 'Tier 1', 'implication': 'Tier 1',
         'equivalence': 'Tier 1', 'valid-reasoning': 'Tier 1',
         'predicate-logic': 'Tier 2', 'logical-proofs': 'Tier 2',
+        'analyzing-arguments': 'Tier 2', 'language-ambiguity': 'Tier 2',
         'set-theory': 'Tier 3', 'boolean-algebra': 'Tier 3',
+        'categorical-syllogisms': 'Tier 3', 'causal-reasoning': 'Tier 3',
         'modal-logic': 'Tier 4', 'paradoxes': 'Tier 4'
     };
 
@@ -5807,7 +5972,11 @@ function getEnemyLessonId(enemyIndex, defaultLessonId) {
         42: 'predicate-logic', 43: 'predicate-logic',
         44: 'logical-proofs', 45: 'logical-proofs',
         46: 'set-theory', 47: 'set-theory',
-        48: 'boolean-algebra', 49: 'boolean-algebra'
+        48: 'boolean-algebra', 49: 'boolean-algebra',
+        // Island enemies get new lessons
+        50: 'analyzing-arguments', 51: 'analyzing-arguments',
+        52: 'language-ambiguity', 53: 'language-ambiguity',
+        54: 'categorical-syllogisms', 55: 'causal-reasoning'
     };
     const advanced = advancedMap[enemyIndex];
     if (advanced && unlocked.includes(advanced)) return advanced;
@@ -6882,18 +7051,21 @@ function drawHouseInterior() {
     ctx.fillText(`Runes: ${found}/${LOGIC_RUNES.length}`, CANVAS_W / 2, 12);
 }
 
+let _lastHouseMove = 0;
 function handleHouseInput() {
     if (!houseInterior) return false;
     const interior = houseInterior.interior;
+    const now = performance.now();
 
-    // Movement
+    // Movement with delay matching overworld
     let dr = 0, dc = 0;
     if (keys['arrowup'] || keys['w']) dr = -1;
     if (keys['arrowdown'] || keys['s']) dr = 1;
     if (keys['arrowleft'] || keys['a']) dc = -1;
     if (keys['arrowright'] || keys['d']) dc = 1;
 
-    if (dr !== 0 || dc !== 0) {
+    if ((dr !== 0 || dc !== 0) && now - _lastHouseMove > 150) {
+        _lastHouseMove = now;
         const nr = houseInterior.playerRow + dr;
         const nc = houseInterior.playerCol + dc;
         if (nr >= 0 && nr < interior.h && nc >= 0 && nc < interior.w) {
@@ -6926,27 +7098,131 @@ function searchHouseSpot() {
             const r = pr + dr, c = pc + dc;
             const spot = interior.searchSpots.find(s => s.row === r && s.col === c && !s.searched);
             if (spot) {
-                spot.searched = true;
-                // Track in state
-                if (!state.collectedRunes) state.collectedRunes = [];
-                if (!state.searchedRunes) state.searchedRunes = {};
-                if (!state.searchedRunes[houseInterior.id]) state.searchedRunes[houseInterior.id] = [];
-                state.searchedRunes[houseInterior.id].push(spot.runeId);
-
-                if (!state.collectedRunes.includes(spot.runeId)) {
-                    state.collectedRunes.push(spot.runeId);
-                    const rune = LOGIC_RUNES.find(r2 => r2.id === spot.runeId);
-                    playSound('gem');
-                    showRuneFound(rune);
-                } else {
-                    showDialogue('\u{1F50D}', 'Search', 'Nothing new here.');
+                if (state.collectedRunes && state.collectedRunes.includes(spot.runeId)) {
+                    showDialogue('\u{1F50D}', 'Search', 'You already collected this rune.');
+                    return;
                 }
-                autoSave();
+                // Show a quiz question before granting the rune
+                const rune = LOGIC_RUNES.find(r2 => r2.id === spot.runeId);
+                showRuneQuiz(rune, spot);
                 return;
             }
         }
     }
     showDialogue('\u{1F50D}', 'Search', 'Nothing to find here.');
+}
+
+// Rune-specific quiz questions
+const RUNE_QUESTIONS = {
+    'and':    { q: '"A AND B" is true when:', choices: ['Only A is true', 'Only B is true', 'Both A and B are true', 'Neither is true'], answer: 2 },
+    'or':     { q: '"A OR B" is true when:', choices: ['Both must be true', 'At least one is true', 'Neither is true', 'Exactly one is true'], answer: 1 },
+    'not':    { q: 'NOT TRUE equals:', choices: ['TRUE', 'FALSE', 'MAYBE', 'BOTH'], answer: 1 },
+    'ifthen': { q: '"IF P THEN Q" is false only when:', choices: ['P is false', 'Q is true', 'P is true and Q is false', 'Both are false'], answer: 2 },
+    'equiv':  { q: 'Two statements are equivalent when they:', choices: ['Sound similar', 'Always have the same truth value', 'Are both short', 'Use the same words'], answer: 1 },
+    'forall': { q: '"For all X, P(X)" means:', choices: ['P is true for some X', 'P is true for every X', 'P is false for all X', 'X does not exist'], answer: 1 },
+    'exists': { q: '"There exists X such that P(X)" means:', choices: ['P is true for every X', 'P is true for at least one X', 'P is false for all X', 'No such X exists'], answer: 1 },
+    'true':   { q: 'In logic, TRUE means a statement:', choices: ['Might be correct', 'Is definitely correct', 'Is an opinion', 'Sounds right'], answer: 1 },
+    'false':  { q: 'A FALSE statement is one that:', choices: ['Might be wrong', 'Is definitely not the case', 'Is unknown', 'Has no answer'], answer: 1 },
+    'xor':    { q: 'XOR (exclusive or) is true when:', choices: ['Both are true', 'Neither is true', 'Exactly one is true', 'At least one is true'], answer: 2 },
+    'nand':   { q: 'NAND is the same as:', choices: ['AND', 'NOT AND', 'OR', 'NOT OR'], answer: 1 },
+    'contradiction': { q: 'A contradiction is a statement that is:', choices: ['Always true', 'Always false', 'Sometimes true', 'Unknown'], answer: 1 },
+    'tautology': { q: 'A tautology is a statement that is:', choices: ['Always true', 'Always false', 'Sometimes true', 'A paradox'], answer: 0 },
+    'therefore': { q: 'The word "therefore" signals:', choices: ['A premise', 'A conclusion', 'A question', 'A definition'], answer: 1 },
+    'because': { q: 'The word "because" signals:', choices: ['A conclusion', 'A premise/reason', 'A question', 'An exclamation'], answer: 1 },
+    'setunion': { q: 'The UNION of sets A and B contains:', choices: ['Only items in both', 'Everything in A or B or both', 'Nothing', 'Only items in A'], answer: 1 },
+    'setintersect': { q: 'The INTERSECTION of sets A and B contains:', choices: ['Everything in A or B', 'Only items in BOTH A and B', 'Only items in A', 'Nothing'], answer: 1 },
+    'subset': { q: 'A is a SUBSET of B means:', choices: ['A and B are equal', 'Every element of A is also in B', 'B is inside A', 'A and B have nothing in common'], answer: 1 },
+    'possible': { q: 'Something is POSSIBLE if it:', choices: ['Must be true', 'Could be true', 'Must be false', 'Is always true'], answer: 1 },
+    'necessary': { q: 'Something is NECESSARY if it:', choices: ['Might be true', 'Could be false', 'Must be true in all cases', 'Is just an opinion'], answer: 2 }
+};
+
+function showRuneQuiz(rune, spot) {
+    const question = RUNE_QUESTIONS[rune.id];
+    if (!question) {
+        // No question defined, just give the rune
+        grantRune(rune, spot);
+        return;
+    }
+
+    state.paused = true;
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:100;display:flex;align-items:center;justify-content:center;';
+
+    const box = document.createElement('div');
+    box.style.cssText = 'background:var(--panel-bg);border:3px solid var(--gold);padding:24px;max-width:500px;width:90%;font-family:"Press Start 2P",monospace;';
+
+    const header = document.createElement('div');
+    header.style.cssText = 'color:var(--gold);font-size:12px;margin-bottom:6px;text-align:center;';
+    header.innerHTML = `<span style="font-size:28px;color:${rune.color}">${rune.symbol}</span>`;
+    box.appendChild(header);
+
+    const title = document.createElement('div');
+    title.style.cssText = 'color:var(--gold);font-size:10px;margin-bottom:14px;text-align:center;';
+    title.textContent = `To claim the ${rune.name}, answer this:`;
+    box.appendChild(title);
+
+    const qText = document.createElement('div');
+    qText.style.cssText = 'font-size:10px;color:var(--text);line-height:2.2;margin-bottom:14px;';
+    qText.textContent = question.q;
+    box.appendChild(qText);
+
+    // Shuffle choices
+    const indexed = question.choices.map((text2, i) => ({ text: text2, isCorrect: i === question.answer }));
+    for (let i = indexed.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [indexed[i], indexed[j]] = [indexed[j], indexed[i]];
+    }
+    const correctIdx = indexed.findIndex(c => c.isCorrect);
+
+    const choicesDiv = document.createElement('div');
+    choicesDiv.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
+
+    indexed.forEach((choice, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-choice';
+        btn.textContent = choice.text;
+        btn.addEventListener('click', () => {
+            choicesDiv.querySelectorAll('.btn-choice').forEach(b2 => b2.style.pointerEvents = 'none');
+            choicesDiv.children[correctIdx].classList.add('correct');
+
+            if (i === correctIdx) {
+                playSound('victory');
+                const fb = document.createElement('div');
+                fb.style.cssText = 'color:var(--success);font-size:10px;margin-top:10px;text-align:center;';
+                fb.textContent = 'Correct! The rune is yours!';
+                box.appendChild(fb);
+                setTimeout(() => {
+                    overlay.remove();
+                    state.paused = false;
+                    grantRune(rune, spot);
+                }, 1200);
+            } else {
+                btn.classList.add('incorrect');
+                playSound('hurt');
+                const fb = document.createElement('div');
+                fb.style.cssText = 'color:var(--accent);font-size:9px;margin-top:10px;text-align:center;line-height:2;';
+                fb.innerHTML = `Wrong! The answer is: <span style="color:var(--success)">${escapeHtml(indexed[correctIdx].text)}</span><br>Come back and try again!`;
+                box.appendChild(fb);
+                setTimeout(() => { overlay.remove(); state.paused = false; }, 2500);
+            }
+        });
+        choicesDiv.appendChild(btn);
+    });
+    box.appendChild(choicesDiv);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+}
+
+function grantRune(rune, spot) {
+    spot.searched = true;
+    if (!state.collectedRunes) state.collectedRunes = [];
+    if (!state.searchedRunes) state.searchedRunes = {};
+    if (!state.searchedRunes[houseInterior.id]) state.searchedRunes[houseInterior.id] = [];
+    state.searchedRunes[houseInterior.id].push(spot.runeId);
+    state.collectedRunes.push(spot.runeId);
+    playSound('gem');
+    showRuneFound(rune);
+    autoSave();
 }
 
 function showRuneFound(rune) {
@@ -7663,6 +7939,93 @@ function drawLessonDiagram(lessonId, container) {
             box(30, 210, 460, 40, '#1a1a2a');
             text('Barber shaves all who dont shave themselves.', 260, 223, '#e0e0e0', 7);
             text('Who shaves the barber?? (Neither works!)', 260, 240, '#e94560', 7);
+            break;
+        }
+        case 'analyzing-arguments': {
+            text('Anatomy of an Argument', 260, 18, '#f5c842', 11);
+            // Premise blocks stacking up to conclusion
+            box(120, 180, 280, 40, '#0a2a1a');
+            text('PREMISE: All dogs are animals', 260, 200, '#4ecca3', 9);
+            box(140, 135, 240, 40, '#0a2a1a');
+            text('PREMISE: Rex is a dog', 260, 155, '#4ecca3', 9);
+            // Arrow up
+            arrow(260, 130, 260, 100, '#f5c842');
+            box(160, 60, 200, 35, '#1a1a3e');
+            text('CONCLUSION: Rex is an animal', 260, 78, '#f5c842', 9);
+            // Signal words
+            text('Signal Words:', 80, 240, '#8888aa', 8);
+            text('therefore, so, hence', 80, 255, '#f5c842', 7);
+            text('because, since, given', 350, 240, '#4ecca3', 7);
+            text('= conclusion', 180, 255, '#f5c842', 7);
+            text('= premise', 440, 240, '#4ecca3', 7);
+            break;
+        }
+        case 'language-ambiguity': {
+            text('Ambiguity & Vagueness', 260, 18, '#f5c842', 11);
+            // Ambiguous sentence splitting into two meanings
+            box(100, 40, 320, 30, '#1a1a3e');
+            text('"I saw the man with the telescope"', 260, 55, '#e0e0e0', 8);
+            arrow(200, 75, 130, 100, '#e94560');
+            arrow(320, 75, 390, 100, '#4ecca3');
+            box(40, 105, 180, 30, '#2a0a1a');
+            text('I used a telescope', 130, 120, '#e94560', 8);
+            box(300, 105, 180, 30, '#0a2a1a');
+            text('The man had one', 390, 120, '#4ecca3', 8);
+            // Vagueness
+            text('Vagueness:', 100, 165, '#f5c842', 9);
+            box(40, 180, 120, 25, '#1a1a2a'); text('"tall"', 100, 192, '#e0e0e0', 9);
+            text('How tall?', 200, 192, '#8888aa', 8);
+            // Equivocation
+            text('Equivocation:', 360, 165, '#e94560', 9);
+            box(280, 180, 200, 50, '#2a0a1a');
+            text('Same word,', 380, 195, '#e0e0e0', 8);
+            text('different meanings!', 380, 215, '#e94560', 8);
+            break;
+        }
+        case 'categorical-syllogisms': {
+            text('Categorical Syllogisms', 260, 18, '#f5c842', 11);
+            // Four types
+            const types = [
+                ['ALL S are P', '#4ecca3'], ['NO S are P', '#e94560'],
+                ['SOME S are P', '#f5c842'], ['SOME S not P', '#8888aa']
+            ];
+            types.forEach((t, i) => {
+                const bx = 20 + (i % 2) * 260;
+                const by = 40 + Math.floor(i / 2) * 40;
+                box(bx, by, 240, 30, '#0a1a2a');
+                text(t[0], bx + 120, by + 15, t[1], 9);
+            });
+            // Valid syllogism example
+            text('Valid Syllogism:', 260, 140, '#f5c842', 9);
+            box(80, 155, 360, 24, '#0a2a1a'); text('All humans are mortal', 260, 167, '#4ecca3', 8);
+            box(80, 183, 360, 24, '#0a2a1a'); text('All Greeks are humans', 260, 195, '#4ecca3', 8);
+            arrow(260, 210, 260, 220, '#f5c842');
+            box(80, 222, 360, 24, '#1a1a3e'); text('All Greeks are mortal', 260, 234, '#f5c842', 9);
+            break;
+        }
+        case 'causal-reasoning': {
+            text('Correlation vs Causation', 260, 18, '#f5c842', 11);
+            // Two paths
+            box(30, 45, 220, 80, '#2a0a1a');
+            text('CORRELATION', 140, 60, '#e94560', 10);
+            text('Things happen together', 140, 80, '#e0e0e0', 8);
+            text('(but one may NOT cause', 140, 96, '#8888aa', 7);
+            text('the other)', 140, 112, '#8888aa', 7);
+            box(270, 45, 220, 80, '#0a2a1a');
+            text('CAUSATION', 380, 60, '#4ecca3', 10);
+            text('One thing MAKES', 380, 80, '#e0e0e0', 8);
+            text('another happen', 380, 96, '#e0e0e0', 8);
+            text('(proven by experiment)', 380, 112, '#8888aa', 7);
+            // Ice cream example
+            text('Ice cream sales UP + Drowning UP', 260, 155, '#e0e0e0', 8);
+            text('= Hot weather causes BOTH!', 260, 175, '#f5c842', 8);
+            // Hidden variable diagram
+            box(200, 195, 120, 30, '#1a1a3e');
+            text('HOT WEATHER', 260, 210, '#f5c842', 8);
+            arrow(220, 228, 120, 245, '#f5c842');
+            arrow(300, 228, 400, 245, '#f5c842');
+            text('Ice Cream', 100, 252, '#4ecca3', 8);
+            text('Drowning', 410, 252, '#e94560', 8);
             break;
         }
         default:
