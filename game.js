@@ -7112,12 +7112,22 @@ function renderQuiz() {
     const entry = questionSet[qi];
 
     if (qi === 0 && !state._lessonSlidesShown) {
-        // Split lesson into slides and show slideshow before questions
-        showLessonSlideshow(lesson, () => {
+        // Skip slideshow if user has already answered questions for this lesson
+        const mastery = state.quizMastery[lesson.id];
+        if (mastery && mastery.answered > 0) {
             state._lessonSlidesShown = true;
-            renderQuiz(); // re-enter to show first question
-        });
-        return;
+            // Show full lesson content for reference
+            const lessonEl = document.getElementById('quiz-lesson');
+            lessonEl.innerHTML = `<h3>${escapeHtml(lesson.title)}</h3><p>${lesson.content.replace(/\n/g, '<br>')}</p>`;
+            drawLessonDiagram(lesson.id, lessonEl);
+            lessonEl.scrollTop = 0;
+        } else {
+            showLessonSlideshow(lesson, () => {
+                state._lessonSlidesShown = true;
+                renderQuiz();
+            });
+            return;
+        }
     }
 
     // Restore question elements after slideshow
