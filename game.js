@@ -6998,9 +6998,10 @@ function showLessonSlideshow(lesson, onComplete) {
                 return;
             }
             progressEl.innerHTML = '';
+            choicesEl.innerHTML = '';
             const doneBtn = document.createElement('button');
             doneBtn.className = 'btn btn-primary';
-            doneBtn.style.cssText = 'font-size:11px;padding:10px 24px;margin-top:8px;';
+            doneBtn.style.cssText = 'font-size:11px;padding:10px 24px;margin-top:12px;';
             doneBtn.textContent = 'Start Quiz!';
             doneBtn.addEventListener('click', () => {
                 // Show full lesson content for reference during questions
@@ -7009,8 +7010,7 @@ function showLessonSlideshow(lesson, onComplete) {
                 lessonEl.scrollTop = 0;
                 onComplete();
             });
-            choicesEl.innerHTML = '';
-            choicesEl.appendChild(doneBtn);
+            lessonEl.appendChild(doneBtn);
             return;
         }
 
@@ -7020,13 +7020,17 @@ function showLessonSlideshow(lesson, onComplete) {
         progressEl.textContent = `Slide ${slideIdx + 1} of ${paragraphs.length + 1}`;
 
         choicesEl.innerHTML = '';
+
+        // Button container appended inside the lesson area (below slide text)
+        const btnRow = document.createElement('div');
+        btnRow.style.cssText = 'margin-top:16px;display:flex;gap:8px;';
+
         const nextBtn = document.createElement('button');
         nextBtn.className = 'btn btn-primary';
         nextBtn.style.cssText = 'font-size:11px;padding:10px 24px;';
 
         // Count lines and delay button by 1 second per line
         const lineCount = paragraphs[slideIdx].split('\n').length;
-        const delayMs = lineCount * 1000;
         nextBtn.textContent = `Read... (${lineCount}s)`;
         nextBtn.disabled = true;
         nextBtn.style.opacity = '0.4';
@@ -7049,20 +7053,23 @@ function showLessonSlideshow(lesson, onComplete) {
             slideIdx++;
             showSlide();
         });
-        choicesEl.appendChild(nextBtn);
+        btnRow.appendChild(nextBtn);
 
         // Add back button if not first slide
         if (slideIdx > 0) {
             const backBtn = document.createElement('button');
             backBtn.className = 'btn btn-secondary';
-            backBtn.style.cssText = 'font-size:9px;padding:8px 16px;margin-left:8px;';
+            backBtn.style.cssText = 'font-size:9px;padding:8px 16px;';
             backBtn.textContent = 'Back';
             backBtn.addEventListener('click', () => {
+                clearInterval(countdown);
                 slideIdx--;
                 showSlide();
             });
-            choicesEl.appendChild(backBtn);
+            btnRow.appendChild(backBtn);
         }
+
+        lessonEl.appendChild(btnRow);
     }
 
     showSlide();
