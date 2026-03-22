@@ -11115,12 +11115,31 @@ function startZordBattleAnimation() {
     _zbAnimId = requestAnimationFrame(zbAnim);
 }
 
+function getZordBattleBackground(loc) {
+    const bgs = {
+        cave:       'linear-gradient(180deg, #2a2a3e 0%, #1a1a2e 40%, #3d3d5c 60%, #2a2840 60%, #1e1e30 100%)',
+        town:       'linear-gradient(180deg, #88b8e0 0%, #a0c8e0 30%, #6aaa70 55%, #c4a663 60%, #b09858 100%)',
+        forest:     'linear-gradient(180deg, #4a7848 0%, #3a6838 35%, #2d5a27 55%, #5a7040 60%, #4a6030 100%)',
+        beach:      'linear-gradient(180deg, #4aa0d0 0%, #60b8e0 30%, #e0c888 55%, #e8d5a3 60%, #d4c090 100%)',
+        mountains:  'linear-gradient(180deg, #708898 0%, #8898a8 30%, #6a6a5a 55%, #7a7a6a 60%, #5a5a50 100%)',
+        zordarena:  'linear-gradient(180deg, #3a2040 0%, #4a2850 30%, #5a3060 55%, #4a2850 60%, #3a2040 100%)'
+    };
+    // Peak floors
+    if (loc && loc.startsWith('peak_')) return 'linear-gradient(180deg, #90a0b0 0%, #a0b0c0 30%, #6a6a5a 55%, #808878 60%, #5a5a50 100%)';
+    // Temple floors
+    if (loc && loc.startsWith('temple_')) return 'linear-gradient(180deg, #1a0a2e 0%, #2d1a4a 30%, #4a3f6b 55%, #3a3050 60%, #2a2040 100%)';
+    return bgs[loc] || bgs.town;
+}
+
 function renderZordBattle() {
     const zb = zordBattle;
     const pz = zb.playerZord;
     const ez = zb.enemyZord;
     const pEl = ELEMENTS[pz.element];
     const eEl = ELEMENTS[ez.element];
+
+    // Set area-based background
+    document.querySelector('.zb-scene').style.background = getZordBattleBackground(state.location);
 
     // Enemy info (top-left box)
     document.getElementById('zb-enemy-name-tag').textContent = ez.nickname;
