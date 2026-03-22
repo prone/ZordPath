@@ -10413,25 +10413,50 @@ function drawTile(col, row, tileType) {
             ctx.fillRect(x+6, y+S-3, S-12, 3);
             ctx.fillRect(x+S/2-1, y+S/2-2, 3, 4);
         } else {
-            // Normal wooden door (town/forest)
-            // Background matches surroundings
-            ctx.fillStyle = '#3a8044'; ctx.fillRect(x, y, S, S);
+            // Area-themed doors
+            const loc = state.location;
+            const isBeach = loc === 'beach';
+            const isMtn = loc === 'mountains' || loc.startsWith('peak_');
+            const isArena = loc === 'zordarena';
+            const isForest = loc === 'forest';
+
+            // Background matches area
+            if (isBeach) ctx.fillStyle = '#e0c888';
+            else if (isMtn) ctx.fillStyle = '#7a7a6a';
+            else if (isArena) ctx.fillStyle = '#3a2040';
+            else ctx.fillStyle = '#3a8044';
+            ctx.fillRect(x, y, S, S);
+
+            // Door frame color by area
+            let frameColor, frameDark, frameLt, handleColor;
+            if (isBeach) {
+                frameColor = '#2a6a90'; frameDark = '#1a4a6a'; frameLt = '#4a90b8'; handleColor = '#f0d040';
+            } else if (isMtn) {
+                frameColor = '#5a5a50'; frameDark = '#3a3a34'; frameLt = '#7a7a70'; handleColor = '#c0b080';
+            } else if (isArena) {
+                frameColor = '#6a5090'; frameDark = '#4a3070'; frameLt = '#8a70b0'; handleColor = '#f5c842';
+            } else if (isForest) {
+                frameColor = '#3a5a28'; frameDark = '#2a4018'; frameLt = '#5a7a40'; handleColor = '#c0a040';
+            } else {
+                frameColor = '#8a6a30'; frameDark = '#6a4a18'; frameLt = '#7a5a28'; handleColor = '#f0c040';
+            }
+
             // Door frame
-            ctx.fillStyle = '#8a6a30';
+            ctx.fillStyle = frameColor;
             ctx.fillRect(x+6, y+2, S-12, S-2);
             // Door
-            ctx.fillStyle = '#6a4a18';
+            ctx.fillStyle = frameDark;
             ctx.fillRect(x+10, y+6, S-20, S-8);
-            ctx.fillStyle = '#7a5a28';
+            ctx.fillStyle = frameLt;
             ctx.fillRect(x+12, y+8, S-24, S-12);
             // Planks
-            ctx.fillStyle = '#604010';
+            ctx.fillStyle = frameDark;
             ctx.fillRect(x+S/2-1, y+6, 2, S-8);
             // Handle
-            ctx.fillStyle = '#f0c040';
+            ctx.fillStyle = handleColor;
             ctx.fillRect(x+S-18, y+S/2-1, 3, 3);
             // Arch
-            ctx.fillStyle = '#7a5a28';
+            ctx.fillStyle = frameLt;
             ctx.fillRect(x+8, y, S-16, 5);
         }
         return;
