@@ -325,9 +325,9 @@
     <!-- Touch Controls Toggle -->
     <div id="touch-toggle" class="touch-toggle" style="display:none;">SHOW</div>
 
-    <!-- Touch Controls (hidden on non-touch devices) -->
+    <!-- Touch Controls (auto-show on touch devices) -->
     <div id="touch-controls" class="touch-controls" style="display:none;">
-        <!-- D-Pad -->
+        <!-- D-Pad (left side) -->
         <div class="touch-dpad">
             <div class="dpad-btn dpad-up" data-key="arrowup"></div>
             <div class="dpad-btn dpad-left" data-key="arrowleft"></div>
@@ -335,17 +335,26 @@
             <div class="dpad-btn dpad-right" data-key="arrowright"></div>
             <div class="dpad-btn dpad-down" data-key="arrowdown"></div>
         </div>
-        <!-- Action Buttons -->
-        <div class="touch-actions">
-            <div class="action-btn action-a" data-key=" ">A</div>
-            <div class="action-btn action-b" data-key="e">B</div>
-            <div class="action-btn action-sm action-i" data-key="i">I</div>
-            <div class="action-btn action-sm action-z" data-key="z">Z</div>
-            <div class="action-btn action-sm action-m" data-key="m">M</div>
-            <div class="action-btn action-sm action-h" data-key="h">?</div>
+        <!-- Primary Action Button (right side, large) -->
+        <div class="touch-primary">
+            <div class="action-btn action-a" data-key=" ">ACTION</div>
+            <div class="action-btn action-b" data-key="e">TALK</div>
         </div>
-        <!-- Keyboard toggle -->
-        <div id="keyboard-toggle" class="touch-kb-toggle">KB</div>
+        <!-- Menu Bar (top of touch area) -->
+        <div class="touch-menu-bar">
+            <div class="action-btn action-menu" data-key="i">INV</div>
+            <div class="action-btn action-menu" data-key="z">ZORD</div>
+            <div class="action-btn action-menu" data-key="m">MAP</div>
+            <div class="action-btn action-menu" data-key="q">QUIZ</div>
+            <div class="action-btn action-menu" data-key="h">HELP</div>
+        </div>
+        <!-- Battle-specific buttons (shown during battles) -->
+        <div class="touch-battle-bar" id="touch-battle-bar" style="display:none;">
+            <div class="action-btn action-battle" data-key="c">CATCH</div>
+            <div class="action-btn action-battle" data-key="d">DEPLOY</div>
+            <div class="action-btn action-battle" data-key="p">POTION</div>
+            <div class="action-btn action-battle" data-key="shift">BLOCK</div>
+        </div>
     </div>
     <!-- Hidden input for virtual keyboard -->
     <input type="text" id="virtual-kb-input" style="position:fixed;bottom:-100px;left:0;opacity:0;font-size:16px;">

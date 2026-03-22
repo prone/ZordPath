@@ -4207,6 +4207,9 @@ function showScreen(screenId) {
     if (el) el.classList.add('active');
     state.screen = screenId;
     charSelectRunning = (screenId === 'character');
+    // Show/hide battle-specific touch buttons
+    const battleBar = document.getElementById('touch-battle-bar');
+    if (battleBar) battleBar.style.display = (screenId === 'battle') ? 'flex' : 'none';
     if (screenId === 'game') {
         state.paused = false;
         initGameCanvas();
@@ -14216,8 +14219,9 @@ doTransition = function(t) {
     window._touchHidden = true;
 
     if (isTouch) {
-        touchEl.style.display = 'none';
+        touchEl.style.display = 'block'; // Auto-show on touch devices
         if (toggleEl) toggleEl.style.display = 'block';
+        window._touchHidden = false;
         // Prevent default touch behaviors (scrolling, zooming)
         document.body.style.overflow = 'hidden';
         document.body.style.touchAction = 'none';
