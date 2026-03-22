@@ -1159,10 +1159,10 @@ const MAP_NPCS = {
         { npcIndex: 2, col: 20, row: 8 },   // Scout Axiom
         { npcIndex: 3, col: 19, row: 6 },   // Al-Muṣawwir (near build site)
         { npcIndex: 4, col: 12, row: 11 },  // ZordTamer Kira (south of town)
-        { npcIndex: 7, col: 15, row: 8 }    // Challenge Master Rho
+        { npcIndex: 5, col: 15, row: 8 }    // Challenge Master Rho
     ],
     beach: [
-        { npcIndex: 5, col: 16, row: 8 },  // Captain Coral (near dock)
+        { npcIndex: 6, col: 16, row: 8 },  // Captain Coral (near dock)
         { npcIndex: 8, col: 3, row: 7 }    // Ferry Captain Finn (near ferry dock)
     ],
     island: [
@@ -1170,7 +1170,7 @@ const MAP_NPCS = {
         { npcIndex: 8, col: 5, row: 5 }                       // Ferry Captain Finn (near ferry dock)
     ],
     mountains: [
-        { npcIndex: 6, col: 14, row: 6 }   // Ranger Flint
+        { npcIndex: 7, col: 14, row: 6 }   // Ranger Flint
     ]
 };
 
