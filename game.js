@@ -7121,9 +7121,11 @@ function renderQuiz() {
     }
 
     // Restore question elements after slideshow
-    document.getElementById('quiz-question').style.display = '';
-    document.getElementById('quiz-choices').style.display = '';
-    document.getElementById('quiz-feedback').style.display = '';
+    document.getElementById('quiz-question').style.display = 'block';
+    document.getElementById('quiz-choices').style.display = 'flex';
+    document.getElementById('quiz-feedback').style.display = 'block';
+    // Scroll to top of quiz container
+    document.querySelector('.quiz-container').scrollTop = 0;
     document.getElementById('quiz-feedback').textContent = '';
     document.getElementById('quiz-feedback').className = 'quiz-feedback';
     document.getElementById('quiz-progress').textContent = `Question ${qi + 1} of ${questionSet.length} | Correct: ${state.quizCorrect}`;
