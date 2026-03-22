@@ -483,15 +483,16 @@ function buildCaveMap() {
     // Stalagmite path (row of rocks creating a passage)
     m[7][8] = T.ROCK; m[7][10] = T.ROCK;
 
-    // Bookshelf (hidden study nook in upper area)
-    m[3][6] = T.BOOKSHELF; m[3][7] = T.BOOKSHELF;
+    // Ice patches (frozen cave sections)
+    m[3][6] = T.ICE; m[3][7] = T.ICE;
+    m[4][7] = T.ICE;
 
     // Statue (ancient cave shrine)
     m[ROWS - 4][8] = T.STATUE;
 
-    // Flowers (bioluminescent cave flowers)
-    m[5][16] = T.FLOWER; m[8][10] = T.FLOWER; m[9][18] = T.FLOWER;
-    m[4][13] = T.FLOWER;
+    // More crystals (glowing cave deposits)
+    m[5][16] = T.CRYSTAL; m[8][10] = T.CRYSTAL;
+    m[9][18] = T.CRYSTAL; m[4][14] = T.CRYSTAL;
 
     // Exit door to town (right side) - clear a corridor to it
     const midRow = Math.floor(ROWS / 2);
