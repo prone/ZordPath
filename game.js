@@ -135,7 +135,10 @@ function saveToSlot(i) {
         quizMastery: JSON.parse(JSON.stringify(state.quizMastery)),
         defeatedArenaTrainers: state.defeatedArenaTrainers || [],
         playerLevel: state.playerLevel,
-        playerLevelXp: state.playerLevelXp
+        playerLevelXp: state.playerLevelXp,
+        challengeBest: state.challengeBest || 0,
+        challengeTotalAnswered: state.challengeTotalAnswered || 0,
+        challengeBadge: state.challengeBadge || null
     };
     try {
         localStorage.setItem(SAVE_PREFIX + i, JSON.stringify(data));
@@ -173,6 +176,9 @@ function loadFromSlot(i) {
         state.defeatedArenaTrainers = d.defeatedArenaTrainers || [];
         state.playerLevel = d.playerLevel || 1;
         state.playerLevelXp = d.playerLevelXp || 0;
+        state.challengeBest = d.challengeBest || 0;
+        state.challengeTotalAnswered = d.challengeTotalAnswered || 0;
+        state.challengeBadge = d.challengeBadge || null;
 
         // Restore discoveredAreas set
         discoveredAreas.clear();
@@ -1060,7 +1066,8 @@ const MAP_NPCS = {
         { npcIndex: 1, col: 11, row: 6 },   // Merchant Mira (near store)
         { npcIndex: 2, col: 20, row: 8 },   // Scout Axiom
         { npcIndex: 3, col: 19, row: 6 },   // Al-Muṣawwir (near build site)
-        { npcIndex: 4, col: 12, row: 11 }   // ZordTamer Kira (south of town)
+        { npcIndex: 4, col: 12, row: 11 },  // ZordTamer Kira (south of town)
+        { npcIndex: 7, col: 15, row: 8 }    // Challenge Master Rho
     ],
     beach: [
         { npcIndex: 5, col: 16, row: 8 }   // Captain Coral (near dock)
@@ -2532,6 +2539,16 @@ const NPCS = [
             'I can sell you ZordCages and heal your Zords. Press Z anytime to see your ZordList!',
             'Some Zords are very rare. The Prismatic Drake in the temple is nearly impossible to catch!',
             'Collect them all and become the greatest ZordTamer in Logic Land!'
+        ]
+    },
+    {
+        name: 'Challenge Master Rho', sprite: '\u{1F3C6}',
+        isChallengeMaster: true,
+        dialogue: [
+            'I am the Challenge Master! Think you know your logic? Prove it!',
+            'In Challenge Mode, you answer question after question. Build up your multiplier by getting streaks!',
+            'But be careful — three wrong answers and it is OVER. Bank your points as rubies when you quit!',
+            'The longer you last, the better your badge. Can you earn the LEGENDARY badge?'
         ]
     },
     {
@@ -5322,34 +5339,49 @@ function getFacingTile() {
 }
 
 function getInteractable() {
-    const { row, col } = getFacingTile();
-    if (row < 0 || row >= ROWS || col < 0 || col >= COLS) return null;
+    // Check all 8 adjacent tiles + facing tile (facing tile gets priority)
+    const { row: fRow, col: fCol } = getFacingTile();
+    const adjacents = [
+        { row: fRow, col: fCol }, // facing first (priority)
+        { row: state.playerRow - 1, col: state.playerCol },     // up
+        { row: state.playerRow + 1, col: state.playerCol },     // down
+        { row: state.playerRow, col: state.playerCol - 1 },     // left
+        { row: state.playerRow, col: state.playerCol + 1 },     // right
+        { row: state.playerRow - 1, col: state.playerCol - 1 }, // up-left
+        { row: state.playerRow - 1, col: state.playerCol + 1 }, // up-right
+        { row: state.playerRow + 1, col: state.playerCol - 1 }, // down-left
+        { row: state.playerRow + 1, col: state.playerCol + 1 }  // down-right
+    ];
 
-    const map = MAPS[state.location];
-    const tile = map[row][col];
+    for (const { row, col } of adjacents) {
+        if (row < 0 || row >= ROWS || col < 0 || col >= COLS) continue;
 
-    // NPC?
-    if (MAP_NPCS[state.location]) {
-        const npc = MAP_NPCS[state.location].find(n => n.col === col && n.row === row);
-        if (npc) return { type: 'npc', data: NPCS[npc.npcIndex] };
-    }
+        const map = MAPS[state.location];
+        const tile = map[row][col];
 
-    // Store?
-    if (tile === T.STORE) return { type: 'store' };
-    // Build site?
-    if (tile === T.BUILD) return { type: 'build' };
-    // Sign?
-    if (tile === T.SIGN) return { type: 'sign', row, col };
-    // Door?
-    if (tile === T.DOOR) return { type: 'door' };
-    // Water (fishing)?
-    if (tile === T.WATER && (state.inventory.fishpole || 0) > 0) return { type: 'fish' };
+        // NPC?
+        if (MAP_NPCS[state.location]) {
+            const npc = MAP_NPCS[state.location].find(n => n.col === col && n.row === row);
+            if (npc) return { type: 'npc', data: NPCS[npc.npcIndex] };
+        }
 
-    // Zord Arena building interactions
-    if (state.location === 'zordarena' && tile === T.TEMPLE_W) {
-        if (col <= 7 && row <= 5) return { type: 'arena_battle' };
-        if (col >= 16 && row <= 5) return { type: 'arena_hospital' };
-        if (col <= 7 && row >= 8) return { type: 'arena_spa' };
+        // Store?
+        if (tile === T.STORE) return { type: 'store' };
+        // Build site?
+        if (tile === T.BUILD) return { type: 'build' };
+        // Sign?
+        if (tile === T.SIGN) return { type: 'sign', row, col };
+        // Door?
+        if (tile === T.DOOR) return { type: 'door' };
+        // Water (fishing)?
+        if (tile === T.WATER && (state.inventory.fishpole || 0) > 0) return { type: 'fish' };
+
+        // Zord Arena building interactions
+        if (state.location === 'zordarena' && tile === T.TEMPLE_W) {
+            if (col <= 7 && row <= 5) return { type: 'arena_battle' };
+            if (col >= 16 && row <= 5) return { type: 'arena_hospital' };
+            if (col <= 7 && row >= 8) return { type: 'arena_spa' };
+        }
     }
 
     return null;
@@ -5576,6 +5608,10 @@ function talkToNPC(npc) {
         showZordTamerMenu(npc);
         return;
     }
+    if (npc.isChallengeMaster) {
+        showChallengeMasterMenu(npc);
+        return;
+    }
     if (!state.npcDialogueIndex[npc.name]) state.npcDialogueIndex[npc.name] = 0;
     currentDialogueNPC = npc;
 
@@ -5603,10 +5639,10 @@ function showZordTamerMenu(npc) {
     const cages = state.inventory.zordcage || 0;
     const buyBtn = document.createElement('button');
     buyBtn.className = 'btn btn-choice';
-    buyBtn.textContent = `Buy ZordCage (50 rubies) [You have: ${cages}]`;
+    buyBtn.textContent = `Buy ZordCage (20 rubies) [You have: ${cages}]`;
     buyBtn.addEventListener('click', () => {
-        if (state.rubies >= 50) {
-            state.rubies -= 50;
+        if (state.rubies >= 20) {
+            state.rubies -= 20;
             if (!state.inventory.zordcage) state.inventory.zordcage = 0;
             state.inventory.zordcage++;
             updateHUD();
@@ -6282,6 +6318,637 @@ function startSpaTraining() {
 }
 
 // ============================================================
+// CHALLENGE MODE
+// ============================================================
+let challenge = null; // active challenge state
+
+const CHALLENGE_BADGES = [
+    { name: 'Bronze',    minQ: 5,   class: 'bronze' },
+    { name: 'Silver',    minQ: 15,  class: 'silver' },
+    { name: 'Gold',      minQ: 30,  class: 'gold' },
+    { name: 'Platinum',  minQ: 50,  class: 'platinum' },
+    { name: 'Legendary', minQ: 80,  class: 'legendary' }
+];
+
+function showChallengeMasterMenu(npc) {
+    state.dialogueOpen = true;
+    state.paused = true;
+    const panel = document.getElementById('dialogue-panel');
+    panel.style.display = 'flex';
+    document.getElementById('dialogue-portrait').textContent = npc.sprite;
+    document.getElementById('dialogue-speaker').textContent = npc.name;
+    document.getElementById('dialogue-text').textContent = 'Ready to test your logic skills? Enter Challenge Mode!';
+    document.getElementById('interact-prompt').style.display = 'none';
+
+    const choicesEl = document.getElementById('dialogue-choices');
+    choicesEl.innerHTML = '';
+
+    // Best score display
+    const best = state.challengeBest || 0;
+    const bestBadge = getBadgeForScore(best);
+    const infoBtn = document.createElement('button');
+    infoBtn.className = 'btn btn-choice';
+    infoBtn.innerHTML = `Best: ${best} pts${bestBadge ? ' | ' + bestBadge.name : ''} | Answered: ${state.challengeTotalAnswered || 0}`;
+    infoBtn.style.pointerEvents = 'none';
+    infoBtn.style.opacity = '0.7';
+    choicesEl.appendChild(infoBtn);
+
+    // Start challenge
+    const startBtn = document.createElement('button');
+    startBtn.className = 'btn btn-choice';
+    startBtn.style.borderColor = 'var(--gold)';
+    startBtn.textContent = 'Start Challenge!';
+    startBtn.addEventListener('click', () => {
+        hideDialogue();
+        startChallenge();
+    });
+    choicesEl.appendChild(startBtn);
+
+    // Chat
+    const chatBtn = document.createElement('button');
+    chatBtn.className = 'btn btn-choice';
+    chatBtn.textContent = 'Tell me more';
+    chatBtn.addEventListener('click', () => {
+        if (!state.npcDialogueIndex[npc.name]) state.npcDialogueIndex[npc.name] = 0;
+        currentDialogueNPC = npc;
+        const idx = state.npcDialogueIndex[npc.name];
+        const line = npc.dialogue[idx % npc.dialogue.length];
+        const hasMore = ((idx + 1) % npc.dialogue.length) !== 0;
+        document.getElementById('dialogue-text').textContent = line;
+        choicesEl.innerHTML = hasMore
+            ? '<span style="color:var(--text-dim);font-size:9px">[Space] ...</span>'
+            : '<span style="color:var(--text-dim);font-size:9px">[Space] Close</span>';
+    });
+    choicesEl.appendChild(chatBtn);
+
+    // Leave
+    const leaveBtn = document.createElement('button');
+    leaveBtn.className = 'btn btn-choice';
+    leaveBtn.textContent = 'Not now';
+    leaveBtn.addEventListener('click', () => hideDialogue());
+    choicesEl.appendChild(leaveBtn);
+}
+
+function startChallenge() {
+    // Build a big pool of all unlocked questions
+    const unlocked = getUnlockedLessonIds();
+    const allQuestions = [];
+    unlocked.forEach(id => {
+        const lesson = LOGIC_LESSONS.find(l => l.id === id);
+        if (lesson) {
+            lesson.questions.forEach(q => allQuestions.push({ ...q, lessonId: id }));
+        }
+    });
+    // Shuffle
+    for (let i = allQuestions.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [allQuestions[i], allQuestions[j]] = [allQuestions[j], allQuestions[i]];
+    }
+
+    challenge = {
+        questions: allQuestions,
+        index: 0,
+        score: 0,
+        streak: 0,
+        multiplier: 1,
+        lives: 3,
+        answered: 0,
+        correct: 0
+    };
+
+    showScreen('challenge');
+    document.querySelector('.challenge-footer').style.display = '';
+    renderChallengeHUD();
+    renderChallengeQuestion();
+}
+
+function renderChallengeHUD() {
+    if (!challenge) return;
+    document.getElementById('challenge-score').textContent = challenge.score;
+    document.getElementById('challenge-multiplier').textContent = `x${challenge.multiplier}`;
+    document.getElementById('challenge-streak').textContent = `Streak: ${challenge.streak}`;
+    document.getElementById('challenge-answered').textContent = `Q: ${challenge.answered}`;
+
+    // Lives as hearts
+    let hearts = '';
+    for (let i = 0; i < 3; i++) {
+        hearts += i < challenge.lives ? '\u2764\uFE0F' : '\u{1F5A4}';
+    }
+    document.getElementById('challenge-lives').innerHTML = hearts;
+}
+
+function renderChallengeQuestion() {
+    if (!challenge) return;
+
+    // If we ran out of questions, cycle back with reshuffle
+    if (challenge.index >= challenge.questions.length) {
+        for (let i = challenge.questions.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [challenge.questions[i], challenge.questions[j]] = [challenge.questions[j], challenge.questions[i]];
+        }
+        challenge.index = 0;
+    }
+
+    const q = challenge.questions[challenge.index];
+    document.getElementById('challenge-question').textContent = q.q;
+    document.getElementById('challenge-feedback').textContent = '';
+    document.getElementById('challenge-feedback').className = 'challenge-feedback';
+
+    const choicesEl = document.getElementById('challenge-choices');
+    choicesEl.innerHTML = '';
+
+    // Shuffle choices
+    const indexed = q.choices.map((text, i) => ({ text, isCorrect: i === q.answer }));
+    for (let i = indexed.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [indexed[i], indexed[j]] = [indexed[j], indexed[i]];
+    }
+    const correctIdx = indexed.findIndex(c => c.isCorrect);
+
+    indexed.forEach((choice, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-choice';
+        btn.textContent = choice.text;
+        btn.addEventListener('click', () => answerChallenge(i, correctIdx, btn, q));
+        choicesEl.appendChild(btn);
+    });
+}
+
+function answerChallenge(selected, correct, btnEl, q) {
+    const buttons = document.querySelectorAll('#challenge-choices .btn-choice');
+    buttons.forEach(b => b.style.pointerEvents = 'none');
+    buttons[correct].classList.add('correct');
+
+    challenge.answered++;
+    const isCorrect = selected === correct;
+
+    trackQuizAnswer(isCorrect);
+    if (q.lessonId) updateMasteryAfterAnswer(q.lessonId, isCorrect);
+
+    if (isCorrect) {
+        challenge.correct++;
+        challenge.streak++;
+        // Multiplier increases every 5 streak
+        challenge.multiplier = 1 + Math.floor(challenge.streak / 5);
+        const points = 10 * challenge.multiplier;
+        challenge.score += points;
+        document.getElementById('challenge-feedback').textContent = `Correct! +${points} pts (x${challenge.multiplier})`;
+        document.getElementById('challenge-feedback').className = 'challenge-feedback';
+        document.getElementById('challenge-feedback').style.color = '#4ecca3';
+        playSound('gem');
+    } else {
+        btnEl.classList.add('incorrect');
+        challenge.streak = 0;
+        challenge.multiplier = 1;
+        challenge.lives--;
+        document.getElementById('challenge-feedback').textContent = `Wrong! Lives: ${challenge.lives}`;
+        document.getElementById('challenge-feedback').className = 'challenge-feedback';
+        document.getElementById('challenge-feedback').style.color = '#e94560';
+        playSound('hurt');
+    }
+
+    renderChallengeHUD();
+
+    if (challenge.lives <= 0) {
+        setTimeout(() => endChallenge(false), 1200);
+        return;
+    }
+
+    challenge.index++;
+    setTimeout(() => renderChallengeQuestion(), 1000);
+}
+
+function getBadgeForScore(answered) {
+    let badge = null;
+    for (const b of CHALLENGE_BADGES) {
+        if (answered >= b.minQ) badge = b;
+    }
+    return badge;
+}
+
+function endChallenge(voluntary) {
+    if (!challenge) return;
+    const score = challenge.score;
+    const answered = challenge.answered;
+    const correct = challenge.correct;
+    const badge = getBadgeForScore(answered);
+
+    // Bank points as rubies (10 pts = 1 ruby)
+    const rubiesEarned = Math.floor(score / 10);
+    state.rubies += rubiesEarned;
+    trackRubiesEarned(rubiesEarned);
+
+    // Update best score
+    if (!state.challengeBest || score > state.challengeBest) state.challengeBest = score;
+    if (!state.challengeTotalAnswered) state.challengeTotalAnswered = 0;
+    state.challengeTotalAnswered += answered;
+
+    // Earn badge
+    if (badge && (!state.challengeBadge || CHALLENGE_BADGES.indexOf(badge) > CHALLENGE_BADGES.findIndex(b => b.name === state.challengeBadge))) {
+        state.challengeBadge = badge.name;
+    }
+
+    autoSave();
+
+    // Show results
+    const body = document.querySelector('.challenge-body');
+    body.innerHTML = '';
+    const result = document.createElement('div');
+    result.className = 'challenge-result';
+    result.innerHTML = `<div style="font-size:18px;color:var(--gold);margin-bottom:16px;">${voluntary ? 'Challenge Complete!' : 'Game Over!'}</div>` +
+        `<div style="font-size:12px;color:var(--text);">Score: <span style="color:var(--gold)">${score}</span></div>` +
+        `<div style="font-size:10px;color:var(--text-dim);">Answered: ${answered} | Correct: ${correct} | Best Streak: ${challenge.streak || 0}</div>` +
+        `<div style="font-size:12px;color:var(--success);margin-top:8px;">+${rubiesEarned} rubies banked!</div>`;
+
+    if (badge) {
+        result.innerHTML += `<div class="challenge-badge ${badge.class}">${badge.name} Badge</div>`;
+    } else {
+        result.innerHTML += `<div style="font-size:9px;color:var(--text-dim);margin-top:8px;">Answer 5+ questions to earn a badge!</div>`;
+    }
+
+    const returnBtn = document.createElement('button');
+    returnBtn.className = 'btn btn-primary';
+    returnBtn.textContent = 'Return to Town';
+    returnBtn.style.marginTop = '20px';
+    returnBtn.addEventListener('click', () => {
+        challenge = null;
+        updateHUD();
+        showScreen('game');
+    });
+    result.appendChild(returnBtn);
+    body.appendChild(result);
+
+    document.getElementById('challenge-choices').innerHTML = '';
+    document.getElementById('challenge-question').textContent = '';
+    document.getElementById('challenge-feedback').textContent = '';
+    document.querySelector('.challenge-footer').style.display = 'none';
+
+    playSound(voluntary ? 'victory' : 'defeat');
+}
+
+// Quit button
+document.getElementById('challenge-quit').addEventListener('click', () => {
+    if (challenge) endChallenge(true);
+});
+
+// ============================================================
+// LESSON DIAGRAMS (canvas-drawn visuals for each lesson)
+// ============================================================
+function drawLessonDiagram(lessonId, container) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 520;
+    canvas.height = 260;
+    canvas.style.cssText = 'width:100%;max-width:520px;display:block;margin:12px auto;image-rendering:pixelated;border:1px solid #2a2a5a;background:#0a0a18;';
+    container.appendChild(canvas);
+    const c = canvas.getContext('2d');
+    c.textBaseline = 'middle';
+
+    function text(str, x, y, color, size) {
+        c.font = `${size || 10}px "Press Start 2P", monospace`;
+        c.fillStyle = color || '#e0e0e0';
+        c.textAlign = 'center';
+        c.fillText(str, x, y);
+    }
+
+    function box(x, y, w, h, color, label) {
+        c.fillStyle = color || '#1a1a3e';
+        c.fillRect(x, y, w, h);
+        c.strokeStyle = '#4a4a7a';
+        c.lineWidth = 2;
+        c.strokeRect(x, y, w, h);
+        if (label) text(label, x + w / 2, y + h / 2, '#e0e0e0', 9);
+    }
+
+    function arrow(x1, y1, x2, y2, color) {
+        c.strokeStyle = color || '#f5c842';
+        c.lineWidth = 2;
+        c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke();
+        // Arrowhead
+        const angle = Math.atan2(y2 - y1, x2 - x1);
+        c.beginPath();
+        c.moveTo(x2, y2);
+        c.lineTo(x2 - 8 * Math.cos(angle - 0.4), y2 - 8 * Math.sin(angle - 0.4));
+        c.lineTo(x2 - 8 * Math.cos(angle + 0.4), y2 - 8 * Math.sin(angle + 0.4));
+        c.closePath();
+        c.fillStyle = color || '#f5c842';
+        c.fill();
+    }
+
+    function venn(x, y, r, label1, label2, colorA, colorB) {
+        // Circle A
+        c.globalAlpha = 0.3;
+        c.fillStyle = colorA || '#e94560';
+        c.beginPath(); c.arc(x - r * 0.4, y, r, 0, Math.PI * 2); c.fill();
+        // Circle B
+        c.fillStyle = colorB || '#4ecca3';
+        c.beginPath(); c.arc(x + r * 0.4, y, r, 0, Math.PI * 2); c.fill();
+        c.globalAlpha = 1;
+        // Outlines
+        c.strokeStyle = '#888';
+        c.lineWidth = 2;
+        c.beginPath(); c.arc(x - r * 0.4, y, r, 0, Math.PI * 2); c.stroke();
+        c.beginPath(); c.arc(x + r * 0.4, y, r, 0, Math.PI * 2); c.stroke();
+        // Labels
+        text(label1, x - r * 0.9, y - r - 10, colorA || '#e94560', 9);
+        text(label2, x + r * 0.9, y - r - 10, colorB || '#4ecca3', 9);
+    }
+
+    function gate(x, y, type, inputA, inputB, output) {
+        // Gate box
+        box(x, y, 60, 40, '#1a2a4e');
+        text(type, x + 30, y + 20, '#f5c842', 10);
+        // Inputs
+        c.strokeStyle = '#888'; c.lineWidth = 2;
+        c.beginPath(); c.moveTo(x - 30, y + 12); c.lineTo(x, y + 12); c.stroke();
+        c.beginPath(); c.moveTo(x - 30, y + 28); c.lineTo(x, y + 28); c.stroke();
+        // Output
+        c.beginPath(); c.moveTo(x + 60, y + 20); c.lineTo(x + 90, y + 20); c.stroke();
+        // Labels
+        text(inputA, x - 40, y + 12, inputA === 'T' ? '#4ecca3' : '#e94560', 9);
+        text(inputB, x - 40, y + 28, inputB === 'T' ? '#4ecca3' : '#e94560', 9);
+        text(output, x + 100, y + 20, output === 'T' ? '#4ecca3' : '#e94560', 10);
+    }
+
+    switch (lessonId) {
+        case 'propositional-basics': {
+            text('Statements vs Non-Statements', 260, 18, '#f5c842', 11);
+            // Statements column
+            box(20, 35, 220, 90, '#0a2a1a');
+            text('STATEMENTS', 130, 50, '#4ecca3', 10);
+            text('"The sky is blue" = TRUE', 130, 72, '#e0e0e0', 8);
+            text('"2+2=5" = FALSE', 130, 92, '#e0e0e0', 8);
+            text('"Fish can fly" = FALSE', 130, 112, '#e0e0e0', 8);
+            // Non-statements column
+            box(280, 35, 220, 90, '#2a0a1a');
+            text('NOT STATEMENTS', 390, 50, '#e94560', 10);
+            text('"How are you?" (question)', 390, 72, '#e0e0e0', 8);
+            text('"Close the door!" (command)', 390, 92, '#e0e0e0', 8);
+            text('"Wow!" (exclamation)', 390, 112, '#e0e0e0', 8);
+            // AND / NOT diagram
+            text('AND: Both must be true', 140, 150, '#f5c842', 9);
+            box(30, 165, 80, 30, '#0a2a1a'); text('TRUE', 70, 180, '#4ecca3', 9);
+            text('AND', 140, 180, '#f5c842', 10);
+            box(170, 165, 80, 30, '#0a2a1a'); text('TRUE', 210, 180, '#4ecca3', 9);
+            text('=', 270, 180, '#888', 10);
+            box(290, 165, 80, 30, '#0a2a1a'); text('TRUE', 330, 180, '#4ecca3', 10);
+
+            text('NOT: Flips the value', 140, 215, '#f5c842', 9);
+            box(50, 230, 80, 25, '#0a2a1a'); text('TRUE', 90, 242, '#4ecca3', 9);
+            arrow(140, 242, 180, 242, '#f5c842');
+            text('NOT', 160, 232, '#f5c842', 8);
+            box(190, 230, 80, 25, '#2a0a1a'); text('FALSE', 230, 242, '#e94560', 9);
+            break;
+        }
+        case 'truth-tables': {
+            text('AND vs OR Truth Tables', 260, 18, '#f5c842', 11);
+            // AND gate diagram
+            gate(80, 40, 'AND', 'T', 'T', 'T');
+            gate(80, 95, 'AND', 'T', 'F', 'F');
+            // OR gate diagram
+            gate(310, 40, 'OR', 'T', 'F', 'T');
+            gate(310, 95, 'OR', 'F', 'F', 'F');
+            // Visual comparison
+            text('AND = ALL must be true', 150, 160, '#4ecca3', 9);
+            text('OR = At least ONE true', 380, 160, '#4ecca3', 9);
+            // Checklist metaphor
+            box(30, 180, 200, 70, '#0a1a2a');
+            text('AND Checklist:', 130, 195, '#f5c842', 8);
+            text('[x] Sunny  [x] Warm', 130, 215, '#4ecca3', 8);
+            text('= TRUE (both checked!)', 130, 235, '#4ecca3', 8);
+            box(280, 180, 210, 70, '#0a1a2a');
+            text('OR Checklist:', 385, 195, '#f5c842', 8);
+            text('[x] Pizza  [ ] Pasta', 385, 215, '#4ecca3', 8);
+            text('= TRUE (one is enough!)', 385, 235, '#4ecca3', 8);
+            break;
+        }
+        case 'implication': {
+            text('IF-THEN (Implication)', 260, 18, '#f5c842', 11);
+            text('Promise: "If you clean, you get ice cream"', 260, 42, '#e0e0e0', 8);
+            // Four scenarios as flow boxes
+            const scenarios = [
+                { ifV: 'Clean: YES', thenV: 'Ice cream: YES', result: 'TRUE', ok: true, why: 'Promise kept!' },
+                { ifV: 'Clean: YES', thenV: 'Ice cream: NO',  result: 'FALSE', ok: false, why: 'Promise BROKEN!' },
+                { ifV: 'Clean: NO',  thenV: 'Ice cream: YES', result: 'TRUE', ok: true, why: 'Not broken!' },
+                { ifV: 'Clean: NO',  thenV: 'Ice cream: NO',  result: 'TRUE', ok: true, why: 'Not broken!' }
+            ];
+            scenarios.forEach((s, i) => {
+                const y = 62 + i * 46;
+                box(20, y, 130, 36, '#0a1a2a');
+                text(s.ifV, 85, y + 18, '#e0e0e0', 8);
+                arrow(155, y + 18, 185, y + 18, '#f5c842');
+                box(190, y, 130, 36, '#0a1a2a');
+                text(s.thenV, 255, y + 18, '#e0e0e0', 8);
+                text('=', 340, y + 18, '#888', 10);
+                box(360, y, 60, 36, s.ok ? '#0a2a1a' : '#2a0a1a');
+                text(s.result, 390, y + 18, s.ok ? '#4ecca3' : '#e94560', 10);
+                text(s.why, 470, y + 18, '#8888aa', 7);
+            });
+            break;
+        }
+        case 'equivalence': {
+            text("De Morgan's Rules", 260, 18, '#f5c842', 11);
+            // Rule 1: NOT(A AND B) = NOT A OR NOT B
+            text('Rule 1:', 50, 50, '#f5c842', 9);
+            box(90, 38, 180, 26, '#1a1a3e');
+            text('NOT (A AND B)', 180, 50, '#e0e0e0', 9);
+            text('=', 290, 50, '#888', 12);
+            box(310, 38, 190, 26, '#1a1a3e');
+            text('NOT A  OR  NOT B', 405, 50, '#e0e0e0', 9);
+            // Venn diagram for Rule 1
+            venn(150, 120, 45, 'A', 'B', '#e94560', '#4ecca3');
+            text('Shaded = NOT(A AND B)', 150, 180, '#8888aa', 7);
+            // Rule 2: NOT(A OR B) = NOT A AND NOT B
+            text('Rule 2:', 50, 210, '#f5c842', 9);
+            box(90, 198, 180, 26, '#1a1a3e');
+            text('NOT (A OR B)', 180, 210, '#e0e0e0', 9);
+            text('=', 290, 210, '#888', 12);
+            box(310, 198, 200, 26, '#1a1a3e');
+            text('NOT A  AND  NOT B', 410, 210, '#e0e0e0', 9);
+            // Second Venn
+            venn(420, 120, 40, 'A', 'B', '#e94560', '#4ecca3');
+            text('Outside = NOT(A OR B)', 420, 175, '#8888aa', 7);
+            break;
+        }
+        case 'valid-reasoning': {
+            text('Valid Reasoning Patterns', 260, 18, '#f5c842', 11);
+            // Modus Ponens
+            text('Modus Ponens (Forward)', 130, 45, '#4ecca3', 9);
+            box(20, 58, 220, 24, '#0a1a2a'); text('If dog -> animal', 130, 70, '#e0e0e0', 8);
+            box(20, 86, 220, 24, '#0a1a2a'); text('Buddy IS a dog', 130, 98, '#e0e0e0', 8);
+            arrow(130, 114, 130, 128, '#4ecca3');
+            box(20, 130, 220, 24, '#0a2a1a'); text('Buddy IS an animal', 130, 142, '#4ecca3', 8);
+            // Modus Tollens
+            text('Modus Tollens (Backward)', 390, 45, '#e94560', 9);
+            box(280, 58, 220, 24, '#0a1a2a'); text('If dog -> animal', 390, 70, '#e0e0e0', 8);
+            box(280, 86, 220, 24, '#0a1a2a'); text('Zorp is NOT animal', 390, 98, '#e0e0e0', 8);
+            arrow(390, 114, 390, 128, '#e94560');
+            box(280, 130, 220, 24, '#2a0a1a'); text('Zorp is NOT a dog', 390, 142, '#e94560', 8);
+            // Invalid pattern
+            text('INVALID (The Trick!)', 260, 180, '#e94560', 10);
+            box(100, 194, 320, 24, '#2a0a1a'); text('If dog -> animal.  Mittens IS animal.', 260, 206, '#e0e0e0', 8);
+            box(140, 225, 240, 24, '#2a0a0a'); text('Mittens is a dog?? WRONG!', 260, 237, '#e94560', 8);
+            text('(Mittens could be a cat!)', 260, 255, '#8888aa', 7);
+            break;
+        }
+        case 'predicate-logic': {
+            text('Predicates & Quantifiers', 260, 18, '#f5c842', 11);
+            // Predicate example
+            text('Predicate: "is tall"', 130, 45, '#4ecca3', 9);
+            box(30, 58, 90, 30, '#0a2a1a'); text('Nyela', 75, 73, '#e0e0e0', 9);
+            arrow(125, 73, 160, 73, '#4ecca3');
+            text('TRUE', 185, 73, '#4ecca3', 10);
+            box(220, 58, 90, 30, '#2a0a1a'); text('Kitten', 265, 73, '#e0e0e0', 9);
+            arrow(315, 73, 350, 73, '#e94560');
+            text('FALSE', 380, 73, '#e94560', 10);
+            // FOR ALL
+            text('FOR ALL (every single one)', 140, 115, '#f5c842', 9);
+            for (let i = 0; i < 5; i++) {
+                const bx = 30 + i * 50;
+                box(bx, 130, 40, 25, '#0a2a1a');
+                text('T', bx + 20, 142, '#4ecca3', 9);
+            }
+            text('= TRUE', 300, 142, '#4ecca3', 10);
+            // THERE EXISTS
+            text('THERE EXISTS (at least one)', 400, 115, '#f5c842', 9);
+            const vals = ['F', 'F', 'T', 'F', 'F'];
+            for (let i = 0; i < 5; i++) {
+                const bx = 310 + i * 40;
+                box(bx, 130, 32, 25, vals[i] === 'T' ? '#0a2a1a' : '#1a1a2a');
+                text(vals[i], bx + 16, 142, vals[i] === 'T' ? '#4ecca3' : '#e94560', 9);
+            }
+            text('= TRUE', 510, 142, '#4ecca3', 10);
+            // Negation
+            text('NOT "for all" = "there exists NOT"', 260, 185, '#8888aa', 8);
+            text('NOT "there exists" = "for all NOT"', 260, 205, '#8888aa', 8);
+            break;
+        }
+        case 'logical-proofs': {
+            text('Proof Chains (Dominoes!)', 260, 18, '#f5c842', 11);
+            // Chain: A -> B -> C -> D
+            const labels = ['A', 'B', 'C', 'D'];
+            for (let i = 0; i < 4; i++) {
+                const bx = 60 + i * 110;
+                box(bx, 50, 60, 40, '#0a1a2a');
+                text(labels[i], bx + 30, 70, '#f5c842', 14);
+                if (i < 3) arrow(bx + 65, 70, bx + 105, 70, '#4ecca3');
+            }
+            text('If A is TRUE, then D MUST be TRUE!', 260, 115, '#4ecca3', 9);
+            // Modus Ponens mini
+            box(30, 140, 200, 50, '#0a1a2a');
+            text('Modus Ponens:', 130, 152, '#f5c842', 8);
+            text('P -> Q,  P  =>  Q', 130, 172, '#4ecca3', 9);
+            // Modus Tollens mini
+            box(280, 140, 210, 50, '#0a1a2a');
+            text('Modus Tollens:', 385, 152, '#f5c842', 8);
+            text('P -> Q, !Q  =>  !P', 385, 172, '#e94560', 9);
+            // Example
+            text('Example: Rain -> Wet -> Puddles', 260, 215, '#e0e0e0', 8);
+            text('It rained => There MUST be puddles!', 260, 240, '#4ecca3', 8);
+            break;
+        }
+        case 'set-theory': {
+            text('Set Theory: Collections', 260, 18, '#f5c842', 11);
+            // Venn diagram
+            venn(170, 110, 60, 'Fruits', 'Red Things', '#e94560', '#4ecca3');
+            text('Apple', 170, 110, '#f5c842', 8);
+            text('Banana', 100, 110, '#e0e0e0', 7);
+            text('Firetruck', 240, 110, '#e0e0e0', 7);
+            // Labels
+            text('UNION = everything', 170, 190, '#8888aa', 8);
+            text('INTERSECTION = overlap', 170, 208, '#8888aa', 8);
+            // Operations
+            box(340, 45, 160, 30, '#0a1a2a');
+            text('UNION (OR)', 420, 60, '#4ecca3', 9);
+            box(340, 85, 160, 30, '#0a1a2a');
+            text('INTERSECT (AND)', 420, 100, '#e94560', 9);
+            box(340, 125, 160, 30, '#0a1a2a');
+            text('SUBSET (inside)', 420, 140, '#f5c842', 9);
+            // Subset example
+            text('{1,2} is inside {1,2,3}', 420, 175, '#8888aa', 7);
+            break;
+        }
+        case 'boolean-algebra': {
+            text('Boolean Algebra Shortcuts', 260, 18, '#f5c842', 11);
+            const rules = [
+                ['A AND TRUE = A', '#4ecca3'],
+                ['A OR FALSE = A', '#4ecca3'],
+                ['A AND FALSE = FALSE', '#e94560'],
+                ['A OR TRUE = TRUE', '#f5c842'],
+                ['NOT NOT A = A', '#4ecca3'],
+                ['A AND NOT A = FALSE', '#e94560'],
+                ['A OR NOT A = TRUE', '#f5c842']
+            ];
+            rules.forEach((r, i) => {
+                const col = i < 4 ? 0 : 1;
+                const row = i < 4 ? i : i - 4;
+                const bx = 20 + col * 260;
+                const by = 40 + row * 52;
+                box(bx, by, 240, 40, '#0a1a2a');
+                text(r[0], bx + 120, by + 20, r[1], 9);
+            });
+            break;
+        }
+        case 'modal-logic': {
+            text('Possibility & Necessity', 260, 18, '#f5c842', 11);
+            // Three columns
+            box(20, 40, 150, 130, '#0a2a1a');
+            text('NECESSARY', 95, 55, '#4ecca3', 9);
+            text('Must be true', 95, 75, '#8888aa', 7);
+            text('2 + 2 = 4', 95, 100, '#e0e0e0', 8);
+            text('Triangles', 95, 118, '#e0e0e0', 8);
+            text('have 3 sides', 95, 134, '#e0e0e0', 8);
+            text('ALWAYS', 95, 158, '#4ecca3', 8);
+
+            box(185, 40, 150, 130, '#1a1a2a');
+            text('POSSIBLE', 260, 55, '#f5c842', 9);
+            text('Could be true', 260, 75, '#8888aa', 7);
+            text('Rain tomorrow', 260, 100, '#e0e0e0', 8);
+            text('Life on Mars', 260, 120, '#e0e0e0', 8);
+            text('MAYBE', 260, 158, '#f5c842', 8);
+
+            box(350, 40, 150, 130, '#2a0a1a');
+            text('IMPOSSIBLE', 425, 55, '#e94560', 9);
+            text('Cannot be true', 425, 75, '#8888aa', 7);
+            text('Square circle', 425, 100, '#e0e0e0', 8);
+            text('2 + 2 = 7', 425, 120, '#e0e0e0', 8);
+            text('NEVER', 425, 158, '#e94560', 8);
+
+            // Contingent
+            box(120, 190, 280, 55, '#1a1a2a');
+            text('CONTINGENT = sometimes true, sometimes not', 260, 210, '#8888aa', 8);
+            text('"I am wearing a hat" (depends on the day!)', 260, 232, '#e0e0e0', 7);
+            break;
+        }
+        case 'paradoxes': {
+            text('Paradoxes: Self-Reference', 260, 18, '#f5c842', 11);
+            // Liar's paradox loop
+            box(130, 40, 260, 35, '#2a0a1a');
+            text('"This statement is FALSE"', 260, 57, '#e0e0e0', 9);
+            // Circular arrows
+            arrow(260, 80, 180, 110, '#e94560');
+            text('If TRUE...', 155, 100, '#e94560', 7);
+            box(100, 115, 120, 28, '#2a0a1a');
+            text('then it IS false', 160, 129, '#e94560', 7);
+            arrow(165, 148, 260, 170, '#4ecca3');
+            text('If FALSE...', 240, 155, '#4ecca3', 7);
+            box(260, 165, 140, 28, '#0a2a1a');
+            text('then it IS true!', 330, 179, '#4ecca3', 7);
+            arrow(330, 198, 260, 78, '#f5c842');
+            text('LOOP!', 350, 135, '#f5c842', 12);
+            // Barber paradox
+            box(30, 210, 460, 40, '#1a1a2a');
+            text('Barber shaves all who dont shave themselves.', 260, 223, '#e0e0e0', 7);
+            text('Who shaves the barber?? (Neither works!)', 260, 240, '#e94560', 7);
+            break;
+        }
+        default:
+            // No diagram for this lesson
+            canvas.remove();
+            return;
+    }
+}
+
+// ============================================================
 // QUIZ SYSTEM
 // ============================================================
 function updateQuizScrollArrow() {
@@ -6337,9 +7004,8 @@ function renderQuiz() {
     if (qi === 0) {
         const lessonEl = document.getElementById('quiz-lesson');
         lessonEl.innerHTML = `<h3>${lesson.title}</h3><p>${lesson.content.replace(/\n/g, '<br>')}</p>`;
+        drawLessonDiagram(lesson.id, lessonEl);
         lessonEl.scrollTop = 0;
-        updateQuizScrollArrow();
-        lessonEl.onscroll = updateQuizScrollArrow;
     }
 
     document.getElementById('quiz-feedback').textContent = '';
@@ -6413,17 +7079,78 @@ function answerQuiz(selected, correct, btnEl) {
         state.quizCorrect++;
         document.getElementById('quiz-feedback').textContent = 'Correct!';
         document.getElementById('quiz-feedback').className = 'quiz-feedback correct';
+        document.getElementById('quiz-progress').textContent = `Question ${state.quizIndex + 1} of ${state.quizTotal} | Correct: ${state.quizCorrect}`;
+        tryRespawnGems();
+        setTimeout(() => { state.quizIndex++; renderQuiz(); }, 1500);
     } else {
         btnEl.classList.add('incorrect');
-        document.getElementById('quiz-feedback').textContent = `Incorrect. The answer was: ${state.currentLesson.questions[state.quizIndex].choices[correct]}`;
-        document.getElementById('quiz-feedback').className = 'quiz-feedback incorrect';
+        // Show walkthrough with explanation and retry
+        showQuizWalkthrough(correct, buttons);
     }
-    document.getElementById('quiz-progress').textContent = `Question ${state.quizIndex + 1} of ${state.quizTotal} | Correct: ${state.quizCorrect}`;
+}
 
-    // Respawn any depleted gem locations now that a question was answered
-    tryRespawnGems();
+function showQuizWalkthrough(correctIdx, buttons) {
+    const lesson = state.currentLesson;
+    const questionSet = lesson.questionSet || lesson.questions.map(q => ({ type: 'mc', data: q }));
+    const entry = questionSet[state.quizIndex];
+    const question = entry ? entry.data : lesson.questions[state.quizIndex];
+    const correctAnswer = buttons[correctIdx].textContent;
 
-    setTimeout(() => { state.quizIndex++; renderQuiz(); }, 1500);
+    const feedbackEl = document.getElementById('quiz-feedback');
+    feedbackEl.className = 'quiz-feedback incorrect';
+    feedbackEl.innerHTML = `<div style="margin-bottom:8px;">Incorrect! Let's learn why.</div>` +
+        `<div style="color:var(--gold);font-size:10px;line-height:2.2;margin-bottom:8px;">The correct answer is: <span style="color:var(--success)">${escapeHtml(correctAnswer)}</span></div>` +
+        `<div style="color:var(--text-dim);font-size:9px;line-height:2;margin-bottom:12px;">` +
+        `Read the lesson above to understand why, then try again!</div>`;
+
+    // Scroll lesson into view
+    const lessonEl = document.getElementById('quiz-lesson');
+    if (lessonEl) lessonEl.scrollTop = 0;
+
+    // Add retry button
+    const retryBtn = document.createElement('button');
+    retryBtn.className = 'btn btn-primary';
+    retryBtn.style.cssText = 'font-size:9px;padding:8px 16px;';
+    retryBtn.textContent = 'Try Again';
+    retryBtn.addEventListener('click', () => {
+        // Re-render the same question with shuffled choices
+        feedbackEl.textContent = '';
+        feedbackEl.className = 'quiz-feedback';
+        document.getElementById('quiz-progress').textContent = `Question ${state.quizIndex + 1} of ${state.quizTotal} | Correct: ${state.quizCorrect} (retry)`;
+
+        const choicesEl = document.getElementById('quiz-choices');
+        choicesEl.innerHTML = '';
+
+        const indexed = question.choices.map((text, i) => ({ text, isCorrect: i === question.answer }));
+        for (let i = indexed.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [indexed[i], indexed[j]] = [indexed[j], indexed[i]];
+        }
+        const newCorrect = indexed.findIndex(c => c.isCorrect);
+
+        indexed.forEach((choice, i) => {
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-choice';
+            btn.textContent = choice.text;
+            btn.addEventListener('click', () => {
+                choicesEl.querySelectorAll('.btn-choice').forEach(b => b.style.pointerEvents = 'none');
+                choicesEl.children[newCorrect].classList.add('correct');
+                if (i === newCorrect) {
+                    feedbackEl.textContent = 'Got it! Moving on.';
+                    feedbackEl.className = 'quiz-feedback correct';
+                    playSound('gem');
+                } else {
+                    btn.classList.add('incorrect');
+                    feedbackEl.textContent = `The answer is: ${escapeHtml(indexed[newCorrect].text)}`;
+                    feedbackEl.className = 'quiz-feedback incorrect';
+                }
+                tryRespawnGems();
+                setTimeout(() => { state.quizIndex++; renderQuiz(); }, 1500);
+            });
+            choicesEl.appendChild(btn);
+        });
+    });
+    feedbackEl.appendChild(retryBtn);
 }
 
 // ============================================================
@@ -6493,23 +7220,82 @@ function showCatchQuiz(enemy, b) {
                     completeCatch(enemy, b);
                 }, 1200);
             } else {
-                // Wrong! Catch fails, enemy breaks free
+                // Wrong — show walkthrough with second chance
                 btn.classList.add('incorrect');
                 trackQuizAnswer(false);
                 if (enemy.lessonId) updateMasteryAfterAnswer(enemy.lessonId, false);
-                const fb = document.createElement('div');
-                fb.style.cssText = 'color:var(--accent);font-size:10px;margin-top:12px;text-align:center;';
-                fb.textContent = `Wrong! ${enemy.name} broke free!`;
-                box.appendChild(fb);
                 playSound('hurt');
-                setTimeout(() => {
-                    overlay.remove();
-                    // Resume battle — enemy breaks free
-                    b.over = false;
-                    b.cageThrown = false;
-                    b.pendingCatch = null;
-                    b.damageNums.push({ x: b.ex, y: b.ey - 40, text: 'BROKE FREE!', color: '#e94560', life: 50 });
-                }, 1500);
+
+                // Remove old choices
+                choicesDiv.innerHTML = '';
+
+                const fb = document.createElement('div');
+                fb.style.cssText = 'color:var(--accent);font-size:10px;margin-top:10px;text-align:center;line-height:2.2;';
+                fb.innerHTML = `Wrong! The correct answer is:<br><span style="color:var(--success)">${escapeHtml(indexed[correctIdx].text)}</span>`;
+                box.appendChild(fb);
+
+                const hint = document.createElement('div');
+                hint.style.cssText = 'color:var(--text-dim);font-size:9px;margin-top:8px;text-align:center;line-height:2;';
+                hint.textContent = 'Study the answer, then try again for a second chance to catch!';
+                box.appendChild(hint);
+
+                const retryBtn = document.createElement('button');
+                retryBtn.className = 'btn btn-primary';
+                retryBtn.style.cssText = 'font-size:9px;margin-top:12px;display:block;margin-left:auto;margin-right:auto;';
+                retryBtn.textContent = 'Try Again';
+                retryBtn.addEventListener('click', () => {
+                    // Remove walkthrough elements
+                    fb.remove(); hint.remove(); retryBtn.remove();
+
+                    // Re-shuffle and show choices again
+                    const indexed2 = question.choices.map((text2, i2) => ({ text: text2, isCorrect: i2 === question.answer }));
+                    for (let k = indexed2.length - 1; k > 0; k--) {
+                        const j2 = Math.floor(Math.random() * (k + 1));
+                        [indexed2[k], indexed2[j2]] = [indexed2[j2], indexed2[k]];
+                    }
+                    const correctIdx2 = indexed2.findIndex(c2 => c2.isCorrect);
+
+                    const choicesDiv2 = document.createElement('div');
+                    choicesDiv2.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
+
+                    indexed2.forEach((choice2, i2) => {
+                        const btn2 = document.createElement('button');
+                        btn2.className = 'btn btn-choice';
+                        btn2.textContent = choice2.text;
+                        btn2.addEventListener('click', () => {
+                            choicesDiv2.querySelectorAll('.btn-choice').forEach(b3 => b3.style.pointerEvents = 'none');
+                            choicesDiv2.children[correctIdx2].classList.add('correct');
+
+                            if (i2 === correctIdx2) {
+                                // Second chance success — catch!
+                                const fb2 = document.createElement('div');
+                                fb2.style.cssText = 'color:var(--success);font-size:10px;margin-top:10px;text-align:center;';
+                                fb2.textContent = 'Correct! Catch successful!';
+                                box.appendChild(fb2);
+                                playSound('victory');
+                                setTimeout(() => { overlay.remove(); completeCatch(enemy, b); }, 1200);
+                            } else {
+                                // Failed twice — breaks free
+                                btn2.classList.add('incorrect');
+                                const fb2 = document.createElement('div');
+                                fb2.style.cssText = 'color:var(--accent);font-size:10px;margin-top:10px;text-align:center;';
+                                fb2.textContent = `${enemy.name} broke free!`;
+                                box.appendChild(fb2);
+                                playSound('hurt');
+                                setTimeout(() => {
+                                    overlay.remove();
+                                    b.over = false;
+                                    b.cageThrown = false;
+                                    b.pendingCatch = null;
+                                    b.damageNums.push({ x: b.ex, y: b.ey - 40, text: 'BROKE FREE!', color: '#e94560', life: 50 });
+                                }, 1500);
+                            }
+                        });
+                        choicesDiv2.appendChild(btn2);
+                    });
+                    box.appendChild(choicesDiv2);
+                });
+                box.appendChild(retryBtn);
             }
         });
         choicesDiv.appendChild(btn);
