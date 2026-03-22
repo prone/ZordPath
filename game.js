@@ -78,6 +78,18 @@ function trackQuizAnswer(correct) {
     saveStats();
 }
 
+// Per-question tracking
+function trackQuestionResult(lessonId, questionText, wasCorrect) {
+    if (!state.questionStats) state.questionStats = {};
+    // Key: lessonId + first 40 chars of question (enough to be unique)
+    const key = lessonId + '::' + questionText.slice(0, 40);
+    if (!state.questionStats[key]) {
+        state.questionStats[key] = { lessonId, q: questionText.slice(0, 60), attempts: 0, correct: 0 };
+    }
+    state.questionStats[key].attempts++;
+    if (wasCorrect) state.questionStats[key].correct++;
+}
+
 function showPlayerLevelUp() {
     // Brief on-screen notification (non-blocking)
     let el = document.getElementById('levelup-toast');
@@ -140,7 +152,8 @@ function saveToSlot(i) {
         challengeTotalAnswered: state.challengeTotalAnswered || 0,
         challengeBadge: state.challengeBadge || null,
         collectedRunes: state.collectedRunes || [],
-        searchedRunes: state.searchedRunes || {}
+        searchedRunes: state.searchedRunes || {},
+        questionStats: state.questionStats || {}
     };
     try {
         localStorage.setItem(SAVE_PREFIX + i, JSON.stringify(data));
@@ -192,6 +205,7 @@ function loadFromSlot(i) {
         state.challengeBadge = d.challengeBadge || null;
         state.collectedRunes = d.collectedRunes || [];
         state.searchedRunes = d.searchedRunes || {};
+        state.questionStats = d.questionStats || {};
 
         // Restore discoveredAreas set
         discoveredAreas.clear();
@@ -5070,6 +5084,180 @@ function renderQuizProgress() {
 }
 
 // Draw quiz progress icon
+document.getElementById('btn-report-card').addEventListener('click', showReportCard);
+
+function showReportCard() {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:200;display:flex;align-items:center;justify-content:center;';
+
+    const card = document.createElement('div');
+    card.id = 'report-card-content';
+    card.style.cssText = 'background:#f8f4e8;color:#222;font-family:"Press Start 2P",monospace;padding:30px;max-width:700px;width:95%;max-height:90vh;overflow-y:auto;border:4px solid #c4a040;';
+
+    const today = new Date().toLocaleDateString();
+    initQuizMastery();
+
+    // Header
+    card.innerHTML = `<div style="text-align:center;margin-bottom:20px;">
+        <div style="font-size:18px;color:#1a1a3e;margin-bottom:6px;">REPORT CARD</div>
+        <div style="font-size:11px;color:#444;">Student: <strong>${escapeHtml(state.name)}</strong> | Level: ${state.playerLevel}</div>
+        <div style="font-size:9px;color:#888;">Date: ${today} | Topic: Introduction to Logic</div>
+        <div style="font-size:9px;color:#888;">Play Time: ${formatPlayTime(state.playTime || 0)}</div>
+    </div>`;
+
+    // Overall summary
+    let totalAns = 0, totalCorr = 0;
+    Object.values(state.quizMastery).forEach(m => { totalAns += m.answered; totalCorr += m.correct; });
+    const overallPct = totalAns > 0 ? Math.round(totalCorr / totalAns * 100) : 0;
+    const grade = overallPct >= 90 ? 'A' : overallPct >= 80 ? 'B' : overallPct >= 70 ? 'C' : overallPct >= 60 ? 'D' : 'F';
+    const gradeColor = grade === 'A' ? '#27ae60' : grade === 'B' ? '#2980b9' : grade === 'C' ? '#f39c12' : '#e74c3c';
+
+    card.innerHTML += `<div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:#eee8d0;border:2px solid #c4a040;margin-bottom:16px;">
+        <div>
+            <div style="font-size:10px;color:#444;">Overall Score</div>
+            <div style="font-size:9px;color:#888;">${totalCorr}/${totalAns} correct (${overallPct}%)</div>
+        </div>
+        <div style="font-size:36px;color:${gradeColor};font-weight:bold;">${grade}</div>
+    </div>`;
+
+    // Per-lesson breakdown
+    const tierLabels = {
+        'propositional-basics': 'Tier 1', 'truth-tables': 'Tier 1', 'implication': 'Tier 1',
+        'equivalence': 'Tier 1', 'valid-reasoning': 'Tier 1',
+        'predicate-logic': 'Tier 2', 'logical-proofs': 'Tier 2',
+        'analyzing-arguments': 'Tier 2', 'language-ambiguity': 'Tier 2',
+        'set-theory': 'Tier 3', 'boolean-algebra': 'Tier 3',
+        'categorical-syllogisms': 'Tier 3', 'causal-reasoning': 'Tier 3',
+        'modal-logic': 'Tier 4', 'paradoxes': 'Tier 4'
+    };
+
+    card.innerHTML += '<div style="font-size:11px;color:#1a1a3e;margin-bottom:8px;border-bottom:2px solid #c4a040;padding-bottom:4px;">Subject Breakdown</div>';
+
+    // Identify strengths and weaknesses
+    const lessonScores = [];
+    LOGIC_LESSONS.forEach(lesson => {
+        const m = state.quizMastery[lesson.id] || { answered: 0, correct: 0, level: 0 };
+        if (m.answered === 0) return;
+        const pct = Math.round(m.correct / m.answered * 100);
+        const lGrade = pct >= 90 ? 'A' : pct >= 80 ? 'B' : pct >= 70 ? 'C' : pct >= 60 ? 'D' : 'F';
+        const lColor = lGrade === 'A' ? '#27ae60' : lGrade === 'B' ? '#2980b9' : lGrade === 'C' ? '#f39c12' : '#e74c3c';
+        const tier = tierLabels[lesson.id] || '';
+
+        lessonScores.push({ id: lesson.id, title: lesson.title, pct, grade: lGrade, tier, answered: m.answered, correct: m.correct, level: m.level });
+
+        card.innerHTML += `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-bottom:1px solid #ddd;font-size:8px;">
+            <div style="flex:1;">
+                <span style="color:#888;">${tier}</span>
+                <span style="color:#222;"> ${escapeHtml(lesson.title)}</span>
+            </div>
+            <div style="width:60px;text-align:center;color:#888;">${m.correct}/${m.answered}</div>
+            <div style="width:40px;text-align:center;color:#888;">${pct}%</div>
+            <div style="width:30px;text-align:center;font-size:12px;color:${lColor};font-weight:bold;">${lGrade}</div>
+        </div>`;
+    });
+
+    // Strengths & Weaknesses
+    const sorted = [...lessonScores].sort((a, b) => b.pct - a.pct);
+    const strengths = sorted.filter(s => s.pct >= 80).slice(0, 3);
+    const weaknesses = sorted.filter(s => s.pct < 70).sort((a, b) => a.pct - b.pct).slice(0, 3);
+
+    card.innerHTML += '<div style="display:flex;gap:16px;margin-top:16px;">';
+
+    // Strengths
+    card.innerHTML += '<div style="flex:1;"><div style="font-size:10px;color:#27ae60;margin-bottom:6px;border-bottom:2px solid #27ae60;padding-bottom:3px;">Strengths</div>';
+    if (strengths.length === 0) {
+        card.innerHTML += '<div style="font-size:8px;color:#888;">Keep studying to find your strengths!</div>';
+    } else {
+        strengths.forEach(s => {
+            card.innerHTML += `<div style="font-size:8px;color:#222;margin-bottom:3px;line-height:1.8;">${escapeHtml(s.title)} (${s.pct}%)</div>`;
+        });
+    }
+    card.innerHTML += '</div>';
+
+    // Weaknesses
+    card.innerHTML += '<div style="flex:1;"><div style="font-size:10px;color:#e74c3c;margin-bottom:6px;border-bottom:2px solid #e74c3c;padding-bottom:3px;">Needs Practice</div>';
+    if (weaknesses.length === 0) {
+        card.innerHTML += '<div style="font-size:8px;color:#888;">Great job - no weak areas!</div>';
+    } else {
+        weaknesses.forEach(w => {
+            card.innerHTML += `<div style="font-size:8px;color:#222;margin-bottom:3px;line-height:1.8;">${escapeHtml(w.title)} (${w.pct}%)</div>`;
+        });
+    }
+    card.innerHTML += '</div></div>';
+
+    // Most-missed questions
+    const qStats = state.questionStats || {};
+    const missed = Object.values(qStats)
+        .filter(qs => qs.attempts >= 2 && qs.correct / qs.attempts < 0.5)
+        .sort((a, b) => (a.correct / a.attempts) - (b.correct / b.attempts))
+        .slice(0, 5);
+
+    if (missed.length > 0) {
+        card.innerHTML += '<div style="font-size:10px;color:#e74c3c;margin-top:16px;margin-bottom:6px;border-bottom:2px solid #e74c3c;padding-bottom:3px;">Most Missed Questions</div>';
+        missed.forEach(mq => {
+            const mqPct = Math.round(mq.correct / mq.attempts * 100);
+            const lessonName = LOGIC_LESSONS.find(l => l.id === mq.lessonId);
+            card.innerHTML += `<div style="font-size:7px;color:#444;margin-bottom:4px;line-height:1.8;padding:4px;background:#f0e8d8;">
+                <span style="color:#888;">[${lessonName ? escapeHtml(lessonName.title).slice(0, 25) : mq.lessonId}]</span>
+                "${escapeHtml(mq.q)}" — ${mq.correct}/${mq.attempts} (${mqPct}%)
+            </div>`;
+        });
+    }
+
+    // Runes collected
+    const runeCount = (state.collectedRunes || []).length;
+    card.innerHTML += `<div style="font-size:9px;color:#444;margin-top:16px;padding:8px;background:#eee8d0;border:1px solid #c4a040;">
+        Logic Runes: ${runeCount}/${LOGIC_RUNES.length} | Zords Caught: ${state.zordList.length} | Challenge Best: ${state.challengeBest || 0} pts
+    </div>`;
+
+    // Buttons
+    const btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display:flex;gap:10px;margin-top:16px;justify-content:center;';
+
+    const dlBtn = document.createElement('button');
+    dlBtn.className = 'btn btn-primary';
+    dlBtn.style.cssText = 'font-size:9px;padding:8px 16px;background:#1a1a3e;color:#f5c842;';
+    dlBtn.textContent = 'Download PDF';
+    dlBtn.addEventListener('click', () => downloadReportCardPDF());
+    btnRow.appendChild(dlBtn);
+
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'btn btn-secondary';
+    closeBtn.style.cssText = 'font-size:9px;padding:8px 16px;';
+    closeBtn.textContent = 'Close';
+    closeBtn.addEventListener('click', () => overlay.remove());
+    btnRow.appendChild(closeBtn);
+
+    card.appendChild(btnRow);
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+}
+
+function downloadReportCardPDF() {
+    const card = document.getElementById('report-card-content');
+    if (!card) return;
+
+    // Use print-based PDF generation
+    const printWindow = window.open('', '_blank');
+    const today = new Date().toLocaleDateString().replace(/\//g, '-');
+    const title = `${state.name} - ${today} - Introduction to Logic - Report Card`;
+
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>${escapeHtml(title)}</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        body { font-family: 'Press Start 2P', 'Courier New', monospace; padding: 20px; background: #fff; }
+        @media print { body { padding: 10px; } }
+    </style></head><body>`);
+    printWindow.document.write(card.innerHTML);
+    // Remove the download/close buttons from print
+    printWindow.document.write('<script>document.querySelectorAll("button").forEach(b=>b.remove());<\/script>');
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+
+    // Auto-trigger print dialog (which offers Save as PDF)
+    setTimeout(() => printWindow.print(), 500);
+}
+
 (function drawQuizIcon() {
     const el = document.getElementById('icon-quiz');
     if (!el) return;
@@ -7770,6 +7958,7 @@ function answerChallenge(selected, correct, btnEl, q) {
 
     trackQuizAnswer(isCorrect);
     if (q.lessonId) updateMasteryAfterAnswer(q.lessonId, isCorrect);
+    if (q.lessonId && q.q) trackQuestionResult(q.lessonId, q.q, isCorrect);
 
     if (isCorrect) {
         challenge.correct++;
@@ -8569,6 +8758,10 @@ function answerQuiz(selected, correct, btnEl) {
     // Update mastery tracking for this lesson
     if (state.currentLesson && state.currentLesson.id) {
         updateMasteryAfterAnswer(state.currentLesson.id, isCorrect);
+        // Track per-question stats
+        const qSet = state.currentLesson.questionSet || state.currentLesson.questions.map(q2 => ({ type: 'mc', data: q2 }));
+        const entry = qSet[state.quizIndex];
+        if (entry && entry.data) trackQuestionResult(state.currentLesson.id, entry.data.q, isCorrect);
     }
     if (isCorrect) {
         state.quizCorrect++;
