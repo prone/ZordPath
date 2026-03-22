@@ -7288,6 +7288,7 @@ function showCatchQuiz(enemy, b) {
                                     b.cageThrown = false;
                                     b.pendingCatch = null;
                                     b.damageNums.push({ x: b.ex, y: b.ey - 40, text: 'BROKE FREE!', color: '#e94560', life: 50 });
+                                    if (battle && !battle.running) { battle.running = true; battleLoop(); }
                                 }, 1500);
                             }
                         });
@@ -7307,6 +7308,7 @@ function showCatchQuiz(enemy, b) {
 }
 
 function completeCatch(enemy, b) {
+    console.log('[CATCH] completeCatch called', { enemy: enemy.name, battleExists: !!battle, bOver: b.over, screen: state.screen });
     playSound('victory');
 
     // Show naming overlay
@@ -7315,12 +7317,17 @@ function completeCatch(enemy, b) {
     const nameInput = document.getElementById('zordname-input');
     nameInput.value = enemy.name;
     document.getElementById('zordname-overlay').style.display = 'flex';
+    console.log('[CATCH] Naming overlay shown');
     setTimeout(() => { nameInput.focus(); nameInput.select(); }, 100);
 
-    // Handle confirm
+    // Remove any stale listeners before adding new ones
     const confirmBtn = document.getElementById('zordname-confirm');
+    const newConfirmBtn = confirmBtn.cloneNode(true);
+    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+
     const onConfirm = () => {
-        confirmBtn.removeEventListener('click', onConfirm);
+        console.log('[CATCH] Confirm clicked');
+        newConfirmBtn.removeEventListener('click', onConfirm);
         nameInput.removeEventListener('keydown', onEnter);
         const nickname = (nameInput.value.trim() || enemy.name).slice(0, 16);
         document.getElementById('zordname-overlay').style.display = 'none';
@@ -7338,23 +7345,32 @@ function completeCatch(enemy, b) {
             catchLocation: state.location
         });
         trackZordCaught();
-        state.hp = battle.playerHp;
+        if (battle) state.hp = battle.playerHp;
         state.rubies += b.pendingCatch.rubies;
         if (!state.defeatedEnemies.includes(enemy.name)) state.defeatedEnemies.push(enemy.name);
+        if (state._pendingZoneKey && !state.defeatedZones.has(state._pendingZoneKey)) {
+            state.defeatedZones.add(state._pendingZoneKey);
+        }
+        state._pendingZoneKey = null;
         autoSave();
+        console.log('[CATCH] Zord added, showing result. battle:', !!battle, 'screen:', state.screen);
 
+        // Show result on battle screen
+        showScreen('battle');
         const resultEl = document.getElementById('battle-result');
         const textEl = document.getElementById('battle-result-text');
         resultEl.style.display = 'flex';
         textEl.innerHTML = `${escapeHtml(b.pendingCatch.species)} caught!<br><br>Named: <span style="color:var(--gold)">${escapeHtml(nickname)}</span><br>+${b.pendingCatch.rubies} rubies`;
         document.getElementById('battle-result-btn').textContent = 'Continue';
         document.getElementById('battle-result-btn').onclick = () => {
-            battle.running = false; battle = null;
+            console.log('[CATCH] Continue clicked, returning to game');
+            resultEl.style.display = 'none';
+            if (battle) { battle.running = false; battle = null; }
             updateHUD(); showScreen('game');
         };
     };
     const onEnter = (e) => { if (e.key === 'Enter') onConfirm(); };
-    confirmBtn.addEventListener('click', onConfirm);
+    newConfirmBtn.addEventListener('click', onConfirm);
     nameInput.addEventListener('keydown', onEnter);
 }
 
