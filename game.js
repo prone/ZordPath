@@ -7023,8 +7023,29 @@ function showLessonSlideshow(lesson, onComplete) {
         const nextBtn = document.createElement('button');
         nextBtn.className = 'btn btn-primary';
         nextBtn.style.cssText = 'font-size:11px;padding:10px 24px;';
-        nextBtn.textContent = isLast ? 'View Diagram' : 'Next';
+
+        // Count lines and delay button by 1 second per line
+        const lineCount = paragraphs[slideIdx].split('\n').length;
+        const delayMs = lineCount * 1000;
+        nextBtn.textContent = `Read... (${lineCount}s)`;
+        nextBtn.disabled = true;
+        nextBtn.style.opacity = '0.4';
+
+        let remaining = lineCount;
+        const countdown = setInterval(() => {
+            remaining--;
+            if (remaining <= 0) {
+                clearInterval(countdown);
+                nextBtn.textContent = isLast ? 'View Diagram' : 'Next';
+                nextBtn.disabled = false;
+                nextBtn.style.opacity = '1';
+            } else {
+                nextBtn.textContent = `Read... (${remaining}s)`;
+            }
+        }, 1000);
+
         nextBtn.addEventListener('click', () => {
+            clearInterval(countdown);
             slideIdx++;
             showSlide();
         });
