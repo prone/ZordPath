@@ -11804,7 +11804,7 @@ function drawTile(col, row, tileType) {
     // === BUILDINGS ===
     if (tileType === T.HOUSE || tileType === T.STORE || tileType === T.BUILD) {
         const map = MAPS[state.location];
-        const bgColor = state.location === 'beach' || state.location === 'island' ? '#e0c888' : '#3a8044';
+        const bgColor = state.location === 'cave' ? '#3d3d5c' : state.location === 'beach' || state.location === 'island' ? '#e0c888' : state.location === 'zordarena' ? '#3a2040' : '#3a8044';
         ctx.fillStyle = bgColor; ctx.fillRect(x, y, S, S);
 
         // For STORE and BUILD, draw standalone
@@ -12087,7 +12087,7 @@ function drawTile(col, row, tileType) {
 
     // === FLOWER ===
     if (tileType === T.FLOWER) {
-        const flBg = state.location === 'beach' ? ((col+row)%2===0?'#e0c888':'#d8c080') : (state.location === 'mountains' || state.location.startsWith('peak_')) ? ((col+row)%2===0?'#7a7868':'#746e60') : ((col+row)%2===0?'#3a8044':'#378040');
+        const flBg = state.location === 'cave' ? ((col+row)%2===0?'#3d3d5c':'#383856') : state.location === 'beach' || state.location === 'island' ? ((col+row)%2===0?'#e0c888':'#d8c080') : (state.location === 'mountains' || state.location.startsWith('peak_')) ? ((col+row)%2===0?'#7a7868':'#746e60') : ((col+row)%2===0?'#3a8044':'#378040');
         ctx.fillStyle = flBg; ctx.fillRect(x, y, S, S);
         ctx.fillStyle = '#2a6830'; ctx.fillRect(x+S/2-1, y+S/2, 2, S/2-2);
         ctx.fillStyle = '#1e5a24'; ctx.fillRect(x+S/2+4, y+S/2+6, 8, 2); // leaf
@@ -12102,7 +12102,7 @@ function drawTile(col, row, tileType) {
 
     // === FENCE ===
     if (tileType === T.FENCE) {
-        ctx.fillStyle = state.location === 'beach' ? '#e0c888' : (state.location === 'mountains' || state.location.startsWith('peak_')) ? '#7a7868' : '#3a8044'; ctx.fillRect(x, y, S, S);
+        ctx.fillStyle = state.location === 'cave' ? '#3d3d5c' : state.location === 'beach' || state.location === 'island' ? '#e0c888' : (state.location === 'mountains' || state.location.startsWith('peak_')) ? '#7a7868' : '#3a8044'; ctx.fillRect(x, y, S, S);
         ctx.fillStyle = '#5a3c1e';
         ctx.fillRect(x, y+14, S, 8); ctx.fillRect(x, y+32, S, 6);
         ctx.fillRect(x+6, y+6, 6, 36); ctx.fillRect(x+S-12, y+6, 6, 36);
@@ -12115,7 +12115,7 @@ function drawTile(col, row, tileType) {
 
     // === SIGN ===
     if (tileType === T.SIGN) {
-        const sgBg = state.location === 'beach' ? ((col+row)%2===0?'#e0c888':'#d8c080') : (state.location === 'mountains' || state.location.startsWith('peak_')) ? ((col+row)%2===0?'#7a7868':'#746e60') : ((col+row)%2===0?'#3a8044':'#378040');
+        const sgBg = state.location === 'cave' ? ((col+row)%2===0?'#3d3d5c':'#383856') : state.location === 'beach' || state.location === 'island' ? ((col+row)%2===0?'#e0c888':'#d8c080') : (state.location === 'mountains' || state.location.startsWith('peak_')) ? ((col+row)%2===0?'#7a7868':'#746e60') : ((col+row)%2===0?'#3a8044':'#378040');
         ctx.fillStyle = sgBg; ctx.fillRect(x, y, S, S);
         ctx.fillStyle = '#5a3c1e'; ctx.fillRect(x+S/2-2, y+S/2, 4, S/2);
         ctx.fillStyle = '#c4a060'; ctx.fillRect(x+6, y+8, S-12, 18);
