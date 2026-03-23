@@ -393,14 +393,14 @@
                 const current = LANGUAGES[currentLang];
                 const btn = document.createElement('div');
                 btn.className = 'lang-dropdown-btn';
-                btn.innerHTML = `${current.flag || ''} ${current.name} &#x25BC;`;
+                btn.innerHTML = `<span style="font-size:21px;vertical-align:middle;">${current.flag || ''}</span> ${current.name} &#x25BC;`;
                 const menu = document.createElement('div');
                 menu.className = 'lang-dropdown-menu';
                 menu.style.display = 'none';
                 Object.entries(LANGUAGES).forEach(([code, lang]) => {
                     const item = document.createElement('div');
                     item.className = 'lang-dropdown-item' + (code === currentLang ? ' active' : '');
-                    item.innerHTML = `${lang.flag || ''} ${lang.name}`;
+                    item.innerHTML = `<span style="font-size:18px;vertical-align:middle;">${lang.flag || ''}</span> ${lang.name}`;
                     item.addEventListener('click', (e) => {
                         e.stopPropagation();
                         setLanguage(code);
