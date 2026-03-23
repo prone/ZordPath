@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head><title>Generate ZordPath Icon</title></head>
+<body style="background:#333;color:#fff;font-family:monospace;text-align:center;padding:40px;">
+<h2>ZordPath App Icon Generator</h2>
+<canvas id="icon" width="1024" height="1024" style="width:256px;height:256px;border:2px solid #666;image-rendering:pixelated;"></canvas>
+<br><br>
+<button onclick="download()" style="font-size:18px;padding:12px 24px;cursor:pointer;">Download 1024x1024 PNG</button>
+<script>
+const c = document.getElementById('icon');
+const ctx = c.getContext('2d');
+const S = 1024;
+
+// Background
+ctx.fillStyle = '#1a1a2e';
+ctx.fillRect(0, 0, S, S);
+
+// Radial glow
+const grad = ctx.createRadialGradient(S/2, S/2, S*0.15, S/2, S/2, S*0.55);
+grad.addColorStop(0, 'rgba(245,200,66,0.18)');
+grad.addColorStop(1, 'rgba(0,0,0,0)');
+ctx.fillStyle = grad;
+ctx.fillRect(0, 0, S, S);
+
+// Z dimensions
+const p = 20; // pixel unit
+const ox = 200, oy = 140;
+const zw = 624, zh = 520;
+
+function drawZ(ctx, x, y, w, h, pw, color) {
+    ctx.fillStyle = color;
+    // Top bar
+    ctx.fillRect(x, y, w, pw * 3);
+    // Diagonal blocks
+    for (let i = 0; i < 8; i++) {
+        const dx = x + w - pw*4 - (i * (w - pw*4) / 7);
+        const dy = y + pw*3 + (i * (h - pw*6) / 7);
+        ctx.fillRect(dx, dy, pw*4, pw*2.5);
+    }
+    // Bottom bar
+    ctx.fillRect(x, y + h - pw*3, w, pw * 3);
+}
+
+// Deep shadow
+drawZ(ctx, ox + 6, oy + 6, zw, zh, p, '#201008');
+// Dark outline
+drawZ(ctx, ox + 3, oy + 3, zw, zh, p, '#402010');
+// Main gold
+drawZ(ctx, ox, oy, zw, zh, p, '#f0c840');
+// Highlight top
+drawZ(ctx, ox, oy - 4, zw, zh, p, '#f8e080');
+// Bright highlight (thinner, top edges only)
+ctx.fillStyle = '#fff8d0';
+ctx.fillRect(ox, oy - 4, zw, p * 1.5);
+ctx.fillRect(ox, oy + zh - p*3 - 4, zw, p * 1.5);
+
+// "PATH" text below
+ctx.font = 'bold 64px "Courier New", monospace';
+ctx.textAlign = 'center';
+ctx.textBaseline = 'top';
+ctx.fillStyle = '#302010';
+ctx.fillText('PATH', S/2 + 3, oy + zh + 40 + 3);
+ctx.fillStyle = '#8888aa';
+ctx.fillText('PATH', S/2, oy + zh + 40);
+
+// Corner decoration (small crystals)
+function crystal(x, y, size, color) {
+    ctx.fillStyle = color;
+    ctx.fillRect(x - size/2, y - size, size, size * 2);
+    ctx.fillRect(x - size, y - size/2, size * 2, size);
+    ctx.fillStyle = '#fff';
+    ctx.globalAlpha = 0.3;
+    ctx.fillRect(x - size/4, y - size*0.8, size/2, size*0.5);
+    ctx.globalAlpha = 1;
+}
+crystal(120, 860, 24, '#9b59b6');
+crystal(900, 860, 20, '#4ecca3');
+crystal(120, 160, 18, '#e94560');
+crystal(900, 160, 22, '#f5c842');
+
+function download() {
+    const a = document.createElement('a');
+    a.download = 'AppIcon-1024.png';
+    a.href = c.toDataURL('image/png');
+    a.click();
+}
+</script>
+</body>
+</html>
