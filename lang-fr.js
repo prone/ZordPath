@@ -760,3 +760,82 @@ Pour prouver la causalité, il faut :
     ]
   }
 };
+
+// NPC Dialogue translations
+LANGUAGES.fr.npcDialogue = {
+    'Elder Tautology': [
+        'Bienvenue dans le Pays de la Logique, voyageur ! Ici, la vérité et la raison sont tes meilleures armes.',
+        'Souviens-toi : une affirmation est soit VRAIE soit FAUSSE. En logique classique, il n\'y a pas de juste milieu !',
+        'Si tu veux vaincre le Seigneur de la Logique, tu dois maîtriser les cinq leçons. Travaille bien !'
+    ],
+    'Merchant Mira': [
+        'Tu veux acheter quelque chose ? Va à la boutique !',
+        "J'ai entendu dire que la Chauve-souris Paradoxe lâche plein de rubis si tu réussis son quiz.",
+        'Tu veux construire une maison dans le Pays de la Logique ? Tu auras besoin de bois, de pierre et de clous à la boutique.'
+    ],
+    'Scout Axiom': [
+        "J'ai exploré les grottes proches. Il y a des ennemis qui rôdent dans chaque recoin !",
+        'Avant chaque bataille, tu devras étudier une leçon de logique et répondre à des questions.',
+        'Plus l\'ennemi est difficile, plus tu gagnes de rubis. Mais les quiz deviennent plus durs aussi !'
+    ],
+    'Al-Muṣawwir': [
+        'Ah, un autre bâtisseur ! Quand tu auras assez de matériaux, viens me parler de construction.',
+        'Une petite cabane nécessite 5 bois et 3 pierres. Un atelier en demande encore plus !',
+        'Les rubis, c\'est bien, mais ce sont les matériaux qui construisent les civilisations !'
+    ],
+    'ZordTamer Kira': [
+        'Bienvenue, jeune dompteur ! Les Zords sont les créatures qui peuplent ces terres. Avec une CageZord, tu peux les apprivoiser !',
+        'Affaiblis un Zord en combat, puis appuie sur C pour lancer une CageZord. Plus il est faible, plus c\'est facile à attraper !',
+        'Je peux te vendre des CagesZord et soigner tes Zords. Appuie sur Z à tout moment pour voir ta ListeZord !',
+        'Certains Zords sont très rares. Le Drake Prismatique du temple est presque impossible à attraper !',
+        'Collecte-les tous et deviens le plus grand DompteurZord du Pays de la Logique !'
+    ],
+    'Challenge Master Rho': [
+        'Je suis le Maître des Défis ! Tu crois connaître la logique ? Prouve-le !',
+        'En Mode Défi, tu réponds question après question. Accumule ton multiplicateur en enchaînant les bonnes réponses !',
+        'Mais fais attention — trois mauvaises réponses et c\'est TERMINÉ. Mets tes points de côté en rubis quand tu te retires !',
+        'Plus tu tiens longtemps, meilleur est ton badge. Peux-tu décrocher le badge LÉGENDAIRE ?'
+    ],
+    'Captain Coral': [
+        'Ahoy ! Bienvenue sur la Plage de la Crique aux Coraux ! La brise marine libère l\'esprit pour penser de façon logique.',
+        'Méfie-toi des Crabes des Marées — ils pincent fort ! Et les Golems de Coquillage sont durs comme des patelles.',
+        'Le quai là-bas est parfait pour pêcher. Il y a de plus gros poissons dans l\'océan que dans l\'étang du village !',
+        'Si tu vois une Méduse Dérivante, attention à son Dard Électrique. Les attaques électriques font mal !'
+    ],
+    'Ranger Flint': [
+        'Bienvenue aux Montagnes du Pic de Fer ! L\'air est rare ici, mais la vue en vaut la peine.',
+        'Le Yéti de Cristal est la créature la plus puissante de ces sommets. Peu ont réussi à en attraper un !',
+        'Les Loups de Givre chassent dans les champs enneigés. Ils sont rapides et frappent fort avec la glace.',
+        'Il y a un petit lac alpin plus loin — bon pour pêcher si tu as une canne.'
+    ],
+    'Ferry Captain Finn': [
+        'Ahoy ! Je fais la traversée en ferry vers la mystérieuse île au-delà de la mer !',
+        'L\'île abrite des créatures que tu ne trouveras nulle part ailleurs sur le continent.',
+        'On dit qu\'une Manta Tempête rôde dans les eaux profondes autour de l\'île. Très rare !',
+        'Les habitants de l\'île sont accueillants. Ils ont leur propre boutique et des spots de pêche.'
+    ],
+    'Island Elder Kai': [
+        'Bienvenue sur notre île, voyageur ! Peu de gens du continent trouvent le chemin jusqu\'ici.',
+        'Les créatures ici sont uniques — Crabes Cocotiers, Serpents de Récif et la légendaire Manta Tempête.',
+        'Nos Esprits Tiki gardent une connaissance ancienne. Bats-les pour apprendre la logique la plus profonde !',
+        'Le quai du ferry est au nord si tu veux retourner à la plage.'
+    ]
+};
+
+// Store item translations
+LANGUAGES.fr.storeItems = {
+    'Health Potion':   { name: 'Potion de Santé',        desc: 'Restaure 30 HP' },
+    'Wooden Shield':   { name: 'Bouclier en Bois',       desc: '+3 Déf, bloque en combat (Shift)' },
+    'Iron Sword':      { name: 'Épée en Fer',            desc: '+5 Atk, frappe plus rapide en combat' },
+    'Magic Staff':     { name: 'Bâton Magique',          desc: 'Lance des boules de feu en combat !' },
+    'Fishing Pole':    { name: 'Canne à Pêche',          desc: 'Pêche au lac ! Mange ou vends le poisson.' },
+    'Wood Planks':     { name: 'Planches de Bois',       desc: 'Matériau de construction de base' },
+    'Stone Blocks':    { name: 'Blocs de Pierre',        desc: 'Matériau de construction solide' },
+    'Iron Nails':      { name: 'Clous en Fer',           desc: 'Maintient tout ensemble' },
+    'Glass Panes':     { name: 'Vitres',                 desc: 'Pour les fenêtres' },
+    'Rope':            { name: 'Corde',                  desc: 'Utile pour construire' },
+    'Island Bar':      { name: 'Barre Insulaire',        desc: 'En-cas sucré, restaure 25 HP' },
+    'Coconut Water':   { name: 'Eau de Coco',            desc: 'Rafraîchissant ! Restaure 15 HP' },
+    'Tropic Charm':    { name: 'Charme Tropical',        desc: '+10% de chance d\'attraper des Zords insulaires' },
+    'Palm Wood':       { name: 'Bois de Palmier',        desc: 'Bois insulaire léger' }
+};

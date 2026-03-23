@@ -760,3 +760,82 @@ Para probar la causalidad necesitas:
     ]
   }
 };
+
+// NPC Dialogue translations
+LANGUAGES.es.npcDialogue = {
+    'Elder Tautology': [
+        '¡Bienvenido a la Tierra de la Lógica, viajero! Aquí, la verdad y la razón son tus mejores armas.',
+        'Recuerda: una afirmación es VERDADERA o FALSA. ¡En la lógica clásica no hay término medio!',
+        'Si quieres vencer al Señor de la Lógica, debes dominar las cinco lecciones. ¡Estudia mucho!'
+    ],
+    'Merchant Mira': [
+        '¿Quieres comprar algo? ¡Ve a la tienda!',
+        'Dicen que el Murciélago Paradoja suelta muchos rubíes si superas su quiz.',
+        'Si quieres construir una casa en la Tierra de la Lógica, necesitarás madera, piedra y clavos de la tienda.'
+    ],
+    'Scout Axiom': [
+        'He explorado las cuevas cercanas. ¡Hay enemigos acechando en cada rincón!',
+        'Antes de cada batalla, tendrás que estudiar una lección de lógica y responder preguntas sobre ella.',
+        '¡Cuanto más difícil el enemigo, más rubíes ganas. Pero los quizzes también se ponen más duros!'
+    ],
+    'Al-Muṣawwir': [
+        '¡Ah, otro constructor! Cuando tengas suficientes materiales, ven a hablar conmigo sobre construcción.',
+        'Una cabaña pequeña necesita 5 maderas y 3 piedras. ¡Un taller necesita aún más!',
+        'Los rubíes están bien, ¡pero los materiales son los que construyen civilizaciones!'
+    ],
+    'ZordTamer Kira': [
+        '¡Bienvenido, joven domador! Los Zords son las criaturas que viven en estas tierras. ¡Con una JaulaZord puedes domarlos!',
+        'Debilita a un Zord en batalla, luego presiona C para lanzar la JaulaZord. ¡Cuanto más débil, más fácil de atrapar!',
+        'Puedo venderte JaulasZord y curar a tus Zords. ¡Pulsa Z en cualquier momento para ver tu ListaZord!',
+        'Algunos Zords son muy raros. ¡El Dragón Prismático del templo es casi imposible de atrapar!',
+        '¡Coléctalos todos y conviértete en el mayor DomadorZord de la Tierra de la Lógica!'
+    ],
+    'Challenge Master Rho': [
+        '¡Soy el Maestro del Desafío! ¿Crees que sabes lógica? ¡Demuéstralo!',
+        'En el Modo Desafío, respondes pregunta tras pregunta. ¡Acumula tu multiplicador con rachas de aciertos!',
+        'Pero ten cuidado: tres respuestas incorrectas y se ACABÓ. ¡Guarda tus puntos como rubíes cuando te retires!',
+        '¡Cuanto más aguantes, mejor tu medalla. ¿Puedes ganar la medalla LEGENDARIA?'
+    ],
+    'Captain Coral': [
+        '¡Ahoy! ¡Bienvenido a la Playa de la Cala de Coral! La brisa del mar despeja la mente para pensar con lógica.',
+        'Cuidado con los Cangrejos de Marea: ¡pellizcan fuerte! Y los Golems de Concha son duros como lapas.',
+        'El muelle de allá es perfecto para pescar. ¡En el océano hay peces más grandes que en el estanque del pueblo!',
+        'Si ves una Medusa Flotante, cuidado con su Aguijón Eléctrico. ¡Los ataques eléctricos duelen!'
+    ],
+    'Ranger Flint': [
+        '¡Bienvenido a las Montañas de Pico de Hierro! El aire es escaso aquí arriba, pero las vistas valen la pena.',
+        'El Yeti de Cristal es la criatura más poderosa de estos picos. ¡Pocos han logrado atrapar uno!',
+        'Los Lobos de Escarcha cazan en los campos nevados. Son rápidos y atacan fuerte con hielo.',
+        'Hay un pequeño lago alpino más adentro: perfecto para pescar si tienes una caña.'
+    ],
+    'Ferry Captain Finn': [
+        '¡Ahoy! ¡Llevo el ferry a la misteriosa isla al otro lado del mar!',
+        'La isla tiene criaturas que no encontrarás en ningún otro lugar del continente.',
+        'Se dice que una Manta Tormentosa acecha en las aguas profundas alrededor de la isla. ¡Muy rara!',
+        'Los isleños son muy amables. Tienen su propia tienda y lugares para pescar.'
+    ],
+    'Island Elder Kai': [
+        '¡Bienvenido a nuestra isla, viajero! Pocos del continente encuentran el camino hasta aquí.',
+        'Las criaturas de aquí son únicas: Cangrejos Cocotero, Serpientes de Arrecife y la legendaria Manta Tormentosa.',
+        'Nuestros Espíritus Tiki guardan conocimiento ancestral. ¡Derrótarlos para aprender la lógica más profunda!',
+        'El muelle del ferry está al norte si quieres volver a la playa.'
+    ]
+};
+
+// Store item translations
+LANGUAGES.es.storeItems = {
+    'Health Potion':   { name: 'Poción de Salud',       desc: 'Restaura 30 HP' },
+    'Wooden Shield':   { name: 'Escudo de Madera',      desc: '+3 Def, bloquea en batalla (Shift)' },
+    'Iron Sword':      { name: 'Espada de Hierro',      desc: '+5 Atk, tajo más rápido en batalla' },
+    'Magic Staff':     { name: 'Bastón Mágico',         desc: '¡Lanza bolas de fuego en batalla!' },
+    'Fishing Pole':    { name: 'Caña de Pescar',        desc: '¡Pesca en el lago! Come o vende el pescado.' },
+    'Wood Planks':     { name: 'Tablones de Madera',    desc: 'Material de construcción básico' },
+    'Stone Blocks':    { name: 'Bloques de Piedra',     desc: 'Material de construcción resistente' },
+    'Iron Nails':      { name: 'Clavos de Hierro',      desc: 'Une todo lo demás' },
+    'Glass Panes':     { name: 'Paneles de Vidrio',     desc: 'Para las ventanas' },
+    'Rope':            { name: 'Cuerda',                desc: 'Útil para construir' },
+    'Island Bar':      { name: 'Barra Isleña',          desc: 'Golosina dulce, restaura 25 HP' },
+    'Coconut Water':   { name: 'Agua de Coco',          desc: '¡Refrescante! Restaura 15 HP' },
+    'Tropic Charm':    { name: 'Amuleto Tropical',      desc: '+10% de probabilidad de atrapar Zords isleños' },
+    'Palm Wood':       { name: 'Madera de Palma',       desc: 'Madera isleña ligera' }
+};
