@@ -406,6 +406,7 @@ function escapeHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&l
 // ============================================================
 const SAVE_VERSION = 1;
 const SAVE_PREFIX = 'zordpath_save_';
+const MAX_SAVE_SLOTS = 6;
 
 function saveToSlot(i) {
     const data = {
@@ -4509,7 +4510,7 @@ function showScreen(screenId) {
 // TITLE SCREEN (Save Slots)
 // ============================================================
 function renderSaveSlots() {
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < MAX_SAVE_SLOTS; i++) {
         const el = document.getElementById('save-slot-' + i);
         if (!el) continue;
         const preview = loadSlotPreview(i);
@@ -4555,10 +4556,14 @@ document.getElementById('save-slots-container').addEventListener('click', (e) =>
 });
 
 document.getElementById('btn-new-game').addEventListener('click', () => {
-    // Find an empty slot, or default to 0
-    let slot = 0;
-    for (let i = 0; i < 3; i++) {
+    // Find an empty slot
+    let slot = -1;
+    for (let i = 0; i < MAX_SAVE_SLOTS; i++) {
         if (!loadSlotPreview(i)) { slot = i; break; }
+    }
+    if (slot === -1) {
+        showGameConfirm('All save slots are full. Delete a save first.', () => {});
+        return;
     }
     state.currentSaveSlot = slot;
     showScreen('character');
@@ -4998,7 +5003,7 @@ function beginAdventure() {
 
     // Pick first available save slot
     if (state.currentSaveSlot === null) {
-        for (let i = 0; i < 3; i++) {
+        for (let i = 0; i < MAX_SAVE_SLOTS; i++) {
             if (!loadSlotPreview(i)) { state.currentSaveSlot = i; break; }
         }
         if (state.currentSaveSlot === null) state.currentSaveSlot = 0;
