@@ -43,5 +43,8 @@ registerLanguage('ur', 'اردو', '\u{1F1F5}\u{1F1F0}', {
     trainingComplete: '!تربیت مکمل', addToBench: 'ٹیم میں شامل کرو',
     removeFromBench: 'ہٹاؤ', benchFull: 'ٹیم بھری ہوئی',
     challenge: 'چیلنج', rematch: 'دوبارہ مقابلہ',
+    theLegendOf: 'کی  داستان',
+    worldsOfKnowledge: 'علم کی دنیائیں',
+    emptySlotN: 'خالی جگہ',
     selectLanguage: 'زبان'
 });

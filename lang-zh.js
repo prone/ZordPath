@@ -43,5 +43,8 @@ registerLanguage('zh', '中文', '\u{1F1F9}\u{1F1FC}', {
     trainingComplete: '訓練完成！', addToBench: '加入隊伍',
     removeFromBench: '移除', benchFull: '隊伍已滿',
     challenge: '挑戰', rematch: '重賽',
+    theLegendOf: '傳說',
+    worldsOfKnowledge: '知識的世界',
+    emptySlotN: '空位',
     selectLanguage: '語言'
 });

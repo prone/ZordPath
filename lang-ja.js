@@ -43,5 +43,8 @@ registerLanguage('ja', '日本語', '\u{1F1EF}\u{1F1F5}', {
     trainingComplete: 'トレーニング完了！', addToBench: 'チームに加える',
     removeFromBench: '外す', benchFull: 'チーム満員',
     challenge: 'チャレンジ', rematch: '再戦',
+    theLegendOf: '伝説の',
+    worldsOfKnowledge: '知識の世界',
+    emptySlotN: '空きスロット',
     selectLanguage: '言語'
 });

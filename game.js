@@ -49,7 +49,10 @@ const LANG_EN = {
     trainingComplete: 'Training Complete!', addToBench: 'Add to Bench',
     removeFromBench: 'Remove', benchFull: 'Bench Full',
     challenge: 'Challenge', rematch: 'Rematch',
-    selectLanguage: 'Language'
+    selectLanguage: 'Language',
+    theLegendOf: 'THE  LEGEND  OF',
+    worldsOfKnowledge: 'WORLDS OF KNOWLEDGE',
+    emptySlotN: 'Empty Slot'
 };
 
 // Language registry — translations loaded from lang-*.js files
@@ -77,6 +80,18 @@ function setLanguage(code) {
         currentLang = code;
         localStorage.setItem('zordpath_lang', code);
     }
+}
+
+// Get a lesson with translated content if available
+function getLesson(lessonId) {
+    const lang = LANGUAGES[currentLang];
+    if (lang && lang.lessons && lang.lessons[lessonId]) {
+        // Merge: use translated title/content/questions but keep original id
+        const translated = lang.lessons[lessonId];
+        const original = getLesson(lessonId);
+        return { ...original, ...translated, id: lessonId };
+    }
+    return getLesson(lessonId);
 }
 
 // ============================================================
@@ -3458,7 +3473,7 @@ const GAME_W = 512, GAME_H = 448;
         }
 
         // "The Legend of" above title
-        drawOutlinedText('THE  LEGEND  OF', W / 2, fy + 12, '6px "Press Start 2P", monospace', '#ccccdd');
+        drawOutlinedText(t('theLegendOf'), W / 2, fy + 12, '6px "Press Start 2P", monospace', '#ccccdd');
 
         // Main title
         c.font = '18px "Press Start 2P", monospace';
@@ -3554,7 +3569,7 @@ const GAME_W = 512, GAME_H = 448;
         }
 
         // Subtitle
-        drawOutlinedText('WORLDS OF KNOWLEDGE', W / 2, fy + 55, '5px "Press Start 2P", monospace', '#9999bb');
+        drawOutlinedText(t('worldsOfKnowledge'), W / 2, fy + 55, '5px "Press Start 2P", monospace', '#9999bb');
 
         // --- GROUND DETAIL ---
         for (let x = 0; x < W; x += 2) {
@@ -4314,7 +4329,7 @@ function renderSaveSlots() {
                 `</span>` +
                 `<span class="slot-delete" data-slot="${i}" title="Delete save">[X]</span>`;
         } else {
-            el.innerHTML = `<span class="slot-empty">-- Empty Slot ${i + 1} --</span>`;
+            el.innerHTML = `<span class="slot-empty">-- ${t('emptySlot')} ${i + 1} --</span>`;
         }
     }
 }
@@ -6323,7 +6338,7 @@ function encounterEnemy(enemyIndex) {
         startBattle();
     } else {
         const lessonId = getEnemyLessonId(enemyIndex, enemy.lessonId);
-        const lesson = LOGIC_LESSONS.find(l => l.id === lessonId);
+        const lesson = getLesson(lessonId);
         const masteryLevel = getMasteryLevel(lessonId);
         const questionSet = buildQuizQuestionSet(lesson, masteryLevel);
         state.currentLesson = { ...lesson, questionSet };
@@ -6693,7 +6708,7 @@ function startArenaMatch(trainerIndex) {
     state._arenaPostQuiz = true;
     const unlocked = getUnlockedLessonIds();
     const lessonId = unlocked[Math.floor(Math.random() * unlocked.length)];
-    const lesson = LOGIC_LESSONS.find(l => l.id === lessonId);
+    const lesson = getLesson(lessonId);
     const masteryLevel = getMasteryLevel(lessonId);
     const questionSet = buildQuizQuestionSet(lesson, masteryLevel);
     state.currentLesson = { ...lesson, questionSet };
@@ -7046,7 +7061,7 @@ function startSpaTraining() {
     // Pick a random lesson
     const unlocked = getUnlockedLessonIds();
     const lessonId = unlocked[Math.floor(Math.random() * unlocked.length)];
-    const lesson = LOGIC_LESSONS.find(l => l.id === lessonId);
+    const lesson = getLesson(lessonId);
 
     // Pick 5 random questions
     const shuffled = [...lesson.questions].sort(() => Math.random() - 0.5);
@@ -7950,7 +7965,7 @@ function startChallenge() {
     const unlocked = getUnlockedLessonIds();
     const allQuestions = [];
     unlocked.forEach(id => {
-        const lesson = LOGIC_LESSONS.find(l => l.id === id);
+        const lesson = getLesson(id);
         if (lesson) {
             lesson.questions.forEach(q => allQuestions.push({ ...q, lessonId: id }));
         }
@@ -8973,7 +8988,7 @@ function showQuizWalkthrough(selectedIdx, correctIdx, buttons) {
 // ============================================================
 function showCatchQuiz(enemy, b) {
     // Pick a random question from the enemy's lesson
-    const lesson = LOGIC_LESSONS.find(l => l.id === enemy.lessonId);
+    const lesson = getLesson(enemy.lessonId);
     if (!lesson || !lesson.questions.length) {
         // No questions available — just catch directly
         completeCatch(enemy, b);
