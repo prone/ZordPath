@@ -199,3 +199,5 @@ LANGUAGES.ja.storeItems = {
 
 // Character descriptions
 LANGUAGES.ja.charDescs = { nyela: "クイズでルビー2倍。ゾードのXP2倍。", nasir: "強打。攻撃時20%ライフスティール。", duncan: "タフ。ダメージ30%軽減。", laila: "素早い。移動速度アップ。捕獲率2倍。" };
+// Character names
+LANGUAGES.ja.charNames = { nyela: "ニエラ", nasir: "ナシール", duncan: "ダンカン", laila: "ライラ" };

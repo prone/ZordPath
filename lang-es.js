@@ -842,3 +842,5 @@ LANGUAGES.es.storeItems = {
 
 // Character descriptions
 LANGUAGES.es.charDescs = { nyela: "2x rubíes en quizzes. Zords ganan 2x XP.", nasir: "Golpea fuerte. 20% robo de vida en ataques.", duncan: "Resistente. Recibe 30% menos daño.", laila: "Rápida. Se mueve más rápido. 2x tasa de captura." };
+// Character names
+LANGUAGES.es.charNames = { nyela: "Niela", nasir: "Nasir", duncan: "Diego", laila: "Laila" };

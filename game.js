@@ -232,6 +232,14 @@ function td(key) {
     return key; // For diagrams, the key IS the English text
 }
 
+// Get translated character name
+function getCharName(charId) {
+    const lang = LANGUAGES[currentLang];
+    if (lang && lang.charNames && lang.charNames[charId]) return lang.charNames[charId];
+    const cls = CHARACTER_CLASSES.find(c2 => c2.id === charId);
+    return cls ? cls.name : charId;
+}
+
 // Get translated character description
 function getCharDesc(charId) {
     const lang = LANGUAGES[currentLang];
@@ -4523,8 +4531,8 @@ function renderSaveSlots() {
                 `</span>` +
                 `<span class="slot-delete" data-slot="${i}" title="Delete save">[X]</span>`;
         } else {
-            const charName = CHARACTER_CLASSES[i] ? CHARACTER_CLASSES[i].name : '';
-            el.innerHTML = `<span class="slot-empty">-- ${charName} (${t('emptySlot')}) --</span>`;
+            const charId = CHARACTER_CLASSES[i] ? CHARACTER_CLASSES[i].id : '';
+            el.innerHTML = `<span class="slot-empty">-- ${getCharName(charId)} (${t('emptySlot')}) --</span>`;
         }
     }
 }
@@ -4875,9 +4883,9 @@ function drawCharSelect() {
         drawCharSprite(c, 110, sy + slot.h / 2 + 4, cls, charSelectFrame);
 
         // Number + Name (editable if selected)
-        let displayName = `${i + 1}. ${cls.name}`;
+        let displayName = `${i + 1}. ${getCharName(cls.id)}`;
         if (selected && editingName) {
-            const currentName = document.getElementById('char-name').value || cls.name;
+            const currentName = document.getElementById('char-name').value || getCharName(cls.id);
             displayName = `${i + 1}. ${currentName}`;
             // Blinking cursor
             if (charSelectFrame % 40 < 25) displayName += '_';
@@ -4957,7 +4965,7 @@ let editingName = false;
 function selectCharacter(cls) {
     state.character = cls;
     const inp = document.getElementById('char-name');
-    inp.value = cls.name;
+    inp.value = getCharName(cls.id);
     editingName = true;
     // Focus the hidden input to capture keyboard
     setTimeout(() => inp.focus(), 50);
@@ -4978,6 +4986,32 @@ function beginAdventure() {
     const name = document.getElementById('char-name').value.trim();
     if (!name) { document.getElementById('char-name').style.borderColor = 'var(--accent)'; return; }
     if (!state.character) return;
+
+    // Check if this character already has a save
+    const charIdx = CHARACTER_CLASSES.findIndex(c2 => c2.id === state.character.id);
+    const existingSave = loadSlotPreview(charIdx);
+    if (existingSave && !state._overwriteConfirmed) {
+        showGameConfirm(`${getCharName(state.character.id)} already has a save (Lv.${existingSave.playerLevel}). Continue existing game or start new?`, () => {
+            // Overwrite - start fresh
+            state._overwriteConfirmed = true;
+            beginAdventure();
+        });
+        // Add a "Continue" option
+        const overlay = document.querySelector('.inventory-overlay:last-child') || document.body.lastElementChild;
+        if (overlay && overlay.querySelector) {
+            const btnRow = overlay.querySelector('div[style*="flex"]');
+            if (btnRow) {
+                const contBtn = document.createElement('button');
+                contBtn.className = 'btn btn-primary';
+                contBtn.style.fontSize = '10px';
+                contBtn.textContent = t('continue');
+                contBtn.addEventListener('click', () => { overlay.remove(); loadFromSlot(charIdx); });
+                btnRow.insertBefore(contBtn, btnRow.firstChild);
+            }
+        }
+        return;
+    }
+    state._overwriteConfirmed = false;
 
     state.name = name;
     trackGameStart(name);

@@ -831,3 +831,5 @@ LANGUAGES.zh.storeItems = {
 
 // Character descriptions
 LANGUAGES.zh.charDescs = { nyela: "測驗獲得2倍紅寶石。佐德獲得2倍XP。", nasir: "攻擊力強。攻擊時20%吸血。", duncan: "堅韌。受到30%更少傷害。", laila: "敏捷。移動更快。2倍捕捉率。" };
+// Character names
+LANGUAGES.zh.charNames = { nyela: "妮菈", nasir: "納西爾", duncan: "鄧肯", laila: "萊拉" };

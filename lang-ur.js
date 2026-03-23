@@ -199,3 +199,5 @@ LANGUAGES.ur.storeItems = {
 
 // Character descriptions
 LANGUAGES.ur.charDescs = { nyela: "کوئز سے 2 گنا یاقوت۔ زورڈز کو 2 گنا XP۔", nasir: "سخت وار۔ حملوں پر 20% زندگی چوری۔", duncan: "مضبوط۔ 30% کم نقصان۔", laila: "تیز۔ تیز چلتی ہے۔ 2 گنا پکڑنے کی شرح۔" };
+// Character names
+LANGUAGES.ur.charNames = { nyela: "نائلہ", nasir: "ناصر", duncan: "دانیال", laila: "لیلیٰ" };
