@@ -4,7 +4,7 @@
   "description": "A children's educational RPG that teaches logic through adventure, battles, and quizzes.",
   "main": "game.js",
   "scripts": {
-    "build": "cp index.html style.css game.js PressStart2P.ttf privacy.html lang-*.js www/",
+    "build": "cp index.html style.css game.js PressStart2P.ttf privacy.html lang*.js www/",
     "sync": "npm run build && npx cap sync ios",
     "open": "npx cap open ios",
     "ios": "npm run sync && npm run open"
