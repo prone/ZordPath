@@ -3,6 +3,83 @@
 // ============================================================
 
 // ============================================================
+// INTERNATIONALIZATION (i18n)
+// ============================================================
+const LANG_EN = {
+    pushStart: 'NEW GAME', continue: 'Continue', correct: 'Correct!', incorrect: 'Incorrect!',
+    tryAgain: 'Try Again', next: 'Next', back: 'Back', viewDiagram: 'View Diagram',
+    startQuiz: 'Start Quiz!', fight: 'FIGHT', zord: 'ZORD', item: 'ITEM', run: 'RUN',
+    attack: 'Attack', switchZord: 'Switch Zord', retreat: 'Retreat', potion: 'Potion',
+    deploy: 'Deploy', catch: 'Catch', block: 'Block', action: 'ACTION', talk: 'TALK',
+    inventory: 'INV', map: 'MAP', help: 'HELP', quiz: 'QUIZ',
+    leaveStore: 'Leave Store', buy: 'Buy', soldOut: 'SOLD OUT', rubies: 'Rubies',
+    healAll: 'Heal All Zords', free: 'FREE', confirm: 'Confirm', cancel: 'Cancel',
+    close: 'Close', save: 'Save', delete: 'Delete', emptySlot: 'Empty Slot',
+    enterHouse: 'Enter House', enterStore: 'Enter Store', enterArena: 'Enter Arena',
+    readSign: 'Read Sign', fishHere: 'Fish here', enter: 'Enter', search: 'Search',
+    exit: 'Exit', zordHospital: 'Zord Hospital', zordSpa: 'Zord Spa',
+    testing: 'TESTING', levelUp: 'LEVEL UP!', reportCard: 'REPORT CARD',
+    strengths: 'Strengths', needsPractice: 'Needs Practice',
+    mostMissed: 'Most Missed Questions', downloadPdf: 'Download PDF',
+    overallScore: 'Overall Score', student: 'Student', date: 'Date',
+    topic: 'Introduction to Logic', playTime: 'Play Time',
+    slide: 'Slide', of: 'of', question: 'Question', score: 'Score',
+    streak: 'Streak', lives: 'Lives', bankQuit: 'Bank Points & Quit',
+    challengeComplete: 'Challenge Complete!', gameOver: 'Game Over!',
+    runesCollected: 'Logic Runes', zordsCaught: 'Zords Caught',
+    sailToIsland: 'Sail to the Island!', sailToBeach: 'Sail to Beach',
+    sailingToIsland: 'Sailing to Mystery Island...', sailingToBeach: 'Sailing back to Coral Cove...',
+    perfectCast: 'Perfect cast!', goodCast: 'Good cast!',
+    waitingBite: 'Waiting for a bite...', fishOn: 'FISH ON!',
+    easyReel: 'Perfect cast - easy reel!', mashSpace: 'Mash Space to reel in!',
+    nothingHere: 'Nothing to find here.', alreadyCollected: 'You already collected this rune.',
+    wrongAnswer: 'Wrong!', correctAnswer: 'Correct!', theAnswerIs: 'The answer is:',
+    comeBackLater: 'Come back and try again!', catchSuccessful: 'Catch successful!',
+    brokeFree: 'broke free!', escaped: 'Escaped!', defeated: 'defeated!',
+    victory: 'Victory!', youWereDefeated: 'You were defeated...',
+    caught: 'CAUGHT!', giveNickname: 'Give it a nickname:',
+    chooseZord: 'Choose a Zord to deploy!',
+    yourZordFainted: 'Your Zord fainted! Choose another!',
+    allZordsFainted: 'All your Zords fainted!',
+    cantRunArena: "Can't run from an Arena battle!",
+    noZords: 'You have no Zords yet!', startChallenge: 'Start Challenge!',
+    tellMeMore: 'Tell me more', notNow: 'Not now',
+    returnToTown: 'Return to Town', returnToArena: 'Return to Arena',
+    startTraining: 'Start Training', backToSpa: 'Back to Spa',
+    trainingComplete: 'Training Complete!', addToBench: 'Add to Bench',
+    removeFromBench: 'Remove', benchFull: 'Bench Full',
+    challenge: 'Challenge', rematch: 'Rematch',
+    selectLanguage: 'Language'
+};
+
+// Language registry — translations loaded from lang-*.js files
+const LANGUAGES = {
+    en: { name: 'English', strings: LANG_EN },
+};
+
+// Current language
+let currentLang = localStorage.getItem('zordpath_lang') || 'en';
+
+// Translation function
+function t(key) {
+    const lang = LANGUAGES[currentLang];
+    if (lang && lang.strings && lang.strings[key]) return lang.strings[key];
+    return LANG_EN[key] || key;
+}
+
+// Register a language (called from lang-*.js files)
+function registerLanguage(code, name, strings) {
+    LANGUAGES[code] = { name, strings };
+}
+
+function setLanguage(code) {
+    if (LANGUAGES[code]) {
+        currentLang = code;
+        localStorage.setItem('zordpath_lang', code);
+    }
+}
+
+// ============================================================
 // LOCAL STATS (localStorage)
 // ============================================================
 const STATS_KEY = 'zordpath_stats';

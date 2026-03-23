@@ -18,6 +18,7 @@
                 <div class="save-slot" id="save-slot-2" data-slot="2"></div>
             </div>
             <div class="title-start" id="btn-new-game">NEW GAME</div>
+            <div class="title-lang" id="lang-selector"></div>
         </div>
     </div>
 
@@ -376,5 +377,35 @@
     </div>
 
     <script src="game.js"></script>
+    <script src="lang-es.js"></script>
+    <script src="lang-ur.js"></script>
+    <script src="lang-zh.js"></script>
+    <script src="lang-ja.js"></script>
+    <script src="lang-fr.js"></script>
+    <script>
+        // Render language selector after all scripts loaded
+        (function() {
+            const sel = document.getElementById('lang-selector');
+            if (!sel) return;
+            function renderLangButtons() {
+                sel.innerHTML = '';
+                Object.entries(LANGUAGES).forEach(([code, lang]) => {
+                    const btn = document.createElement('span');
+                    btn.className = 'lang-btn' + (code === currentLang ? ' active' : '');
+                    btn.textContent = lang.name;
+                    btn.addEventListener('click', () => {
+                        setLanguage(code);
+                        renderLangButtons();
+                        // Update title screen text
+                        document.getElementById('btn-new-game').textContent = t('pushStart');
+                        renderSaveSlots();
+                    });
+                    sel.appendChild(btn);
+                });
+            }
+            renderLangButtons();
+            document.getElementById('btn-new-game').textContent = t('pushStart');
+        })();
+    </script>
 </body>
 </html>

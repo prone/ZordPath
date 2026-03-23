@@ -208,6 +208,31 @@ body {
     color: #e94560;
 }
 
+.title-lang {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.title-lang .lang-btn {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    color: #8888aa;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.15);
+    padding: 4px 10px;
+    cursor: pointer;
+    border-radius: 3px;
+}
+
+.title-lang .lang-btn:hover, .title-lang .lang-btn.active {
+    color: #f5c842;
+    border-color: #f5c842;
+    background: rgba(245,200,66,0.1);
+}
+
 .title-start {
     font-family: 'Press Start 2P', monospace;
     font-size: 14px;
