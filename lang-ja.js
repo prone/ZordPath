@@ -196,3 +196,6 @@ LANGUAGES.ja.storeItems = {
     'Tropic Charm':    { name: 'トロピックチャーム',   desc: '島のゾードの捕獲率+10%' },
     'Palm Wood':       { name: 'ヤシの木材',           desc: '軽い島の木材' }
 };
+
+// Character descriptions
+LANGUAGES.ja.charDescs = { nyela: "クイズでルビー2倍。ゾードのXP2倍。", nasir: "強打。攻撃時20%ライフスティール。", duncan: "タフ。ダメージ30%軽減。", laila: "素早い。移動速度アップ。捕獲率2倍。" };

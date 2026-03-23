@@ -196,3 +196,6 @@ LANGUAGES.ur.storeItems = {
     'Tropic Charm':    { name: 'اشنکٹبندیی تعویذ',   desc: 'جزیرے کے زورڈز کو پکڑنے کا +10% موقع' },
     'Palm Wood':       { name: 'کھجور کی لکڑی',       desc: 'ہلکی جزیرے کی لکڑی' }
 };
+
+// Character descriptions
+LANGUAGES.ur.charDescs = { nyela: "کوئز سے 2 گنا یاقوت۔ زورڈز کو 2 گنا XP۔", nasir: "سخت وار۔ حملوں پر 20% زندگی چوری۔", duncan: "مضبوط۔ 30% کم نقصان۔", laila: "تیز۔ تیز چلتی ہے۔ 2 گنا پکڑنے کی شرح۔" };

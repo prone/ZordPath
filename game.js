@@ -406,7 +406,7 @@ function escapeHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&l
 // ============================================================
 const SAVE_VERSION = 1;
 const SAVE_PREFIX = 'zordpath_save_';
-const MAX_SAVE_SLOTS = 6;
+const MAX_SAVE_SLOTS = 4; // one per character
 
 function saveToSlot(i) {
     const data = {
@@ -4523,7 +4523,8 @@ function renderSaveSlots() {
                 `</span>` +
                 `<span class="slot-delete" data-slot="${i}" title="Delete save">[X]</span>`;
         } else {
-            el.innerHTML = `<span class="slot-empty">-- ${t('emptySlot')} ${i + 1} --</span>`;
+            const charName = CHARACTER_CLASSES[i] ? CHARACTER_CLASSES[i].name : '';
+            el.innerHTML = `<span class="slot-empty">-- ${charName} (${t('emptySlot')}) --</span>`;
         }
     }
 }
@@ -4556,16 +4557,7 @@ document.getElementById('save-slots-container').addEventListener('click', (e) =>
 });
 
 document.getElementById('btn-new-game').addEventListener('click', () => {
-    // Find an empty slot
-    let slot = -1;
-    for (let i = 0; i < MAX_SAVE_SLOTS; i++) {
-        if (!loadSlotPreview(i)) { slot = i; break; }
-    }
-    if (slot === -1) {
-        showGameConfirm('All save slots are full. Delete a save first.', () => {});
-        return;
-    }
-    state.currentSaveSlot = slot;
+    state.currentSaveSlot = null;
     showScreen('character');
     renderCharacterSelection();
 });
@@ -5001,12 +4993,10 @@ function beginAdventure() {
     state.quizMastery = {};
     initQuizMastery();
 
-    // Pick first available save slot
+    // Save slot = character index (one save per character)
     if (state.currentSaveSlot === null) {
-        for (let i = 0; i < MAX_SAVE_SLOTS; i++) {
-            if (!loadSlotPreview(i)) { state.currentSaveSlot = i; break; }
-        }
-        if (state.currentSaveSlot === null) state.currentSaveSlot = 0;
+        const charIdx = CHARACTER_CLASSES.findIndex(c2 => c2.id === state.character.id);
+        state.currentSaveSlot = charIdx >= 0 ? charIdx : 0;
     }
 
     showScreen('game');
@@ -6634,7 +6624,7 @@ function showZordTamerMenu(npc) {
         document.getElementById('dialogue-text').textContent = line;
         choicesEl.innerHTML = hasMore
             ? '<span style="color:var(--text-dim);font-size:9px">[Space] ...</span>'
-            : '<span style="color:var(--text-dim);font-size:9px">[Space] Close</span>';
+            : `<span style="color:var(--text-dim);font-size:9px">[Space] ${t('close')}</span>`;
     });
     choicesEl.appendChild(chatBtn);
 
@@ -6670,7 +6660,7 @@ function advanceDialogue() {
             document.getElementById('dialogue-text').textContent = line;
             document.getElementById('dialogue-choices').innerHTML = hasMore
                 ? '<span style="color:var(--text-dim);font-size:9px;animation:fadeIn 0.5s ease infinite alternate">[Space] ...</span>'
-                : '<span style="color:var(--text-dim);font-size:9px">[Space] Close</span>';
+                : `<span style="color:var(--text-dim);font-size:9px">[Space] ${t('close')}</span>`;
         }
     } else {
         hideDialogue();
@@ -6691,7 +6681,7 @@ function showDialogue(portrait, speaker, text, hasMore) {
     if (hasMore) {
         choicesEl.innerHTML = '<span style="color:var(--text-dim);font-size:9px;animation:fadeIn 0.5s ease infinite alternate">[Space] ...</span>';
     } else {
-        choicesEl.innerHTML = '<span style="color:var(--text-dim);font-size:9px">[Space] Close</span>';
+        choicesEl.innerHTML = `<span style="color:var(--text-dim);font-size:9px">[Space] ${t('close')}</span>`;
     }
 }
 
@@ -7849,7 +7839,7 @@ function showFerryMenu(npc) {
         document.getElementById('dialogue-text').textContent = line;
         choicesEl.innerHTML = hasMore
             ? '<span style="color:var(--text-dim);font-size:9px">[Space] ...</span>'
-            : '<span style="color:var(--text-dim);font-size:9px">[Space] Close</span>';
+            : `<span style="color:var(--text-dim);font-size:9px">[Space] ${t('close')}</span>`;
     });
     choicesEl.appendChild(chatBtn);
 
@@ -8148,7 +8138,7 @@ function showChallengeMasterMenu(npc) {
         document.getElementById('dialogue-text').textContent = line;
         choicesEl.innerHTML = hasMore
             ? '<span style="color:var(--text-dim);font-size:9px">[Space] ...</span>'
-            : '<span style="color:var(--text-dim);font-size:9px">[Space] Close</span>';
+            : `<span style="color:var(--text-dim);font-size:9px">[Space] ${t('close')}</span>`;
     });
     choicesEl.appendChild(chatBtn);
 

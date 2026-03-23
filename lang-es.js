@@ -839,3 +839,6 @@ LANGUAGES.es.storeItems = {
     'Tropic Charm':    { name: 'Amuleto Tropical',      desc: '+10% de probabilidad de atrapar Zords isleños' },
     'Palm Wood':       { name: 'Madera de Palma',       desc: 'Madera isleña ligera' }
 };
+
+// Character descriptions
+LANGUAGES.es.charDescs = { nyela: "2x rubíes en quizzes. Zords ganan 2x XP.", nasir: "Golpea fuerte. 20% robo de vida en ataques.", duncan: "Resistente. Recibe 30% menos daño.", laila: "Rápida. Se mueve más rápido. 2x tasa de captura." };
