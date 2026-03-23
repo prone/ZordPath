@@ -3502,7 +3502,8 @@ const GAME_W = 512, GAME_H = 448;
         }
 
         // "The Legend of" above title
-        drawOutlinedText(t('theLegendOf'), W / 2, fy + 12, '6px "Press Start 2P", monospace', '#ccccdd');
+        const titleFontSize = (currentLang === 'ur' || currentLang === 'zh' || currentLang === 'ja') ? '8px' : '6px';
+        drawOutlinedText(t('theLegendOf'), W / 2, fy + 12, titleFontSize + ' "Press Start 2P", monospace', '#ccccdd');
 
         // Main title
         c.font = '18px "Press Start 2P", monospace';
@@ -3598,7 +3599,8 @@ const GAME_W = 512, GAME_H = 448;
         }
 
         // Subtitle
-        drawOutlinedText(t('worldsOfKnowledge'), W / 2, fy + 55, '5px "Press Start 2P", monospace', '#9999bb');
+        const subFontSize = (currentLang === 'ur' || currentLang === 'zh' || currentLang === 'ja') ? '7px' : '5px';
+        drawOutlinedText(t('worldsOfKnowledge'), W / 2, fy + 55, subFontSize + ' "Press Start 2P", monospace', '#9999bb');
 
         // --- GROUND DETAIL ---
         for (let x = 0; x < W; x += 2) {
