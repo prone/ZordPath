@@ -52,7 +52,47 @@ const LANG_EN = {
     selectLanguage: 'Language',
     theLegendOf: 'THE  LEGEND  OF',
     worldsOfKnowledge: 'WORLDS OF KNOWLEDGE',
-    emptySlotN: 'Empty Slot'
+    emptySlotN: 'Empty Slot',
+    // Additional UI
+    built: 'BUILT', build: 'Build', theArena: 'The Arena',
+    continueBattle: 'Continue Battle', switchZord: 'Switch Zord',
+    yourZords: 'Your Zords', goodbye: 'Goodbye',
+    trainZords: 'Train Your Zords (Answer Questions for XP!)',
+    trainDesc: 'Answer 5 quiz questions correctly to earn XP for all bench Zords. Costs 5 rubies per session.',
+    remove: 'Remove', collect: 'Collect!',
+    runeYours: 'Correct! The rune is yours!',
+    readyChallenge: 'Ready to test your logic skills? Enter Challenge Mode!',
+    spaComplete: 'Zord Spa - Training Complete!',
+    notQuiteRight: 'Not quite right.',
+    gotIt: 'Got it! Moving on.',
+    studyAnswer: 'Study the answer, then try again for a second chance to catch!',
+    classify: 'Classify this statement:', spotFallacy: 'Spot the fallacy in this argument:',
+    checkAnswers: 'Check Answers', matchFrom: 'Match from:', matchTo: 'Match to:',
+    clickToBuild: 'Click elements below to build...',
+    undo: 'Undo', clear: 'Clear', submit: 'Submit', testCircuit: 'Test Circuit',
+    fightYourself: 'Fight yourself', runAway: 'Run away',
+    allHealedUp: 'There you go! All healed up!',
+    tellAboutZords: 'Tell me about Zords',
+    tellAboutIsland: 'Tell me about the island',
+    aimCast: 'Aim with arrows/WASD, Space to cast!',
+    noBite: 'No bite... too far from the ripple. Press Space to try again.',
+    nibbling: 'Something is nibbling...',
+    fishBrokeFree: 'The fish broke free at the last moment! Press Space to try again.',
+    fishGotAway: 'The fish got away! Press Space to try again.',
+    keepFishing: 'Keep Fishing', leave: 'Leave',
+    casting: 'Casting...', reeledIn: 'Reeled in. Aim and cast again!',
+    interactEnterHouse: '[E/Space] Enter House',
+    interactEnterStore: '[E/Space] Enter Store',
+    interactReadSign: '[E/Space] Read Sign',
+    interactEnter: '[E/Space] Enter',
+    interactFish: '[E/Space] Fish here',
+    interactArena: '[E/Space] Enter Arena',
+    interactHospital: '[E/Space] Zord Hospital',
+    interactSpa: '[E/Space] Zord Spa',
+    interactTalk: '[E/Space] Talk to',
+    interactBuild: '[E/Space] Open Build Menu',
+    downloadPdf: 'Download PDF',
+    hpFull: 'HP is full', noItems: 'No items'
 };
 
 // Language registry — translations loaded from lang-*.js files
@@ -84,14 +124,13 @@ function setLanguage(code) {
 
 // Get a lesson with translated content if available
 function getLesson(lessonId) {
+    const original = LOGIC_LESSONS.find(l => l.id === lessonId);
     const lang = LANGUAGES[currentLang];
     if (lang && lang.lessons && lang.lessons[lessonId]) {
-        // Merge: use translated title/content/questions but keep original id
         const translated = lang.lessons[lessonId];
-        const original = getLesson(lessonId);
         return { ...original, ...translated, id: lessonId };
     }
-    return getLesson(lessonId);
+    return original;
 }
 
 // In-game confirm dialog (replaces browser confirm())
@@ -5347,7 +5386,7 @@ function showReportCard() {
     const dlBtn = document.createElement('button');
     dlBtn.className = 'btn btn-primary';
     dlBtn.style.cssText = 'font-size:9px;padding:8px 16px;background:#1a1a3e;color:#f5c842;';
-    dlBtn.textContent = 'Download PDF';
+    dlBtn.textContent = t('downloadPdf');
     dlBtn.addEventListener('click', () => downloadReportCardPDF());
     btnRow.appendChild(dlBtn);
 
@@ -5791,7 +5830,7 @@ function updateTestingIndicator() {
             el = document.createElement('div');
             el.id = 'testing-indicator';
             el.style.cssText = 'position:fixed;bottom:8px;right:8px;z-index:9999;font-family:"Press Start 2P",monospace;font-size:10px;color:#e94560;background:rgba(0,0,0,0.7);padding:4px 10px;border:1px solid #e94560;pointer-events:none;';
-            el.textContent = 'TESTING';
+            el.textContent = t('testing');
             document.body.appendChild(el);
         }
         el.style.display = 'block';
@@ -6170,15 +6209,15 @@ function updateInteractPrompt() {
         prompt.style.display = 'block';
         switch (interactable.type) {
             case 'npc': text.textContent = `[E/Space] Talk to ${interactable.data.name}`; break;
-            case 'house': text.textContent = '[E/Space] Enter House'; break;
-            case 'store': text.textContent = '[E/Space] Enter Store'; break;
-            case 'build': text.textContent = '[E/Space] Open Build Menu'; break;
-            case 'sign': text.textContent = '[E/Space] Read Sign'; break;
-            case 'door': text.textContent = '[E/Space] Enter'; break;
-            case 'fish': text.textContent = '[E/Space] Fish here'; break;
-            case 'arena_battle': text.textContent = '[E/Space] Enter Arena'; break;
-            case 'arena_hospital': text.textContent = '[E/Space] Zord Hospital'; break;
-            case 'arena_spa': text.textContent = '[E/Space] Zord Spa'; break;
+            case 'house': text.textContent = t('interactEnterHouse'); break;
+            case 'store': text.textContent = t('interactEnterStore'); break;
+            case 'build': text.textContent = t('interactBuild'); break;
+            case 'sign': text.textContent = t('interactReadSign'); break;
+            case 'door': text.textContent = t('interactEnter'); break;
+            case 'fish': text.textContent = t('interactFish'); break;
+            case 'arena_battle': text.textContent = t('interactArena'); break;
+            case 'arena_hospital': text.textContent = t('interactHospital'); break;
+            case 'arena_spa': text.textContent = t('interactSpa'); break;
         }
     } else {
         prompt.style.display = 'none';
@@ -6484,7 +6523,7 @@ function showZordTamerMenu(npc) {
     // Leave
     const leaveBtn = document.createElement('button');
     leaveBtn.className = 'btn btn-choice';
-    leaveBtn.textContent = 'Goodbye';
+    leaveBtn.textContent = t('goodbye');
     leaveBtn.addEventListener('click', () => hideDialogue());
     choicesEl.appendChild(leaveBtn);
 }
@@ -6636,12 +6675,12 @@ function renderBuild() {
         if (alreadyBuilt) {
             const tag = document.createElement('span');
             tag.className = 'built-item';
-            tag.textContent = 'BUILT';
+            tag.textContent = t('built');
             div.appendChild(tag);
         } else {
             const btn = document.createElement('button');
             btn.className = 'btn btn-primary';
-            btn.textContent = 'Build';
+            btn.textContent = t('build');
             btn.disabled = !hasResources;
             btn.style.opacity = hasResources ? '1' : '0.4';
             btn.addEventListener('click', () => buildItem(recipe));
@@ -6685,7 +6724,7 @@ document.getElementById('btn-leave-zordarena').addEventListener('click', () => {
 function openArenaBattle() {
     state.paused = true;
     showScreen('zordarena');
-    document.getElementById('zordarena-title').textContent = 'The Arena';
+    document.getElementById('zordarena-title').textContent = t('theArena');
     const content = document.getElementById('zordarena-content');
     content.innerHTML = '';
 
@@ -6854,7 +6893,7 @@ function arenaZordBattleEnd(victory) {
 
             const continueBtn = document.createElement('button');
             continueBtn.className = 'btn btn-primary';
-            continueBtn.textContent = 'Continue Battle';
+            continueBtn.textContent = t('continueBattle');
             continueBtn.addEventListener('click', () => {
                 zordBattle.enemyZord = nextEz;
                 zordBattle.turn = 'player';
@@ -6869,7 +6908,7 @@ function arenaZordBattleEnd(victory) {
             if (aliveZords.length > 1) {
                 const switchBtn = document.createElement('button');
                 switchBtn.className = 'btn btn-secondary';
-                switchBtn.textContent = 'Switch Zord';
+                switchBtn.textContent = t('switchZord');
                 switchBtn.addEventListener('click', () => {
                     actionsEl.innerHTML = '';
                     aliveZords.forEach(idx => {
@@ -6905,7 +6944,7 @@ function arenaZordBattleEnd(victory) {
 
         const btn = document.createElement('button');
         btn.className = 'btn btn-primary';
-        btn.textContent = 'Return to Arena';
+        btn.textContent = t('returnToArena');
         btn.addEventListener('click', () => {
             zordBattle = null;
             state._arenaTrainer = null;
@@ -6921,7 +6960,7 @@ function arenaZordBattleEnd(victory) {
 
         const btn = document.createElement('button');
         btn.className = 'btn btn-secondary';
-        btn.textContent = 'Return to Arena';
+        btn.textContent = t('returnToArena');
         btn.addEventListener('click', () => {
             zordBattle = null;
             state._arenaTrainer = null;
@@ -6938,7 +6977,7 @@ function arenaZordBattleEnd(victory) {
 function openZordHospital() {
     state.paused = true;
     showScreen('zordarena');
-    document.getElementById('zordarena-title').textContent = 'Zord Hospital';
+    document.getElementById('zordarena-title').textContent = t('zordHospital');
     const content = document.getElementById('zordarena-content');
     content.innerHTML = '';
 
@@ -6965,7 +7004,7 @@ function openZordHospital() {
     // Show each Zord
     const title = document.createElement('div');
     title.className = 'arena-section-title';
-    title.textContent = 'Your Zords';
+    title.textContent = t('yourZords');
     content.appendChild(title);
 
     state.zordList.forEach((z, i) => {
@@ -7006,7 +7045,7 @@ function openZordHospital() {
 function openZordSpa() {
     state.paused = true;
     showScreen('zordarena');
-    document.getElementById('zordarena-title').textContent = 'Zord Spa';
+    document.getElementById('zordarena-title').textContent = t('zordSpa');
     const content = document.getElementById('zordarena-content');
     content.innerHTML = '';
 
@@ -7069,7 +7108,7 @@ function openZordSpa() {
         benchBtn.className = 'btn btn-secondary';
         benchBtn.style.cssText = 'font-size:7px;padding:5px 10px;margin-left:6px;';
         if (onBench) {
-            benchBtn.textContent = 'Remove';
+            benchBtn.textContent = t('removeFromBench');
             benchBtn.addEventListener('click', () => {
                 state.zordBench = state.zordBench.filter(idx => idx !== i);
                 openZordSpa();
@@ -7615,7 +7654,7 @@ function showRuneFound(rune) {
     `;
     const btn = document.createElement('button');
     btn.className = 'btn btn-primary';
-    btn.textContent = 'Collect!';
+    btn.textContent = t('collect');
     btn.addEventListener('click', () => overlay.remove());
     box.appendChild(btn);
     overlay.appendChild(box);
@@ -7688,7 +7727,7 @@ function showFerryMenu(npc) {
 
     const leaveBtn = document.createElement('button');
     leaveBtn.className = 'btn btn-choice';
-    leaveBtn.textContent = 'Not now';
+    leaveBtn.textContent = t('notNow');
     leaveBtn.addEventListener('click', () => hideDialogue());
     choicesEl.appendChild(leaveBtn);
 }
@@ -7961,7 +8000,7 @@ function showChallengeMasterMenu(npc) {
     const startBtn = document.createElement('button');
     startBtn.className = 'btn btn-choice';
     startBtn.style.borderColor = 'var(--gold)';
-    startBtn.textContent = 'Start Challenge!';
+    startBtn.textContent = t('startChallenge');
     startBtn.addEventListener('click', () => {
         hideDialogue();
         startChallenge();
@@ -7971,7 +8010,7 @@ function showChallengeMasterMenu(npc) {
     // Chat
     const chatBtn = document.createElement('button');
     chatBtn.className = 'btn btn-choice';
-    chatBtn.textContent = 'Tell me more';
+    chatBtn.textContent = t('tellMeMore');
     chatBtn.addEventListener('click', () => {
         if (!state.npcDialogueIndex[npc.name]) state.npcDialogueIndex[npc.name] = 0;
         currentDialogueNPC = npc;
@@ -7988,7 +8027,7 @@ function showChallengeMasterMenu(npc) {
     // Leave
     const leaveBtn = document.createElement('button');
     leaveBtn.className = 'btn btn-choice';
-    leaveBtn.textContent = 'Not now';
+    leaveBtn.textContent = t('notNow');
     leaveBtn.addEventListener('click', () => hideDialogue());
     choicesEl.appendChild(leaveBtn);
 }
@@ -8173,7 +8212,7 @@ function endChallenge(voluntary) {
 
     const returnBtn = document.createElement('button');
     returnBtn.className = 'btn btn-primary';
-    returnBtn.textContent = 'Return to Town';
+    returnBtn.textContent = t('returnToTown');
     returnBtn.style.marginTop = '20px';
     returnBtn.addEventListener('click', () => {
         challenge = null;
@@ -8688,7 +8727,7 @@ function showLessonSlideshow(lesson, onComplete) {
             const doneBtn = document.createElement('button');
             doneBtn.className = 'btn btn-primary';
             doneBtn.style.cssText = 'font-size:11px;padding:10px 24px;margin-top:12px;';
-            doneBtn.textContent = 'Start Quiz!';
+            doneBtn.textContent = t('startQuiz');
             doneBtn.addEventListener('click', () => {
                 // Show full lesson content for reference during questions
                 lessonEl.innerHTML = `<h3>${escapeHtml(lesson.title)}</h3><p>${lesson.content.replace(/\n/g, '<br>')}</p>`;
@@ -8784,7 +8823,7 @@ function renderQuiz() {
             </div>`;
             const btn = document.createElement('button');
             btn.className = 'btn btn-primary';
-            btn.textContent = 'Back to Spa';
+            btn.textContent = t('backToSpa');
             btn.style.marginTop = '10px';
             btn.addEventListener('click', () => openZordSpa());
             content.appendChild(btn);
@@ -8968,7 +9007,7 @@ function showQuizWalkthrough(selectedIdx, correctIdx, buttons) {
         remaining--;
         if (remaining <= 0) {
             clearInterval(countdown);
-            retryBtn.textContent = 'Try Again';
+            retryBtn.textContent = t('tryAgain');
             retryBtn.disabled = false;
             retryBtn.style.opacity = '1';
         } else {
@@ -9105,7 +9144,7 @@ function showCatchQuiz(enemy, b) {
                 const retryBtn = document.createElement('button');
                 retryBtn.className = 'btn btn-primary';
                 retryBtn.style.cssText = 'font-size:9px;margin-top:12px;display:block;margin-left:auto;margin-right:auto;';
-                retryBtn.textContent = 'Try Again';
+                retryBtn.textContent = t('tryAgain');
                 retryBtn.addEventListener('click', () => {
                     // Remove walkthrough elements
                     fb.remove(); hint.remove(); retryBtn.remove();
@@ -9753,7 +9792,7 @@ function renderTruthTable(q, container, onComplete, lessonId) {
     const submitBtn = document.createElement('button');
     submitBtn.className = 'btn btn-primary';
     submitBtn.style.marginTop = '12px';
-    submitBtn.textContent = 'Check Answers';
+    submitBtn.textContent = t('checkAnswers');
     submitBtn.addEventListener('click', () => {
         submitBtn.style.pointerEvents = 'none';
         let allCorrect = true;
@@ -9919,7 +9958,7 @@ function renderLogicBuilder(q, container, onComplete, lessonId) {
 
     const backBtn = document.createElement('button');
     backBtn.className = 'btn btn-secondary';
-    backBtn.textContent = 'Undo';
+    backBtn.textContent = t('undo');
     backBtn.style.fontSize = '9px';
     backBtn.addEventListener('click', () => {
         built.pop();
@@ -9929,7 +9968,7 @@ function renderLogicBuilder(q, container, onComplete, lessonId) {
 
     const clearBtn = document.createElement('button');
     clearBtn.className = 'btn btn-secondary';
-    clearBtn.textContent = 'Clear';
+    clearBtn.textContent = t('clear');
     clearBtn.style.fontSize = '9px';
     clearBtn.addEventListener('click', () => {
         built.length = 0;
@@ -9939,7 +9978,7 @@ function renderLogicBuilder(q, container, onComplete, lessonId) {
 
     const submitBtn = document.createElement('button');
     submitBtn.className = 'btn btn-primary';
-    submitBtn.textContent = 'Submit';
+    submitBtn.textContent = t('submit');
     submitBtn.style.fontSize = '9px';
     submitBtn.addEventListener('click', () => {
         submitBtn.style.pointerEvents = 'none';
@@ -10074,7 +10113,7 @@ function renderCircuit(q, container, onComplete, lessonId) {
     // Test button
     const testBtn = document.createElement('button');
     testBtn.className = 'btn btn-primary';
-    testBtn.textContent = 'Test Circuit';
+    testBtn.textContent = t('testCircuit');
     testBtn.style.marginTop = '10px';
     testBtn.addEventListener('click', () => {
         const result = evalCircuit();
@@ -13478,7 +13517,7 @@ function zordBattleEnd(victory) {
         // Go back to action battle
         const btn = document.createElement('button');
         btn.className = 'btn btn-secondary';
-        btn.textContent = 'Fight yourself';
+        btn.textContent = t('fightYourself');
         btn.addEventListener('click', () => {
             if (battle) {
                 battle.enemyHp = zb.enemyZord.currentHp;
@@ -13492,7 +13531,7 @@ function zordBattleEnd(victory) {
 
         const runBtn = document.createElement('button');
         runBtn.className = 'btn btn-secondary';
-        runBtn.textContent = 'Run away';
+        runBtn.textContent = t('runAway');
         runBtn.addEventListener('click', () => {
             zordBattle = null;
             if (battle) { battle.running = false; battle = null; }
@@ -13718,7 +13757,7 @@ function showFishingResult(caught, fish) {
 
     const keepBtn = document.createElement('button');
     keepBtn.className = 'btn btn-primary';
-    keepBtn.textContent = 'Keep Fishing';
+    keepBtn.textContent = t('keepFishing');
     keepBtn.addEventListener('click', () => {
         resultEl.style.display = 'none';
         resetFishingCast();
@@ -13759,7 +13798,7 @@ function showFishingResult(caught, fish) {
 
     const leaveBtn = document.createElement('button');
     leaveBtn.className = 'btn btn-secondary';
-    leaveBtn.textContent = 'Leave';
+    leaveBtn.textContent = t('leave');
     leaveBtn.addEventListener('click', () => {
         fishing.running = false;
         fishing = null;
