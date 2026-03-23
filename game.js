@@ -382,7 +382,7 @@ function showPlayerLevelUp() {
         el.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9998;font-family:"Press Start 2P",monospace;font-size:14px;color:#f5c842;background:rgba(0,0,0,0.85);border:3px solid #f5c842;padding:18px 28px;text-align:center;pointer-events:none;line-height:2.5;';
         document.body.appendChild(el);
     }
-    el.innerHTML = `LEVEL UP!<br><span style="font-size:10px;color:#4ecca3">Level ${state.playerLevel}</span><br><span style="font-size:8px;color:#8888aa">+2 HP  +1 ATK</span>`;
+    el.innerHTML = `${t('levelUp')}<br><span style="font-size:10px;color:#4ecca3">Level ${state.playerLevel}</span><br><span style="font-size:8px;color:#8888aa">+2 HP  +1 ATK</span>`;
     el.style.display = 'block';
     playSound('victory');
     setTimeout(() => { el.style.display = 'none'; }, 2000);
@@ -6408,7 +6408,7 @@ function readSign(row, col) {
         const floorNum = parseInt(state.location.split('_')[1]);
         text = TEMPLE_FLOORS[floorNum - 1].name;
     }
-    showDialogue('\u{1FAA7}', 'Sign', t(text));
+    showDialogue('\u{1FAA7}', t('readSign'), t(text));
 }
 
 // ============================================================
@@ -8322,7 +8322,7 @@ function endChallenge(voluntary) {
     body.innerHTML = '';
     const result = document.createElement('div');
     result.className = 'challenge-result';
-    result.innerHTML = `<div style="font-size:18px;color:var(--gold);margin-bottom:16px;">${voluntary ? 'Challenge Complete!' : 'Game Over!'}</div>` +
+    result.innerHTML = `<div style="font-size:18px;color:var(--gold);margin-bottom:16px;">${voluntary ? t('challengeComplete') : t('gameOver')}</div>` +
         `<div style="font-size:12px;color:var(--text);">Score: <span style="color:var(--gold)">${score}</span></div>` +
         `<div style="font-size:10px;color:var(--text-dim);">Answered: ${answered} | Correct: ${correct} | Best Streak: ${challenge.streak || 0}</div>` +
         `<div style="font-size:12px;color:var(--success);margin-top:8px;">+${rubiesEarned} rubies banked!</div>`;
@@ -12118,7 +12118,7 @@ function endBattle(victory) {
         trackRubiesEarned(rubiesEarned);
         if (enemy.name === 'Arch-Logician Zephyr') stats.bossDefeated = true;
 
-        textEl.innerHTML = `${enemy.name} defeated!<br><br>+${rubiesEarned} rubies<br><span style="font-size:9px;color:var(--text-dim)">(${enemy.rubies} base + ${quizBonus} quiz bonus)</span>`;
+        textEl.innerHTML = `${enemy.name} ${t('defeated')}<br><br>+${rubiesEarned} ${t('rubies')}<br><span style="font-size:9px;color:var(--text-dim)">(${enemy.rubies} + ${quizBonus} quiz)</span>`;
         btnEl.textContent = t('continue');
         playSound('victory');
         autoSave();
@@ -12127,7 +12127,7 @@ function endBattle(victory) {
         state._pendingZoneKey = null;
         state._encounterCooldown = 90;
         trackDeath();
-        textEl.innerHTML = `You were defeated...<br><br><span style="color:var(--accent)">You escape with 1 HP</span>`;
+        textEl.innerHTML = `${t('youWereDefeated')}<br><br><span style="color:var(--accent)">${t('escaped')} 1 HP</span>`;
         btnEl.textContent = t('returnToTown');
         playSound('defeat');
     }
@@ -13222,7 +13222,7 @@ function showZordPicker() {
     const currentFainted = zordBattle && zordBattle.playerZord && zordBattle.playerZord.currentHp <= 0;
     const isArena = zordBattle && zordBattle.isArena;
 
-    document.getElementById('zb-log').innerHTML = `<div class="zb-log-line">${currentFainted ? 'Your Zord fainted! Choose another!' : 'Choose a Zord to deploy!'}</div>`;
+    document.getElementById('zb-log').innerHTML = `<div class="zb-log-line">${currentFainted ? t('yourZordFainted') : t('chooseZord')}</div>`;
     const pCanvas = document.getElementById('zb-player-sprite');
     if (pCanvas) { const pc = pCanvas.getContext('2d'); pc.clearRect(0, 0, pCanvas.width, pCanvas.height); }
     document.getElementById('zb-player-name-tag').textContent = '???';
