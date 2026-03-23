@@ -208,12 +208,12 @@ body {
     color: #e94560;
 }
 
-/* Language Dropdown (title screen, upper left) */
+/* Language Dropdown (title screen, upper left, outside overlay) */
 .title-lang-dropdown {
     position: absolute;
     top: 10px;
     left: 10px;
-    z-index: 10;
+    z-index: 20;
 }
 
 .lang-dropdown-btn {
