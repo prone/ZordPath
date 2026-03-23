@@ -12,13 +12,13 @@
     <div id="screen-title" class="screen active">
         <canvas id="title-canvas"></canvas>
         <div class="title-overlay">
+            <div class="title-lang" id="lang-selector"></div>
             <div class="save-slots-container" id="save-slots-container">
                 <div class="save-slot" id="save-slot-0" data-slot="0"></div>
                 <div class="save-slot" id="save-slot-1" data-slot="1"></div>
                 <div class="save-slot" id="save-slot-2" data-slot="2"></div>
             </div>
             <div class="title-start" id="btn-new-game">NEW GAME</div>
-            <div class="title-lang" id="lang-selector"></div>
         </div>
     </div>
 
@@ -115,6 +115,8 @@
                         <div>Y .................. Potion</div>
                         <div>LB / RB ............ Zords / Inventory</div>
                         <div>Select / Start ..... Map / Enter</div>
+                        <div style="color:var(--gold);margin:8px 0 6px;">-- Language --</div>
+                        <div class="title-lang" id="help-lang-selector" style="margin:4px 0;"></div>
                     </div>
                 </div>
             </div>
@@ -383,27 +385,30 @@
     <script src="lang-ja.js"></script>
     <script src="lang-fr.js"></script>
     <script>
-        // Render language selector after all scripts loaded
+        // Render language selectors after all scripts loaded
         (function() {
-            const sel = document.getElementById('lang-selector');
-            if (!sel) return;
-            function renderLangButtons() {
-                sel.innerHTML = '';
+            function renderLangSelector(container) {
+                if (!container) return;
+                container.innerHTML = '';
                 Object.entries(LANGUAGES).forEach(([code, lang]) => {
                     const btn = document.createElement('span');
                     btn.className = 'lang-btn' + (code === currentLang ? ' active' : '');
                     btn.textContent = lang.name;
                     btn.addEventListener('click', () => {
                         setLanguage(code);
-                        renderLangButtons();
-                        // Update title screen text
+                        renderAllLangSelectors();
                         document.getElementById('btn-new-game').textContent = t('pushStart');
-                        renderSaveSlots();
+                        if (typeof renderSaveSlots === 'function') renderSaveSlots();
                     });
-                    sel.appendChild(btn);
+                    container.appendChild(btn);
                 });
             }
-            renderLangButtons();
+            function renderAllLangSelectors() {
+                renderLangSelector(document.getElementById('lang-selector'));
+                renderLangSelector(document.getElementById('help-lang-selector'));
+            }
+            window.renderAllLangSelectors = renderAllLangSelectors;
+            renderAllLangSelectors();
             document.getElementById('btn-new-game').textContent = t('pushStart');
         })();
     </script>
