@@ -94,7 +94,16 @@ const LANG_EN = {
     downloadPdf: 'Download PDF',
     hpFull: 'HP is full', noItems: 'No items',
     equipment: 'Equipment', buildingMaterials: 'Building Materials',
-    why: 'Why?'
+    why: 'Why?', leaveStore: 'Leave Store',
+    // Location names
+    loc_cave: 'The Caverns', loc_town: 'Verdant Village', loc_forest: 'Whispering Woods',
+    loc_beach: 'Coral Cove', loc_mountains: 'Iron Peak Range', loc_zordarena: 'Zord Colosseum',
+    loc_island: 'Mystery Island', loc_peak_1: 'Rocky Foothills', loc_peak_2: 'Pine Ridge',
+    loc_peak_3: 'Frozen Pass', loc_peak_4: 'Windswept Crag', loc_peak_5: 'The Summit',
+    loc_temple_1: 'Hall of Truth', loc_temple_2: 'Chamber of Negation',
+    loc_temple_3: 'The Grand Library', loc_temple_4: 'Frozen Sanctum',
+    loc_temple_5: 'Lava Labyrinth', loc_temple_6: 'The Void Between',
+    loc_temple_7: 'Sanctum of the Arch-Logician'
 };
 
 // Language registry — translations loaded from lang-*.js files
@@ -122,6 +131,11 @@ function setLanguage(code) {
         currentLang = code;
         localStorage.setItem('zordpath_lang', code);
     }
+}
+
+// Get translated location name
+function getLocationName(loc) {
+    return t('loc_' + loc) || loc;
 }
 
 // Get a lesson with translated content if available
@@ -4396,7 +4410,7 @@ function renderSaveSlots() {
             const sprite = preview.character ? preview.character.sprite : '';
             el.innerHTML = `<span class="slot-name">${sprite} ${escapeHtml(preview.name)} <span style="font-size:7px;color:var(--success)">Lv.${preview.playerLevel}</span></span>` +
                 `<span class="slot-info">` +
-                `${escapeHtml(preview.location)} | ${formatPlayTime(preview.playTime)}<br>` +
+                `${escapeHtml(getLocationName(preview.location))} | ${formatPlayTime(preview.playTime)}<br>` +
                 `HP: ${preview.hp}/${preview.maxHp} | Rubies: ${preview.rubies} | Zords: ${preview.zordCount}` +
                 `</span>` +
                 `<span class="slot-delete" data-slot="${i}" title="Delete save">[X]</span>`;
@@ -5860,7 +5874,7 @@ function showTestWarpMenu() {
         const btn = document.createElement('button');
         btn.className = 'btn btn-choice';
         btn.style.cssText = 'font-size:9px;padding:8px 12px;margin-bottom:4px;width:100%;text-align:left;';
-        btn.textContent = loc + (loc === state.location ? ' (current)' : '');
+        btn.textContent = getLocationName(loc) + (loc === state.location ? ' *' : '');
         if (loc === state.location) btn.style.borderColor = '#f5c842';
         btn.addEventListener('click', () => {
             overlay.remove();
@@ -13039,10 +13053,7 @@ function drawCanvasHUD() {
     ctx.textAlign = 'center';
     ctx.fillStyle = '#8888aa';
     ctx.font = '8px "Press Start 2P", monospace';
-    const locNames = { cave: 'The Cave', town: 'Logic Land Town', forest: 'Enchanted Forest', beach: 'Coral Cove Beach', mountains: 'Iron Peak Mountains', zordarena: 'Zord Arena', island: 'Mystery Island' };
-    TEMPLE_FLOORS.forEach((f, i) => { locNames['temple_' + (i + 1)] = f.name; });
-    PEAK_FLOORS.forEach((f, i) => { locNames['peak_' + (i + 1)] = f.name; });
-    ctx.fillText(locNames[state.location] || state.location, CANVAS_W / 2, y);
+    ctx.fillText(getLocationName(state.location), CANVAS_W / 2, y);
 
     // Rubies (right)
     ctx.textAlign = 'right';
