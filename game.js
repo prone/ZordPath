@@ -126,7 +126,43 @@ const LANG_EN = {
     sign_arena_hospital: 'Zord Hospital - Heal your Zords!',
     sign_arena_spa: 'Zord Spa - Train & Level Up!',
     sign_arena_exit: 'Back to Village v',
-    sign_island_store: 'Frugalway - Island Grocery Store'
+    sign_island_store: 'Frugalway - Island Grocery Store',
+    // NPC / Menus
+    buyZordCage: 'Buy ZordCage (20 rubies)',
+    youHave: 'You have',
+    healToFull: 'Heal me to full HP (free)',
+    viewZordList: 'View ZordList',
+    yourBench: 'Your bench',
+    zordsReady: 'Zord(s) ready',
+    allZords: 'All Zords',
+    startTrainingCost: 'Start Training (5 rubies,',
+    benchZords: 'bench Zords)',
+    healAllInjured: 'injured',
+    answerToClaimRune: 'To claim the',
+    answerThis: 'answer this:',
+    answerCorrectly: 'Answer correctly to catch',
+    talkTo: 'Talk to',
+    areas: 'Areas',
+    // Character select
+    chooseCharacter: 'Choose Your Character',
+    enterName: 'Enter your name:',
+    startAdventure: 'Start Adventure!',
+    // Help
+    controls: 'Controls',
+    movement: 'Movement',
+    actions: 'Actions',
+    battle: 'Battle',
+    fishing: 'Fishing',
+    controller: 'Controller',
+    language: 'Language',
+    // Report card
+    subjectBreakdown: 'Subject Breakdown',
+    // Misc
+    caught2: 'caught',
+    potionHeal: 'Potion',
+    heal30hp: 'Heal 30 HP',
+    sell: 'Sell',
+    fish: 'Fish'
 };
 
 // Language registry — translations loaded from lang-*.js files
@@ -154,6 +190,39 @@ function setLanguage(code) {
         currentLang = code;
         localStorage.setItem('zordpath_lang', code);
     }
+}
+
+// Get translated NPC dialogue line
+function getNpcDialogue(npcName, index) {
+    const lang = LANGUAGES[currentLang];
+    if (lang && lang.npcDialogue && lang.npcDialogue[npcName]) {
+        const lines = lang.npcDialogue[npcName];
+        if (lines[index]) return lines[index];
+    }
+    // Fall back to English dialogue from NPCS array
+    const npc = NPCS.find(n => n.name === npcName);
+    return npc ? npc.dialogue[index % npc.dialogue.length] : '';
+}
+
+// Get translated NPC name
+function getNpcName(npcName) {
+    const lang = LANGUAGES[currentLang];
+    if (lang && lang.npcNames && lang.npcNames[npcName]) return lang.npcNames[npcName];
+    return npcName;
+}
+
+// Get translated store item name/desc
+function getItemName(itemId) {
+    const lang = LANGUAGES[currentLang];
+    if (lang && lang.storeItems && lang.storeItems[itemId]) return lang.storeItems[itemId].name;
+    const item = STORE_ITEMS.find(i => i.id === itemId);
+    return item ? item.name : itemId;
+}
+function getItemDesc(itemId) {
+    const lang = LANGUAGES[currentLang];
+    if (lang && lang.storeItems && lang.storeItems[itemId]) return lang.storeItems[itemId].desc;
+    const item = STORE_ITEMS.find(i => i.id === itemId);
+    return item ? item.desc : '';
 }
 
 // Get translated location name
@@ -5006,7 +5075,7 @@ function renderInventory() {
     const buildsEl = document.getElementById('inventory-builds');
     if (state.builtItems.length > 0) {
         const built = BUILD_RECIPES.filter(r => state.builtItems.includes(r.id));
-        buildsEl.innerHTML = 'Built: ' + built.map(r => r.sprite + ' ' + r.name).join(' | ');
+        buildsEl.innerHTML = t('built') + ': ' + built.map(r => r.sprite + ' ' + r.name).join(' | ');
     } else {
         buildsEl.innerHTML = '';
     }
@@ -6247,7 +6316,7 @@ function updateInteractPrompt() {
     if (interactable && !state.dialogueOpen) {
         prompt.style.display = 'block';
         switch (interactable.type) {
-            case 'npc': text.textContent = `[E/Space] Talk to ${interactable.data.name}`; break;
+            case 'npc': text.textContent = t('interactTalk') + ' ' + interactable.data.name; break;
             case 'house': text.textContent = t('interactEnterHouse'); break;
             case 'store': text.textContent = t('interactEnterStore'); break;
             case 'build': text.textContent = t('interactBuild'); break;
@@ -6484,7 +6553,7 @@ function talkToNPC(npc) {
     currentDialogueNPC = npc;
 
     const idx = state.npcDialogueIndex[npc.name];
-    const line = npc.dialogue[idx % npc.dialogue.length];
+    const line = getNpcDialogue(npc.name, idx % npc.dialogue.length);
     const hasMore = ((idx + 1) % npc.dialogue.length) !== 0;
 
     showDialogue(npc.sprite, npc.name, line, hasMore);
@@ -6496,8 +6565,8 @@ function showZordTamerMenu(npc) {
     const panel = document.getElementById('dialogue-panel');
     panel.style.display = 'flex';
     document.getElementById('dialogue-portrait').textContent = npc.sprite;
-    document.getElementById('dialogue-speaker').textContent = npc.name;
-    document.getElementById('dialogue-text').textContent = `Hello ${state.name}! I can help you with your Zords. What do you need?`;
+    document.getElementById('dialogue-speaker').textContent = getNpcName(npc.name);
+    document.getElementById('dialogue-text').textContent = t('allHealedUp').includes('!') ? t('tellAboutZords') : t('tellAboutZords');
     document.getElementById('interact-prompt').style.display = 'none';
 
     const choicesEl = document.getElementById('dialogue-choices');
@@ -6527,7 +6596,7 @@ function showZordTamerMenu(npc) {
     healBtn.addEventListener('click', () => {
         state.hp = state.maxHp;
         updateHUD();
-        document.getElementById('dialogue-text').textContent = 'There you go! All healed up!';
+        document.getElementById('dialogue-text').textContent = t('allHealedUp');
         playSound('gem');
     });
     choicesEl.appendChild(healBtn);
@@ -6535,12 +6604,12 @@ function showZordTamerMenu(npc) {
     // Chat
     const chatBtn = document.createElement('button');
     chatBtn.className = 'btn btn-choice';
-    chatBtn.textContent = 'Tell me about Zords';
+    chatBtn.textContent = t('tellAboutZords');
     chatBtn.addEventListener('click', () => {
         if (!state.npcDialogueIndex[npc.name]) state.npcDialogueIndex[npc.name] = 0;
         currentDialogueNPC = npc;
         const idx = state.npcDialogueIndex[npc.name];
-        const line = npc.dialogue[idx % npc.dialogue.length];
+        const line = getNpcDialogue(npc.name, idx % npc.dialogue.length);
         const hasMore = ((idx + 1) % npc.dialogue.length) !== 0;
         document.getElementById('dialogue-text').textContent = line;
         choicesEl.innerHTML = hasMore
@@ -6576,7 +6645,7 @@ function advanceDialogue() {
             hideDialogue();
             currentDialogueNPC = null;
         } else {
-            const line = npc.dialogue[idx % npc.dialogue.length];
+            const line = getNpcDialogue(npc.name, idx % npc.dialogue.length);
             const hasMore = ((idx + 1) % npc.dialogue.length) !== 0;
             document.getElementById('dialogue-text').textContent = line;
             document.getElementById('dialogue-choices').innerHTML = hasMore
@@ -6640,8 +6709,8 @@ function renderStore() {
         const canBuy = canAfford && remaining > 0;
         div.innerHTML = `
             <div class="store-item-info">
-                <span class="store-item-name">${item.icon} ${item.name}</span>
-                <span class="store-item-desc">${item.desc}</span>
+                <span class="store-item-name">${item.icon} ${getItemName(item.id)}</span>
+                <span class="store-item-desc">${getItemDesc(item.id)}</span>
             </div>
             <span class="store-item-price">${item.price}r</span>
             <span style="font-size:8px;color:${remaining > 0 ? 'var(--text-dim)' : 'var(--accent)'};margin-right:8px;">
@@ -6733,7 +6802,7 @@ function renderBuild() {
         const built = BUILD_RECIPES.filter(r => state.builtItems.includes(r.id));
         preview.innerHTML = '<br>Your builds: ' + built.map(r => r.sprite + ' ' + r.name).join(' | ');
     } else {
-        preview.innerHTML = 'Collect materials from the store to build!';
+        preview.innerHTML = t('buildingMaterials');
     }
 }
 
@@ -6842,7 +6911,7 @@ function continueArenaAfterQuiz() {
     logEl.innerHTML = `<div class="zb-log-line">${trainer.sprite} ${escapeHtml(trainer.name)}: "${escapeHtml(trainer.dialogue)}"</div>`;
     const pCanvasArena = document.getElementById('zb-player-sprite');
     if (pCanvasArena) { const pc = pCanvasArena.getContext('2d'); pc.clearRect(0, 0, pCanvasArena.width, pCanvasArena.height); }
-    document.getElementById('zb-player-name-tag').textContent = 'Choose...';
+    document.getElementById('zb-player-name-tag').textContent = '...';
     document.getElementById('zb-player-level-tag').textContent = '';
     document.getElementById('zb-player-hp-bar').style.width = '0%';
     document.getElementById('zb-player-hp-text').textContent = '';
@@ -7096,12 +7165,12 @@ function openZordSpa() {
     // Train section
     const trainTitle = document.createElement('div');
     trainTitle.className = 'arena-section-title';
-    trainTitle.textContent = 'Train Your Zords (Answer Questions for XP!)';
+    trainTitle.textContent = t('trainZords');
     content.appendChild(trainTitle);
 
     const trainDesc = document.createElement('div');
     trainDesc.style.cssText = 'font-size:8px;color:var(--text-dim);margin-bottom:10px;line-height:2;';
-    trainDesc.textContent = 'Answer 5 quiz questions correctly to earn XP for all bench Zords. Costs 5 rubies per session.';
+    trainDesc.textContent = t('trainDesc');
     content.appendChild(trainDesc);
 
     const benchCount = state.zordBench.filter(i => state.zordList[i] && state.zordList[i].currentHp > 0).length;
@@ -7642,7 +7711,7 @@ function showRuneQuiz(rune, spot) {
                 playSound('victory');
                 const fb = document.createElement('div');
                 fb.style.cssText = 'color:var(--success);font-size:10px;margin-top:10px;text-align:center;';
-                fb.textContent = 'Correct! The rune is yours!';
+                fb.textContent = t('runeYours');
                 box.appendChild(fb);
                 setTimeout(() => {
                     overlay.remove();
@@ -7725,7 +7794,7 @@ function showFerryMenu(npc) {
     const panel = document.getElementById('dialogue-panel');
     panel.style.display = 'flex';
     document.getElementById('dialogue-portrait').textContent = npc.sprite;
-    document.getElementById('dialogue-speaker').textContent = npc.name;
+    document.getElementById('dialogue-speaker').textContent = getNpcName(npc.name);
     document.getElementById('interact-prompt').style.display = 'none';
 
     const isOnIsland = state.location === 'island';
@@ -7750,12 +7819,12 @@ function showFerryMenu(npc) {
     // Chat
     const chatBtn = document.createElement('button');
     chatBtn.className = 'btn btn-choice';
-    chatBtn.textContent = 'Tell me about the island';
+    chatBtn.textContent = t('tellAboutIsland');
     chatBtn.addEventListener('click', () => {
         if (!state.npcDialogueIndex[npc.name]) state.npcDialogueIndex[npc.name] = 0;
         currentDialogueNPC = npc;
         const idx = state.npcDialogueIndex[npc.name];
-        const line = npc.dialogue[idx % npc.dialogue.length];
+        const line = getNpcDialogue(npc.name, idx % npc.dialogue.length);
         const hasMore = ((idx + 1) % npc.dialogue.length) !== 0;
         document.getElementById('dialogue-text').textContent = line;
         choicesEl.innerHTML = hasMore
@@ -8018,8 +8087,8 @@ function showChallengeMasterMenu(npc) {
     const panel = document.getElementById('dialogue-panel');
     panel.style.display = 'flex';
     document.getElementById('dialogue-portrait').textContent = npc.sprite;
-    document.getElementById('dialogue-speaker').textContent = npc.name;
-    document.getElementById('dialogue-text').textContent = 'Ready to test your logic skills? Enter Challenge Mode!';
+    document.getElementById('dialogue-speaker').textContent = getNpcName(npc.name);
+    document.getElementById('dialogue-text').textContent = t('readyChallenge');
     document.getElementById('interact-prompt').style.display = 'none';
 
     const choicesEl = document.getElementById('dialogue-choices');
@@ -8054,7 +8123,7 @@ function showChallengeMasterMenu(npc) {
         if (!state.npcDialogueIndex[npc.name]) state.npcDialogueIndex[npc.name] = 0;
         currentDialogueNPC = npc;
         const idx = state.npcDialogueIndex[npc.name];
-        const line = npc.dialogue[idx % npc.dialogue.length];
+        const line = getNpcDialogue(npc.name, idx % npc.dialogue.length);
         const hasMore = ((idx + 1) % npc.dialogue.length) !== 0;
         document.getElementById('dialogue-text').textContent = line;
         choicesEl.innerHTML = hasMore
@@ -8853,7 +8922,7 @@ function renderQuiz() {
             grantBenchXp(xpGain);
             autoSave();
             showScreen('zordarena');
-            document.getElementById('zordarena-title').textContent = 'Zord Spa - Training Complete!';
+            document.getElementById('zordarena-title').textContent = t('spaComplete');
             const content = document.getElementById('zordarena-content');
             content.innerHTML = `<div class="spa-quiz-prompt">
                 <span style="color:var(--gold)">Training Complete!</span><br><br>
@@ -8916,7 +8985,7 @@ function renderQuiz() {
                 document.getElementById('quiz-feedback').textContent = t('correct');
                 document.getElementById('quiz-feedback').className = 'quiz-feedback correct';
             } else {
-                document.getElementById('quiz-feedback').textContent = 'Not quite right.';
+                document.getElementById('quiz-feedback').textContent = t('notQuiteRight');
                 document.getElementById('quiz-feedback').className = 'quiz-feedback incorrect';
             }
             document.getElementById('quiz-progress').textContent = `Question ${qi + 1} of ${questionSet.length} | Correct: ${state.quizCorrect}`;
@@ -9086,7 +9155,7 @@ function showQuizWalkthrough(selectedIdx, correctIdx, buttons) {
                 choicesEl.querySelectorAll('.btn-choice').forEach(b => b.style.pointerEvents = 'none');
                 choicesEl.children[newCorrect].classList.add('correct');
                 if (i === newCorrect) {
-                    feedbackEl.textContent = 'Got it! Moving on.';
+                    feedbackEl.textContent = t('gotIt');
                     feedbackEl.className = 'quiz-feedback correct';
                     playSound('gem');
                 } else {
@@ -9162,7 +9231,7 @@ function showCatchQuiz(enemy, b) {
                 if (enemy.lessonId) updateMasteryAfterAnswer(enemy.lessonId, true);
                 const fb = document.createElement('div');
                 fb.style.cssText = 'color:var(--success);font-size:10px;margin-top:12px;text-align:center;';
-                fb.textContent = 'Correct! Catch successful!';
+                fb.textContent = t('catchSuccessful');
                 box.appendChild(fb);
                 playSound('victory');
                 setTimeout(() => {
@@ -9186,7 +9255,7 @@ function showCatchQuiz(enemy, b) {
 
                 const hint = document.createElement('div');
                 hint.style.cssText = 'color:var(--text-dim);font-size:9px;margin-top:8px;text-align:center;line-height:2;';
-                hint.textContent = 'Study the answer, then try again for a second chance to catch!';
+                hint.textContent = t('studyAnswer');
                 box.appendChild(hint);
 
                 const retryBtn = document.createElement('button');
@@ -9220,7 +9289,7 @@ function showCatchQuiz(enemy, b) {
                                 // Second chance success — catch!
                                 const fb2 = document.createElement('div');
                                 fb2.style.cssText = 'color:var(--success);font-size:10px;margin-top:10px;text-align:center;';
-                                fb2.textContent = 'Correct! Catch successful!';
+                                fb2.textContent = t('catchSuccessful');
                                 box.appendChild(fb2);
                                 playSound('victory');
                                 setTimeout(() => { overlay.remove(); completeCatch(enemy, b); }, 1200);
@@ -9715,7 +9784,7 @@ function resetInteractiveDisplay() {
 function renderClassifier(q, container, onComplete, lessonId) {
     const label = document.createElement('div');
     label.style.cssText = 'font-size:10px;color:var(--text);margin-bottom:12px;line-height:2;';
-    label.textContent = 'Classify this statement:';
+    label.textContent = t('classify');
     container.appendChild(label);
 
     const stmt = document.createElement('div');
@@ -9751,7 +9820,7 @@ function renderClassifier(q, container, onComplete, lessonId) {
 function renderFallacy(q, container, onComplete, lessonId) {
     const label = document.createElement('div');
     label.style.cssText = 'font-size:10px;color:var(--text);margin-bottom:8px;';
-    label.textContent = 'Spot the fallacy in this argument:';
+    label.textContent = t('spotFallacy');
     container.appendChild(label);
 
     const quote = document.createElement('blockquote');
@@ -9876,14 +9945,14 @@ function renderPatternMatch(q, container, onComplete, lessonId) {
     leftCol.className = 'pattern-col';
     const leftLabel = document.createElement('div');
     leftLabel.className = 'pattern-col-label';
-    leftLabel.textContent = 'Match from:';
+    leftLabel.textContent = t('matchFrom');
     leftCol.appendChild(leftLabel);
 
     const rightCol = document.createElement('div');
     rightCol.className = 'pattern-col';
     const rightLabel = document.createElement('div');
     rightLabel.className = 'pattern-col-label';
-    rightLabel.textContent = 'Match to:';
+    rightLabel.textContent = t('matchTo');
     rightCol.appendChild(rightLabel);
 
     // Shuffle right side
@@ -9963,7 +10032,7 @@ function renderLogicBuilder(q, container, onComplete, lessonId) {
     bar.className = 'logic-bar';
     const emptyHint = document.createElement('span');
     emptyHint.className = 'logic-bar-empty';
-    emptyHint.textContent = 'Click elements below to build...';
+    emptyHint.textContent = t('clickToBuild');
     bar.appendChild(emptyHint);
     container.appendChild(bar);
 
@@ -9974,7 +10043,7 @@ function renderLogicBuilder(q, container, onComplete, lessonId) {
         if (built.length === 0) {
             const hint = document.createElement('span');
             hint.className = 'logic-bar-empty';
-            hint.textContent = 'Click elements below to build...';
+            hint.textContent = t('clickToBuild');
             bar.appendChild(hint);
         } else {
             built.forEach(token => {
@@ -10367,7 +10436,7 @@ function battleUpdate() {
                 state._encounterCooldown = 90;
                 playSound('gem');
                 const resultEl = document.getElementById('battle-result');
-                document.getElementById('battle-result-text').innerHTML = 'Escaped!';
+                document.getElementById('battle-result-text').innerHTML = t('escaped');
                 resultEl.style.display = 'flex';
                 document.getElementById('battle-result-btn').textContent = t('continue');
                 document.getElementById('battle-result-btn').onclick = () => {
@@ -12044,7 +12113,7 @@ function endBattle(victory) {
         state._encounterCooldown = 90;
         trackDeath();
         textEl.innerHTML = `You were defeated...<br><br><span style="color:var(--accent)">You escape with 1 HP</span>`;
-        btnEl.textContent = 'Return';
+        btnEl.textContent = t('returnToTown');
         playSound('defeat');
     }
 
@@ -13171,7 +13240,7 @@ function showZordPicker() {
     if (!currentFainted && !isArena && battle) {
         const backBtn = document.createElement('button');
         backBtn.className = 'btn btn-secondary';
-        backBtn.textContent = 'Cancel (fight yourself)';
+        backBtn.textContent = t('fightYourself');
         backBtn.addEventListener('click', () => {
             showScreen('battle');
             battle.running = true;
@@ -13640,7 +13709,7 @@ function startFishing() {
         caughtFish: null
     };
 
-    document.getElementById('fishing-status').textContent = 'Aim with arrows/WASD, Space to cast!';
+    document.getElementById('fishing-status').textContent = t('aimCast');
     document.getElementById('fishing-result').style.display = 'none';
     document.getElementById('fishing-fish-count').textContent = `Fish: ${Object.values(state.fish).reduce((a, b) => a + b, 0)}`;
     fishingLoop();
@@ -13725,10 +13794,10 @@ function fishingUpdate() {
                 playSound('hit');
             } else {
                 f.phase = 'missed';
-                document.getElementById('fishing-status').textContent = 'No bite... too far from the ripple. Press Space to try again.';
+                document.getElementById('fishing-status').textContent = t('noBite');
             }
         } else if (f.hookTimer < 25) {
-            document.getElementById('fishing-status').textContent = 'Something is nibbling...';
+            document.getElementById('fishing-status').textContent = t('nibbling');
         }
     }
 
@@ -13748,14 +13817,14 @@ function fishingUpdate() {
                 showFishingResult(true, f.caughtFish);
             } else {
                 f.phase = 'missed';
-                document.getElementById('fishing-status').textContent = 'The fish broke free at the last moment! Press Space to try again.';
+                document.getElementById('fishing-status').textContent = t('fishBrokeFree');
                 playSound('hurt');
             }
         }
         // Longer timeout - 6 seconds
         if (f.frame > 360 && f.phase === 'hooked') {
             f.phase = 'missed';
-            document.getElementById('fishing-status').textContent = 'The fish got away! Press Space to try again.';
+            document.getElementById('fishing-status').textContent = t('fishGotAway');
             playSound('hurt');
         }
     }
@@ -13864,7 +13933,7 @@ function resetFishingCast() {
     fishing.rippleY = 60 + Math.random() * (FH - 180);
     fishing.rippleVx = (Math.random() < 0.5 ? 1 : -1) * (0.2 + Math.random() * 0.3);
     fishing.rippleVy = (Math.random() < 0.5 ? 1 : -1) * (0.15 + Math.random() * 0.2);
-    document.getElementById('fishing-status').textContent = 'Aim with arrows/WASD, Space to cast!';
+    document.getElementById('fishing-status').textContent = t('aimCast');
     document.getElementById('fishing-fish-count').textContent = `Fish: ${Object.values(state.fish).reduce((a, b) => a + b, 0)}`;
 }
 
@@ -13891,7 +13960,7 @@ document.addEventListener('keydown', (e) => {
             fishing.castTimer = 0;
             fishing.bobberX = fishing.castX;
             fishing.bobberY = fishing.castY;
-            document.getElementById('fishing-status').textContent = 'Casting...';
+            document.getElementById('fishing-status').textContent = t('casting');
             playSound('swing');
         } else if (fishing.phase === 'casting') {
             // Cancel cast, reel back
@@ -13899,7 +13968,7 @@ document.addEventListener('keydown', (e) => {
         } else if (fishing.phase === 'waiting') {
             // Reel in and recast
             resetFishingCast();
-            document.getElementById('fishing-status').textContent = 'Reeled in. Aim and cast again!';
+            document.getElementById('fishing-status').textContent = t('reeledIn');
         } else if (fishing.phase === 'hooked') {
             fishing.reelProgress += (fishing.reelPerTap || 8);
             playSound('step');
