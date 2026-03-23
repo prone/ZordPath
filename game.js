@@ -5250,7 +5250,7 @@ function renameZord(index) {
     const rCtx = rCanvas.getContext('2d');
     rCtx.clearRect(0, 0, rCanvas.width, rCanvas.height);
     drawBattleEnemy(rCtx, 60, 65, { name: zord.species || zord.nickname, element: zord.element }, 0);
-    document.getElementById('zordname-species').textContent = 'Rename ' + zord.species;
+    document.getElementById('zordname-species').textContent = t('confirm') + zord.species;
     const nameInput = document.getElementById('zordname-input');
     nameInput.value = zord.nickname;
     document.getElementById('zordname-overlay').style.display = 'flex';
