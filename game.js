@@ -92,7 +92,9 @@ const LANG_EN = {
     interactTalk: '[E/Space] Talk to',
     interactBuild: '[E/Space] Open Build Menu',
     downloadPdf: 'Download PDF',
-    hpFull: 'HP is full', noItems: 'No items'
+    hpFull: 'HP is full', noItems: 'No items',
+    equipment: 'Equipment', buildingMaterials: 'Building Materials',
+    why: 'Why?'
 };
 
 // Language registry — translations loaded from lang-*.js files
@@ -6588,8 +6590,8 @@ function renderStore() {
     document.getElementById('store-rubies').textContent = state.rubies;
     const equipCol = document.getElementById('store-equip');
     const buildCol = document.getElementById('store-build');
-    equipCol.innerHTML = '<div style="padding:6px 8px;color:var(--gold);font-size:10px;border-bottom:2px solid var(--border);">-- Equipment --</div>';
-    buildCol.innerHTML = '<div style="padding:6px 8px;color:var(--gold);font-size:10px;border-bottom:2px solid var(--border);">-- Building Materials --</div>';
+    equipCol.innerHTML = `<div style="padding:6px 8px;color:var(--gold);font-size:10px;border-bottom:2px solid var(--border);">-- ${t('equipment')} --</div>`;
+    buildCol.innerHTML = `<div style="padding:6px 8px;color:var(--gold);font-size:10px;border-bottom:2px solid var(--border);">-- ${t('buildingMaterials')} --</div>`;
 
     const storeItems = STORE_ITEMS.filter(item => !item.location || item.location === state.location);
     storeItems.forEach(item => {
@@ -8949,24 +8951,33 @@ function answerQuiz(selected, correct, btnEl) {
 function generateExplanation(question, selectedIdx, correctIdx, lessonId) {
     const selectedText = question.choices[selectedIdx] || 'your answer';
     const correctText = question.choices[correctIdx] || 'the correct answer';
-    const q = question.q;
 
-    // Build a contextual explanation based on lesson type
+    // Check if translated explanations exist
+    const lang = LANGUAGES[currentLang];
+    if (lang && lang.explanations && lang.explanations[lessonId]) {
+        return lang.explanations[lessonId].replace('{correct}', escapeHtml(correctText)).replace('{selected}', escapeHtml(selectedText));
+    }
+
     const explanations = {
-        'propositional-basics': `In logic, a statement must be either TRUE or FALSE. "${escapeHtml(correctText)}" is correct because it properly identifies whether something is a statement, and whether AND/NOT are applied correctly. "${escapeHtml(selectedText)}" is wrong because it misapplies these rules.`,
-        'truth-tables': `Remember: AND means BOTH must be true (like a checklist). OR means at least ONE must be true. "${escapeHtml(correctText)}" follows these rules correctly. "${escapeHtml(selectedText)}" confuses how AND and OR work.`,
-        'implication': `An IF-THEN statement is only FALSE when the IF part is true but the THEN part is false (a broken promise). "${escapeHtml(correctText)}" correctly applies this rule. "${escapeHtml(selectedText)}" misunderstands when a promise is broken.`,
-        'equivalence': `De Morgan's Rules: NOT(A AND B) = NOT A OR NOT B, and NOT(A OR B) = NOT A AND NOT B. "${escapeHtml(correctText)}" correctly applies these equivalences. "${escapeHtml(selectedText)}" confuses the transformation.`,
-        'valid-reasoning': `Good reasoning means: if the clues are true, the conclusion MUST be true. Watch out for the trick of assuming the conclusion proves the clue! "${escapeHtml(correctText)}" uses valid logic. "${escapeHtml(selectedText)}" falls for a common logical trap.`,
-        'predicate-logic': `"For all" means EVERY single one must satisfy the condition (like AND for a group). "There exists" means at least ONE does (like OR). "${escapeHtml(correctText)}" correctly applies quantifiers. "${escapeHtml(selectedText)}" confuses "all" with "some" or vice versa.`,
-        'logical-proofs': `Modus Ponens: If P then Q, and P is true, then Q must be true. Modus Tollens: If P then Q, and Q is NOT true, then P is NOT true. "${escapeHtml(correctText)}" correctly follows these proof patterns.`,
-        'set-theory': `Union combines everything from both sets (OR). Intersection is only what appears in BOTH sets (AND). A subset means every element is contained in the larger set. "${escapeHtml(correctText)}" correctly applies set operations.`,
-        'boolean-algebra': `Key shortcuts: A AND TRUE = A, A OR FALSE = A, A AND FALSE = FALSE, A OR TRUE = TRUE, NOT NOT A = A. "${escapeHtml(correctText)}" correctly simplifies the expression.`,
-        'modal-logic': `Necessary = must ALWAYS be true. Possible = could be true. Impossible = can NEVER be true. Contingent = sometimes true, sometimes not. "${escapeHtml(correctText)}" correctly classifies the statement.`,
-        'paradoxes': `A paradox leads to a logical contradiction — it cannot be true AND cannot be false. Self-reference (a statement talking about itself) is often the cause. "${escapeHtml(correctText)}" correctly identifies the paradoxical nature.`
+        'propositional-basics': `In logic, a statement must be either TRUE or FALSE. "{correct}" is correct because it properly identifies whether something is a statement, and whether AND/NOT are applied correctly. "{selected}" is wrong because it misapplies these rules.`,
+        'truth-tables': `Remember: AND means BOTH must be true (like a checklist). OR means at least ONE must be true. "{correct}" follows these rules correctly. "{selected}" confuses how AND and OR work.`,
+        'implication': `An IF-THEN statement is only FALSE when the IF part is true but the THEN part is false (a broken promise). "{correct}" correctly applies this rule. "{selected}" misunderstands when a promise is broken.`,
+        'equivalence': `De Morgan's Rules: NOT(A AND B) = NOT A OR NOT B, and NOT(A OR B) = NOT A AND NOT B. "{correct}" correctly applies these equivalences. "{selected}" confuses the transformation.`,
+        'valid-reasoning': `Good reasoning means: if the clues are true, the conclusion MUST be true. Watch out for the trick of assuming the conclusion proves the clue! "{correct}" uses valid logic. "{selected}" falls for a common logical trap.`,
+        'predicate-logic': `"For all" means EVERY single one must satisfy the condition (like AND for a group). "There exists" means at least ONE does (like OR). "{correct}" correctly applies quantifiers. "{selected}" confuses "all" with "some" or vice versa.`,
+        'logical-proofs': `Modus Ponens: If P then Q, and P is true, then Q must be true. Modus Tollens: If P then Q, and Q is NOT true, then P is NOT true. "{correct}" correctly follows these proof patterns.`,
+        'set-theory': `Union combines everything from both sets (OR). Intersection is only what appears in BOTH sets (AND). A subset means every element is contained in the larger set. "{correct}" correctly applies set operations.`,
+        'boolean-algebra': `Key shortcuts: A AND TRUE = A, A OR FALSE = A, A AND FALSE = FALSE, A OR TRUE = TRUE, NOT NOT A = A. "{correct}" correctly simplifies the expression.`,
+        'modal-logic': `Necessary = must ALWAYS be true. Possible = could be true. Impossible = can NEVER be true. Contingent = sometimes true, sometimes not. "{correct}" correctly classifies the statement.`,
+        'paradoxes': `A paradox leads to a logical contradiction — it cannot be true AND cannot be false. Self-reference (a statement talking about itself) is often the cause. "{correct}" correctly identifies the paradoxical nature.`,
+        'analyzing-arguments': `Every argument has premises (reasons) and a conclusion (what you're trying to prove). Look for signal words: "therefore/so" = conclusion, "because/since" = premise. "{correct}" correctly identifies the argument structure.`,
+        'language-ambiguity': `Words can be tricky! Ambiguity = multiple meanings. Vagueness = not precise enough. Equivocation = same word, two meanings in one argument. "{correct}" correctly identifies the language issue.`,
+        'categorical-syllogisms': `Categorical syllogisms use ALL, NO, and SOME with exactly 2 premises and 1 conclusion. The middle term connects premises but doesn't appear in the conclusion. "{correct}" correctly applies syllogism rules.`,
+        'causal-reasoning': `Correlation (things happening together) does NOT mean causation (one causes the other). Watch for hidden confounding variables! "{correct}" correctly distinguishes cause from coincidence.`
     };
 
-    return explanations[lessonId] || `The correct answer is "${escapeHtml(correctText)}" because it correctly applies the logical rules from this lesson. "${escapeHtml(selectedText)}" does not follow these rules correctly.`;
+    const tmpl = explanations[lessonId] || `The correct answer is "{correct}" because it correctly applies the logical rules. "{selected}" does not follow these rules correctly.`;
+    return tmpl.replace('{correct}', escapeHtml(correctText)).replace('{selected}', escapeHtml(selectedText));
 }
 
 function showQuizWalkthrough(selectedIdx, correctIdx, buttons) {
@@ -8985,9 +8996,9 @@ function showQuizWalkthrough(selectedIdx, correctIdx, buttons) {
     feedbackEl.innerHTML =
         `<div style="margin-bottom:10px;font-size:11px;">Incorrect!</div>` +
         `<div style="color:var(--accent);font-size:9px;line-height:2;margin-bottom:8px;padding:8px;background:rgba(233,69,96,0.1);border-left:3px solid var(--accent);">` +
-        `<strong>Your answer:</strong> "${escapeHtml(selectedAnswer)}" <span style="color:var(--accent);">&#x2718;</span></div>` +
+        `<strong>${t('wrongAnswer')}</strong> "${escapeHtml(selectedAnswer)}" <span style="color:var(--accent);">&#x2718;</span></div>` +
         `<div style="color:var(--success);font-size:9px;line-height:2;margin-bottom:8px;padding:8px;background:rgba(78,204,163,0.1);border-left:3px solid var(--success);">` +
-        `<strong>Correct answer:</strong> "${escapeHtml(correctAnswer)}" <span style="color:var(--success);">&#x2714;</span></div>` +
+        `<strong>${t('correctAnswer')}</strong> "${escapeHtml(correctAnswer)}" <span style="color:var(--success);">&#x2714;</span></div>` +
         `<div style="color:var(--text);font-size:9px;line-height:2.2;margin-bottom:12px;padding:10px;background:var(--bg-dark);border:1px solid var(--border);">` +
         `<strong style="color:var(--gold);">Why?</strong> ${explanation}</div>`;
 
