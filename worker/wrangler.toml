@@ -1,0 +1,7 @@
+name = "zordpath-saves"
+main = "index.js"
+compatibility_date = "2024-01-01"
+
+[[kv_namespaces]]
+binding = "SAVES"
+id = "8ba7de3b216747e3acc7080d3e12bb77"

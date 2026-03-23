@@ -93,6 +93,8 @@ const LANG_EN = {
     interactBuild: '[E/Space] Open Build Menu',
     downloadPdf: 'Download PDF',
     hpFull: 'HP is full', noItems: 'No items',
+    existingSave: 'already has a save',
+    continueOrNew: 'Continue existing game or start new?',
     equipment: 'Equipment', buildingMaterials: 'Building Materials',
     why: 'Why?', leaveStore: 'Leave Store',
     // Location names
@@ -146,7 +148,7 @@ const LANG_EN = {
     // Character select
     chooseCharacter: 'Choose Your Character',
     enterName: 'Enter your name:',
-    startAdventure: 'Start Adventure!',
+    startAdventure: 'Click a character to select',
     // Help
     controls: 'Controls',
     movement: 'Movement',
@@ -544,7 +546,34 @@ function autoSave() {
     if (state.testingMode) return; // never save in testing mode
     if (state.currentSaveSlot !== undefined && state.currentSaveSlot !== null) {
         saveToSlot(state.currentSaveSlot);
+        cloudBackup(state.currentSaveSlot);
     }
+}
+
+// Cloud backup to Cloudflare Worker
+const CLOUD_SAVE_URL = 'https://zordpath-saves.duncanwinter.workers.dev';
+
+function getMachineId() {
+    let id = localStorage.getItem('zordpath_machine_id');
+    if (!id) {
+        id = 'machine_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
+        localStorage.setItem('zordpath_machine_id', id);
+    }
+    return id;
+}
+
+function cloudBackup(slotIdx) {
+    try {
+        const raw = localStorage.getItem(SAVE_PREFIX + slotIdx);
+        if (!raw) return;
+        const saveData = JSON.parse(raw);
+        const characterId = saveData.characterId || 'unknown';
+        fetch(CLOUD_SAVE_URL + '/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ machineId: getMachineId(), characterId, saveData })
+        }).catch(() => {}); // Silent fail — cloud backup is best-effort
+    } catch (e) {}
 }
 
 function formatPlayTime(seconds) {
@@ -4941,7 +4970,7 @@ function drawCharSelect() {
     if (selectedCharIdx >= 0 && editingName) {
         if (charSelectFrame % 50 < 35) drawOutlinedTextCS(c, 'TYPE NAME  -  PRESS ENTER TO START', CS_W / 2, CS_H - 20, '9px "Press Start 2P", monospace', '#f5c842');
     } else if (selectedCharIdx < 0) {
-        if (charSelectFrame % 50 < 35) drawOutlinedTextCS(c, 'CLICK A CHARACTER TO SELECT', CS_W / 2, CS_H - 20, '10px "Press Start 2P", monospace', '#ccccdd');
+        if (charSelectFrame % 50 < 35) drawOutlinedTextCS(c, t('startAdventure'), CS_W / 2, CS_H - 20, '10px "Press Start 2P", monospace', '#ccccdd');
     }
 }
 
@@ -4991,7 +5020,7 @@ function beginAdventure() {
     const charIdx = CHARACTER_CLASSES.findIndex(c2 => c2.id === state.character.id);
     const existingSave = loadSlotPreview(charIdx);
     if (existingSave && !state._overwriteConfirmed) {
-        showGameConfirm(`${getCharName(state.character.id)} already has a save (Lv.${existingSave.playerLevel}). Continue existing game or start new?`, () => {
+        showGameConfirm(`${getCharName(state.character.id)} ${t('existingSave')} (Lv.${existingSave.playerLevel}). ${t('continueOrNew')}`, () => {
             // Overwrite - start fresh
             state._overwriteConfirmed = true;
             beginAdventure();
