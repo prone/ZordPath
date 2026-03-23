@@ -208,6 +208,64 @@ body {
     color: #e94560;
 }
 
+/* Language Dropdown (title screen, upper left) */
+.title-lang-dropdown {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 10;
+}
+
+.lang-dropdown-btn {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    color: #e0e0e0;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 6px 12px;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.lang-dropdown-btn:hover {
+    border-color: #f5c842;
+    color: #f5c842;
+}
+
+.lang-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 4px;
+    background: rgba(10,10,30,0.95);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 4px;
+    min-width: 160px;
+    z-index: 20;
+}
+
+.lang-dropdown-item {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    color: #8888aa;
+    padding: 8px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.lang-dropdown-item:hover {
+    color: #f5c842;
+    background: rgba(245,200,66,0.1);
+}
+
+.lang-dropdown-item.active {
+    color: #f5c842;
+}
+
+.lang-dropdown-item:last-child {
+    border-bottom: none;
+}
+
 .title-lang {
     display: flex;
     gap: 8px;

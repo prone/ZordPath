@@ -1,5 +1,5 @@
 // Traditional Chinese translations for ZordPath
-registerLanguage('zh', '中文', {
+registerLanguage('zh', '中文', '\u{1F1F9}\u{1F1FC}', {
     pushStart: '新遊戲', continue: '繼續', correct: '正確！', incorrect: '錯誤！',
     tryAgain: '再試一次', next: '下一頁', back: '返回', viewDiagram: '查看圖表',
     startQuiz: '開始測驗！', fight: '戰鬥', zord: '佐德', item: '物品', run: '逃跑',

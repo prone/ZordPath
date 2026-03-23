@@ -1,5 +1,5 @@
 // Spanish translations for ZordPath
-registerLanguage('es', 'Espanol', {
+registerLanguage('es', 'Espanol', '\u{1F1EA}\u{1F1F8}', {
     pushStart: 'NUEVO JUEGO', continue: 'Continuar', correct: 'Correcto!', incorrect: 'Incorrecto!',
     tryAgain: 'Intentar de Nuevo', next: 'Siguiente', back: 'Atras', viewDiagram: 'Ver Diagrama',
     startQuiz: 'Comenzar Quiz!', fight: 'LUCHAR', zord: 'ZORD', item: 'OBJETO', run: 'HUIR',

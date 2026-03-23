@@ -1,5 +1,5 @@
 // Urdu translations for ZordPath
-registerLanguage('ur', 'اردو', {
+registerLanguage('ur', 'اردو', '\u{1F1F5}\u{1F1F0}', {
     pushStart: 'نیا کھیل', continue: 'جاری رکھیں', correct: '!صحیح', incorrect: '!غلط',
     tryAgain: 'دوبارہ کوشش کریں', next: 'اگلا', back: 'واپس', viewDiagram: 'خاکہ دیکھیں',
     startQuiz: '!کوئز شروع کریں', fight: 'لڑو', zord: 'زورڈ', item: 'چیز', run: 'بھاگو',

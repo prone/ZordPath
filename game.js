@@ -54,7 +54,7 @@ const LANG_EN = {
 
 // Language registry — translations loaded from lang-*.js files
 const LANGUAGES = {
-    en: { name: 'English', strings: LANG_EN },
+    en: { name: 'English', flag: '\u{1F1FA}\u{1F1F8}', strings: LANG_EN },
 };
 
 // Current language
@@ -68,8 +68,8 @@ function t(key) {
 }
 
 // Register a language (called from lang-*.js files)
-function registerLanguage(code, name, strings) {
-    LANGUAGES[code] = { name, strings };
+function registerLanguage(code, name, flag, strings) {
+    LANGUAGES[code] = { name, flag: flag || '', strings };
 }
 
 function setLanguage(code) {
@@ -230,7 +230,8 @@ function saveToSlot(i) {
         challengeBadge: state.challengeBadge || null,
         collectedRunes: state.collectedRunes || [],
         searchedRunes: state.searchedRunes || {},
-        questionStats: state.questionStats || {}
+        questionStats: state.questionStats || {},
+        language: currentLang
     };
     try {
         localStorage.setItem(SAVE_PREFIX + i, JSON.stringify(data));
@@ -283,6 +284,7 @@ function loadFromSlot(i) {
         state.collectedRunes = d.collectedRunes || [];
         state.searchedRunes = d.searchedRunes || {};
         state.questionStats = d.questionStats || {};
+        if (d.language && LANGUAGES[d.language]) setLanguage(d.language);
 
         // Restore discoveredAreas set
         discoveredAreas.clear();
@@ -5304,7 +5306,7 @@ function showReportCard() {
     const closeBtn = document.createElement('button');
     closeBtn.className = 'btn btn-secondary';
     closeBtn.style.cssText = 'font-size:9px;padding:8px 16px;';
-    closeBtn.textContent = 'Close';
+    closeBtn.textContent = t('close');
     closeBtn.addEventListener('click', () => overlay.remove());
     btnRow.appendChild(closeBtn);
 
@@ -5787,7 +5789,7 @@ function showTestWarpMenu() {
     const cancelBtn = document.createElement('button');
     cancelBtn.className = 'btn btn-secondary';
     cancelBtn.style.cssText = 'font-size:9px;margin-top:10px;width:100%;';
-    cancelBtn.textContent = 'Cancel';
+    cancelBtn.textContent = t('cancel');
     cancelBtn.addEventListener('click', () => overlay.remove());
     box.appendChild(cancelBtn);
 
@@ -5849,7 +5851,7 @@ function showTestZordPicker() {
     const cancelBtn = document.createElement('button');
     cancelBtn.className = 'btn btn-secondary';
     cancelBtn.style.cssText = 'font-size:9px;margin-top:10px;width:100%;';
-    cancelBtn.textContent = 'Cancel';
+    cancelBtn.textContent = t('cancel');
     cancelBtn.addEventListener('click', () => overlay.remove());
     box.appendChild(cancelBtn);
 
@@ -6522,7 +6524,7 @@ function renderStore() {
         `;
         const btn = document.createElement('button');
         btn.className = 'btn btn-primary';
-        btn.textContent = 'Buy';
+        btn.textContent = t('buy');
         btn.disabled = !canBuy;
         btn.style.opacity = canBuy ? '1' : '0.4';
         btn.addEventListener('click', () => buyItem(item));
@@ -6754,7 +6756,7 @@ function continueArenaAfterQuiz() {
 
     const backBtn = document.createElement('button');
     backBtn.className = 'btn btn-secondary';
-    backBtn.textContent = 'Cancel';
+    backBtn.textContent = t('cancel');
     backBtn.addEventListener('click', () => openArenaBattle());
     actionsEl.appendChild(backBtn);
 }
@@ -6938,7 +6940,7 @@ function openZordHospital() {
             const healBtn = document.createElement('button');
             healBtn.className = 'btn btn-primary';
             healBtn.style.cssText = 'font-size:7px;padding:5px 10px;';
-            healBtn.textContent = 'Heal';
+            healBtn.textContent = t('healAll').split(' ')[0];
             healBtn.addEventListener('click', () => {
                 z.currentHp = z.maxHp;
                 playSound('gem');
@@ -8691,7 +8693,7 @@ function showLessonSlideshow(lesson, onComplete) {
             const backBtn = document.createElement('button');
             backBtn.className = 'btn btn-secondary';
             backBtn.style.cssText = 'font-size:9px;padding:8px 16px;';
-            backBtn.textContent = 'Back';
+            backBtn.textContent = t('back');
             backBtn.addEventListener('click', () => {
                 clearInterval(countdown);
                 slideIdx--;
@@ -8785,7 +8787,7 @@ function renderQuiz() {
         const rendered = renderInteractiveQuestion(entry.lessonId, entry.level, (correct) => {
             if (correct) {
                 state.quizCorrect++;
-                document.getElementById('quiz-feedback').textContent = 'Correct!';
+                document.getElementById('quiz-feedback').textContent = t('correct');
                 document.getElementById('quiz-feedback').className = 'quiz-feedback correct';
             } else {
                 document.getElementById('quiz-feedback').textContent = 'Not quite right.';
@@ -8845,7 +8847,7 @@ function answerQuiz(selected, correct, btnEl) {
     }
     if (isCorrect) {
         state.quizCorrect++;
-        document.getElementById('quiz-feedback').textContent = 'Correct!';
+        document.getElementById('quiz-feedback').textContent = t('correct');
         document.getElementById('quiz-feedback').className = 'quiz-feedback correct';
         document.getElementById('quiz-progress').textContent = `Question ${state.quizIndex + 1} of ${state.quizTotal} | Correct: ${state.quizCorrect}`;
         tryRespawnGems();
@@ -9177,7 +9179,7 @@ function completeCatch(enemy, b) {
         const textEl = document.getElementById('battle-result-text');
         resultEl.style.display = 'flex';
         textEl.innerHTML = `${escapeHtml(b.pendingCatch.species)} caught!<br><br>Named: <span style="color:var(--gold)">${escapeHtml(nickname)}</span><br>+${b.pendingCatch.rubies} rubies`;
-        document.getElementById('battle-result-btn').textContent = 'Continue';
+        document.getElementById('battle-result-btn').textContent = t('continue');
         document.getElementById('battle-result-btn').onclick = () => {
             console.log('[CATCH] Continue clicked, returning to game');
             resultEl.style.display = 'none';
@@ -10232,7 +10234,7 @@ function battleUpdate() {
                 const resultEl = document.getElementById('battle-result');
                 document.getElementById('battle-result-text').innerHTML = 'Escaped!';
                 resultEl.style.display = 'flex';
-                document.getElementById('battle-result-btn').textContent = 'Continue';
+                document.getElementById('battle-result-btn').textContent = t('continue');
                 document.getElementById('battle-result-btn').onclick = () => {
                     battle.running = false; battle = null;
                     updateHUD(); showScreen('game');
@@ -11898,7 +11900,7 @@ function endBattle(victory) {
         if (enemy.name === 'Arch-Logician Zephyr') stats.bossDefeated = true;
 
         textEl.innerHTML = `${enemy.name} defeated!<br><br>+${rubiesEarned} rubies<br><span style="font-size:9px;color:var(--text-dim)">(${enemy.rubies} base + ${quizBonus} quiz bonus)</span>`;
-        btnEl.textContent = 'Continue';
+        btnEl.textContent = t('continue');
         playSound('victory');
         autoSave();
     } else {
@@ -13196,13 +13198,13 @@ function renderZordBattle() {
     // FIGHT
     const atkBtn = document.createElement('button');
     atkBtn.className = 'btn btn-primary';
-    atkBtn.innerHTML = `&#9654;FIGHT`;
+    atkBtn.innerHTML = `&#9654;${t('fight')}`;
     atkBtn.addEventListener('click', () => {
         // Show attack sub-menu
         actionsEl.innerHTML = '';
         const basicBtn = document.createElement('button');
         basicBtn.className = 'btn btn-choice';
-        basicBtn.textContent = `Attack (${pz.attack} dmg)`;
+        basicBtn.textContent = `${t('attack')} (${pz.attack} dmg)`;
         basicBtn.addEventListener('click', () => zordDoTurn('attack'));
         actionsEl.appendChild(basicBtn);
 
@@ -13214,7 +13216,7 @@ function renderZordBattle() {
 
         const backBtn2 = document.createElement('button');
         backBtn2.className = 'btn btn-choice';
-        backBtn2.textContent = 'Back';
+        backBtn2.textContent = t('back');
         backBtn2.addEventListener('click', () => renderZordBattle());
         actionsEl.appendChild(backBtn2);
     });
@@ -13224,7 +13226,7 @@ function renderZordBattle() {
     const otherBench = state.zordBench.filter(i => i !== zb.playerZordIdx && state.zordList[i].currentHp > 0);
     const switchBtn = document.createElement('button');
     switchBtn.className = 'btn btn-secondary';
-    switchBtn.textContent = 'ZORD';
+    switchBtn.textContent = t('zord');
     switchBtn.disabled = otherBench.length === 0;
     switchBtn.style.opacity = otherBench.length > 0 ? '1' : '0.4';
     switchBtn.addEventListener('click', () => {
@@ -13235,7 +13237,7 @@ function renderZordBattle() {
     // ITEM (placeholder / potion)
     const itemBtn = document.createElement('button');
     itemBtn.className = 'btn btn-secondary';
-    itemBtn.textContent = 'ITEM';
+    itemBtn.textContent = t('item');
     itemBtn.addEventListener('click', () => {
         actionsEl.innerHTML = '';
         const potions = state.inventory.potion || 0;
@@ -13265,7 +13267,7 @@ function renderZordBattle() {
         }
         const backBtn3 = document.createElement('button');
         backBtn3.className = 'btn btn-choice';
-        backBtn3.textContent = 'Back';
+        backBtn3.textContent = t('back');
         backBtn3.addEventListener('click', () => renderZordBattle());
         actionsEl.appendChild(backBtn3);
     });
@@ -13274,7 +13276,7 @@ function renderZordBattle() {
     // RUN
     const runBtn = document.createElement('button');
     runBtn.className = 'btn btn-secondary';
-    runBtn.textContent = 'RUN';
+    runBtn.textContent = t('run');
     runBtn.addEventListener('click', () => {
         if (zb.isArena) {
             zb.log.push('Can\'t run from an Arena battle!');
@@ -13410,7 +13412,7 @@ function zordBattleEnd(victory) {
         playSound('victory');
         const btn = document.createElement('button');
         btn.className = 'btn btn-primary';
-        btn.textContent = 'Continue';
+        btn.textContent = t('continue');
         btn.addEventListener('click', () => {
             zordBattle = null;
             if (battle) { battle.running = false; battle = null; }

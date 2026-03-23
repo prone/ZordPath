@@ -1,5 +1,5 @@
 // French translations for ZordPath
-registerLanguage('fr', 'Francais', {
+registerLanguage('fr', 'Francais', '\u{1F1EB}\u{1F1F7}', {
     pushStart: 'NOUVELLE PARTIE', continue: 'Continuer', correct: 'Correct !', incorrect: 'Incorrect !',
     tryAgain: 'Reessayer', next: 'Suivant', back: 'Retour', viewDiagram: 'Voir le Diagramme',
     startQuiz: 'Commencer le Quiz !', fight: 'COMBAT', zord: 'ZORD', item: 'OBJET', run: 'FUIR',

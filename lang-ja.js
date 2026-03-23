@@ -1,5 +1,5 @@
 // Japanese translations for ZordPath
-registerLanguage('ja', '日本語', {
+registerLanguage('ja', '日本語', '\u{1F1EF}\u{1F1F5}', {
     pushStart: 'ニューゲーム', continue: 'つづける', correct: '正解！', incorrect: '不正解！',
     tryAgain: 'もう一度', next: '次へ', back: '戻る', viewDiagram: '図を見る',
     startQuiz: 'クイズ開始！', fight: 'たたかう', zord: 'ゾード', item: 'アイテム', run: 'にげる',

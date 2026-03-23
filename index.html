@@ -12,7 +12,7 @@
     <div id="screen-title" class="screen active">
         <canvas id="title-canvas"></canvas>
         <div class="title-overlay">
-            <div class="title-lang" id="lang-selector"></div>
+            <div class="title-lang-dropdown" id="lang-dropdown-container"></div>
             <div class="save-slots-container" id="save-slots-container">
                 <div class="save-slot" id="save-slot-0" data-slot="0"></div>
                 <div class="save-slot" id="save-slot-1" data-slot="1"></div>
@@ -387,13 +387,42 @@
     <script>
         // Render language selectors after all scripts loaded
         (function() {
-            function renderLangSelector(container) {
+            function renderDropdown(container) {
+                if (!container) return;
+                container.innerHTML = '';
+                const current = LANGUAGES[currentLang];
+                const btn = document.createElement('div');
+                btn.className = 'lang-dropdown-btn';
+                btn.innerHTML = `${current.flag || ''} ${current.name} &#x25BC;`;
+                const menu = document.createElement('div');
+                menu.className = 'lang-dropdown-menu';
+                menu.style.display = 'none';
+                Object.entries(LANGUAGES).forEach(([code, lang]) => {
+                    const item = document.createElement('div');
+                    item.className = 'lang-dropdown-item' + (code === currentLang ? ' active' : '');
+                    item.innerHTML = `${lang.flag || ''} ${lang.name}`;
+                    item.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        setLanguage(code);
+                        renderAllLangSelectors();
+                        document.getElementById('btn-new-game').textContent = t('pushStart');
+                        if (typeof renderSaveSlots === 'function') renderSaveSlots();
+                    });
+                    menu.appendChild(item);
+                });
+                btn.addEventListener('click', () => {
+                    menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+                });
+                container.appendChild(btn);
+                container.appendChild(menu);
+            }
+            function renderLangButtons(container) {
                 if (!container) return;
                 container.innerHTML = '';
                 Object.entries(LANGUAGES).forEach(([code, lang]) => {
                     const btn = document.createElement('span');
                     btn.className = 'lang-btn' + (code === currentLang ? ' active' : '');
-                    btn.textContent = lang.name;
+                    btn.innerHTML = `${lang.flag || ''} ${lang.name}`;
                     btn.addEventListener('click', () => {
                         setLanguage(code);
                         renderAllLangSelectors();
@@ -404,8 +433,8 @@
                 });
             }
             function renderAllLangSelectors() {
-                renderLangSelector(document.getElementById('lang-selector'));
-                renderLangSelector(document.getElementById('help-lang-selector'));
+                renderDropdown(document.getElementById('lang-dropdown-container'));
+                renderLangButtons(document.getElementById('help-lang-selector'));
             }
             window.renderAllLangSelectors = renderAllLangSelectors;
             renderAllLangSelectors();
