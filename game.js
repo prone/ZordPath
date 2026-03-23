@@ -103,7 +103,30 @@ const LANG_EN = {
     loc_temple_1: 'Hall of Truth', loc_temple_2: 'Chamber of Negation',
     loc_temple_3: 'The Grand Library', loc_temple_4: 'Frozen Sanctum',
     loc_temple_5: 'Lava Labyrinth', loc_temple_6: 'The Void Between',
-    loc_temple_7: 'Sanctum of the Arch-Logician'
+    loc_temple_7: 'Sanctum of the Arch-Logician',
+    // Sign texts
+    sign_cave: 'Exit to Verdant Village -->',
+    sign_town_left: '<-- The Caverns (enemies!)',
+    sign_town_right: 'Whispering Woods -->',
+    sign_town_north: 'Coral Cove ^',
+    sign_town_south: 'v Iron Peak Range',
+    sign_forest_left: '<-- Back to Village',
+    sign_forest_right: 'Temple of Logic --> (Defeat the Logic Lord first!)',
+    sign_beach_south: 'Back to Village v',
+    sign_beach_dock: 'Fishing Dock - Cast your line!',
+    sign_mtn_north: 'Back to Village ^',
+    sign_mtn_deep: 'Beware! Strong creatures dwell deeper in the peaks.',
+    sign_mtn_south: 'v The Peak Climb (5 levels to the summit!)',
+    sign_peak: 'The air grows thinner... keep climbing!',
+    sign_beach_ferry: 'Ferry to Mystery Island! Talk to Captain Finn.',
+    sign_island_ferry: 'Ferry back to Coral Cove. Talk to Captain Finn.',
+    sign_island: 'Welcome to Mystery Island! Rare Zords roam here.',
+    sign_town_arena: 'Zord Colosseum v (Battle, Heal & Train!)',
+    sign_arena_battle: 'The Arena - Battle Town Trainers!',
+    sign_arena_hospital: 'Zord Hospital - Heal your Zords!',
+    sign_arena_spa: 'Zord Spa - Train & Level Up!',
+    sign_arena_exit: 'Back to Village v',
+    sign_island_store: 'Frugalway - Island Grocery Store'
 };
 
 // Language registry — translations loaded from lang-*.js files
@@ -1359,27 +1382,27 @@ const TRANSITIONS = {
 
 // --- SIGN TEXTS ---
 const SIGN_TEXTS = {
-    cave: 'Exit to Logic Land Town -->',
-    town_left: '<-- The Cave (enemies!)',
-    town_right: 'Enchanted Forest -->',
-    town_north: 'Coral Cove Beach ^',
-    town_south: 'v Iron Peak Mountains',
-    forest_left: '<-- Back to Town',
-    forest_right: 'Temple of Logic --> (Defeat the Logic Lord first!)',
-    beach_south: 'Back to Town v',
-    beach_dock: 'Fishing Dock - Cast your line!',
-    mtn_north: 'Back to Town ^',
-    mtn_deep: 'Beware! Strong creatures dwell deeper in the peaks.',
-    mtn_south: 'v The Peak Climb (5 levels to the summit!)',
-    peak_sign: 'The air grows thinner... keep climbing!',
-    beach_ferry: 'Ferry to the Island! Talk to Captain Finn.',
-    island_ferry: 'Ferry back to Coral Cove Beach. Talk to Captain Finn.',
-    island_sign: 'Welcome to the Island! Rare Zords roam here.',
-    town_arena: 'Zord Arena v (Battle, Heal & Train!)',
-    arena_battle: 'The Arena - Battle Town Trainers!',
-    arena_hospital: 'Zord Hospital - Heal your Zords!',
-    arena_spa: 'Zord Spa - Train & Level Up!',
-    arena_exit: 'Back to Town v'
+    cave: 'sign_cave',
+    town_left: 'sign_town_left',
+    town_right: 'sign_town_right',
+    town_north: 'sign_town_north',
+    town_south: 'sign_town_south',
+    forest_left: 'sign_forest_left',
+    forest_right: 'sign_forest_right',
+    beach_south: 'sign_beach_south',
+    beach_dock: 'sign_beach_dock',
+    mtn_north: 'sign_mtn_north',
+    mtn_deep: 'sign_mtn_deep',
+    mtn_south: 'sign_mtn_south',
+    peak_sign: 'sign_peak',
+    beach_ferry: 'sign_beach_ferry',
+    island_ferry: 'sign_island_ferry',
+    island_sign: 'sign_island',
+    town_arena: 'sign_town_arena',
+    arena_battle: 'sign_arena_battle',
+    arena_hospital: 'sign_arena_hospital',
+    arena_spa: 'sign_arena_spa',
+    arena_exit: 'sign_arena_exit'
 };
 
 // --- MAP NPC PLACEMENTS ---
@@ -6289,7 +6312,7 @@ function readSign(row, col) {
         else text = SIGN_TEXTS.beach_south;
     } else if (state.location === 'island') {
         if (col <= 5 && row <= 5) text = SIGN_TEXTS.island_ferry;
-        else if (col > 15) text = 'Frugalway - Island Grocery Store';
+        else if (col > 15) text = 'sign_island_store';
         else text = SIGN_TEXTS.island_sign;
     } else if (state.location === 'zordarena') {
         if (row >= ROWS - 4) text = SIGN_TEXTS.arena_exit;
@@ -6301,7 +6324,7 @@ function readSign(row, col) {
         const floorNum = parseInt(state.location.split('_')[1]);
         text = TEMPLE_FLOORS[floorNum - 1].name;
     }
-    showDialogue('\u{1FAA7}', 'Sign', text);
+    showDialogue('\u{1FAA7}', 'Sign', t(text));
 }
 
 // ============================================================
