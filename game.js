@@ -94,6 +94,35 @@ function getLesson(lessonId) {
     return getLesson(lessonId);
 }
 
+// In-game confirm dialog (replaces browser confirm())
+function showGameConfirm(message, onYes) {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:var(--panel-bg);border:3px solid var(--gold);padding:24px 32px;font-family:"Press Start 2P",monospace;text-align:center;max-width:400px;';
+    const msg = document.createElement('div');
+    msg.style.cssText = 'font-size:11px;color:var(--text);margin-bottom:20px;line-height:2.2;';
+    msg.textContent = message;
+    box.appendChild(msg);
+    const btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display:flex;gap:12px;justify-content:center;';
+    const yesBtn = document.createElement('button');
+    yesBtn.className = 'btn btn-primary';
+    yesBtn.style.fontSize = '10px';
+    yesBtn.textContent = t('confirm');
+    yesBtn.addEventListener('click', () => { overlay.remove(); onYes(); });
+    const noBtn = document.createElement('button');
+    noBtn.className = 'btn btn-secondary';
+    noBtn.style.fontSize = '10px';
+    noBtn.textContent = t('cancel');
+    noBtn.addEventListener('click', () => overlay.remove());
+    btnRow.appendChild(yesBtn);
+    btnRow.appendChild(noBtn);
+    box.appendChild(btnRow);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+}
+
 // ============================================================
 // LOCAL STATS (localStorage)
 // ============================================================
@@ -4342,9 +4371,11 @@ document.getElementById('save-slots-container').addEventListener('click', (e) =>
         e.stopPropagation();
         const slotIdx = parseInt(delBtn.dataset.slot);
         const preview = loadSlotPreview(slotIdx);
-        if (preview && confirm(`Delete save "${preview.name}"?`)) {
-            deleteSlot(slotIdx);
-            renderSaveSlots();
+        if (preview) {
+            showGameConfirm(`${t('delete')} "${escapeHtml(preview.name)}"?`, () => {
+                deleteSlot(slotIdx);
+                renderSaveSlots();
+            });
         }
         return;
     }
