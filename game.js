@@ -5244,7 +5244,7 @@ function renderZordList() {
     const disc = document.createElement('div');
     disc.className = 'inv-item';
     disc.style.cssText = 'margin-top:8px;border-top:2px solid var(--border);padding-top:8px;';
-    disc.innerHTML = `<span style="color:var(--text-dim);font-size:8px">Species discovered: ${uniqueSpecies.size} / ${totalSpecies}</span>`;
+    disc.innerHTML = `<span style="color:var(--text-dim);font-size:8px">${t('zordsCaught')}: ${uniqueSpecies.size} / ${totalSpecies}</span>`;
     container.appendChild(disc);
 }
 
@@ -5341,7 +5341,7 @@ function renderQuizProgress() {
     const pct = totalAnswered > 0 ? Math.round(totalCorrect / totalAnswered * 100) : 0;
     const summary = document.createElement('div');
     summary.className = 'quiz-progress-summary';
-    summary.innerHTML = `Total Quizzes: <span style="color:var(--gold)">${totalAnswered}</span> | ` +
+    summary.innerHTML = `${t('quiz')}: <span style="color:var(--gold)">${totalAnswered}</span> | ` +
         `Correct: <span style="color:var(--success)">${totalCorrect}</span> | ` +
         `Accuracy: <span style="color:${pct >= 80 ? 'var(--success)' : 'var(--accent)'}">${pct}%</span>`;
     container.appendChild(summary);
@@ -8865,7 +8865,7 @@ function showLessonSlideshow(lesson, onComplete) {
         // Show current slide
         lessonEl.innerHTML = `<h3>${escapeHtml(lesson.title)}</h3><p>${paragraphs[slideIdx].replace(/\n/g, '<br>')}</p>`;
         lessonEl.scrollTop = 0;
-        progressEl.textContent = `Slide ${slideIdx + 1} of ${paragraphs.length + 1}`;
+        progressEl.textContent = `${t('slide')} ${slideIdx + 1} ${t('of')} ${paragraphs.length + 1}`;
 
         choicesEl.innerHTML = '';
 
@@ -8986,7 +8986,7 @@ function renderQuiz() {
     document.querySelector('.quiz-container').scrollTop = 0;
     document.getElementById('quiz-feedback').textContent = '';
     document.getElementById('quiz-feedback').className = 'quiz-feedback';
-    document.getElementById('quiz-progress').textContent = `Question ${qi + 1} of ${questionSet.length} | Correct: ${state.quizCorrect}`;
+    document.getElementById('quiz-progress').textContent = `${t('question')} ${qi + 1} ${t('of')} ${questionSet.length} | ${t('correct')} ${state.quizCorrect}`;
 
     // Reset interactive display
     resetInteractiveDisplay();
@@ -9003,7 +9003,7 @@ function renderQuiz() {
                 document.getElementById('quiz-feedback').textContent = t('notQuiteRight');
                 document.getElementById('quiz-feedback').className = 'quiz-feedback incorrect';
             }
-            document.getElementById('quiz-progress').textContent = `Question ${qi + 1} of ${questionSet.length} | Correct: ${state.quizCorrect}`;
+            document.getElementById('quiz-progress').textContent = `${t('question')} ${qi + 1} ${t('of')} ${questionSet.length} | ${t('correct')} ${state.quizCorrect}`;
             tryRespawnGems();
             setTimeout(() => { state.quizIndex++; renderQuiz(); }, 1500);
         });
@@ -9059,7 +9059,7 @@ function answerQuiz(selected, correct, btnEl) {
         state.quizCorrect++;
         document.getElementById('quiz-feedback').textContent = t('correct');
         document.getElementById('quiz-feedback').className = 'quiz-feedback correct';
-        document.getElementById('quiz-progress').textContent = `Question ${state.quizIndex + 1} of ${state.quizTotal} | Correct: ${state.quizCorrect}`;
+        document.getElementById('quiz-progress').textContent = `${t('question')} ${state.quizIndex + 1} ${t('of')} ${state.quizTotal} | ${t('correct')} ${state.quizCorrect}`;
         tryRespawnGems();
         setTimeout(() => { state.quizIndex++; renderQuiz(); }, 1500);
     } else {
@@ -9115,7 +9115,7 @@ function showQuizWalkthrough(selectedIdx, correctIdx, buttons) {
     const feedbackEl = document.getElementById('quiz-feedback');
     feedbackEl.className = 'quiz-feedback incorrect';
     feedbackEl.innerHTML =
-        `<div style="margin-bottom:10px;font-size:11px;">Incorrect!</div>` +
+        `<div style="margin-bottom:10px;font-size:11px;">${t('incorrect')}</div>` +
         `<div style="color:var(--accent);font-size:9px;line-height:2;margin-bottom:8px;padding:8px;background:rgba(233,69,96,0.1);border-left:3px solid var(--accent);">` +
         `<strong>${t('wrongAnswer')}</strong> "${escapeHtml(selectedAnswer)}" <span style="color:var(--accent);">&#x2718;</span></div>` +
         `<div style="color:var(--success);font-size:9px;line-height:2;margin-bottom:8px;padding:8px;background:rgba(78,204,163,0.1);border-left:3px solid var(--success);">` +
@@ -9150,7 +9150,7 @@ function showQuizWalkthrough(selectedIdx, correctIdx, buttons) {
         // Re-render the same question with shuffled choices
         feedbackEl.textContent = '';
         feedbackEl.className = 'quiz-feedback';
-        document.getElementById('quiz-progress').textContent = `Question ${state.quizIndex + 1} of ${state.quizTotal} | Correct: ${state.quizCorrect} (retry)`;
+        document.getElementById('quiz-progress').textContent = `${t('question')} ${state.quizIndex + 1} ${t('of')} ${state.quizTotal} | ${t('correct')} ${state.quizCorrect} (retry)`;
 
         const choicesEl = document.getElementById('quiz-choices');
         choicesEl.innerHTML = '';
