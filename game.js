@@ -225,6 +225,21 @@ function getItemDesc(itemId) {
     return item ? item.desc : '';
 }
 
+// Get translated diagram text (falls back to English key itself)
+function td(key) {
+    const lang = LANGUAGES[currentLang];
+    if (lang && lang.diagram && lang.diagram[key]) return lang.diagram[key];
+    return key; // For diagrams, the key IS the English text
+}
+
+// Get translated character description
+function getCharDesc(charId) {
+    const lang = LANGUAGES[currentLang];
+    if (lang && lang.charDescs && lang.charDescs[charId]) return lang.charDescs[charId];
+    const cls = CHARACTER_CLASSES.find(c2 => c2.id === charId);
+    return cls ? cls.desc : '';
+}
+
 // Get translated location name
 function getLocationName(loc) {
     return t('loc_' + loc) || loc;
@@ -4828,7 +4843,7 @@ function drawCharSelect() {
     c.fillStyle = '#6a5a30';
     c.fillRect(60, bannerY, CS_W - 120, 2);
     c.fillRect(60, bannerY + bannerH - 2, CS_W - 120, 2);
-    drawOutlinedTextCS(c, 'PLAYER  SELECT', CS_W / 2, bannerY + bannerH / 2, '16px "Press Start 2P", monospace', '#1a1a2e');
+    drawOutlinedTextCS(c, t('chooseCharacter'), CS_W / 2, bannerY + bannerH / 2, '16px "Press Start 2P", monospace', '#1a1a2e');
 
     // --- DARK INNER PANEL ---
     const px = 50, py = 55, pw = CS_W - 100, ph = CS_H - 85;
@@ -4885,10 +4900,10 @@ function drawCharSelect() {
         c.font = '7px "Press Start 2P", monospace';
         c.fillStyle = '#000';
         for (let ox = -1; ox <= 1; ox++) for (let oy = -1; oy <= 1; oy++) {
-            if (ox || oy) c.fillText(cls.desc, textLeft + ox, sy + 35 + oy);
+            if (ox || oy) c.fillText(getCharDesc(cls.id), textLeft + ox, sy + 35 + oy);
         }
         c.fillStyle = '#7777aa';
-        c.fillText(cls.desc, textLeft, sy + 35);
+        c.fillText(getCharDesc(cls.id), textLeft, sy + 35);
 
         // Stats
         const statsText = `HP:${cls.hp}  ATK:${cls.attack}  DEF:${cls.defense}`;
@@ -8423,28 +8438,28 @@ function drawLessonDiagram(lessonId, container) {
 
     switch (lessonId) {
         case 'propositional-basics': {
-            text('Statements vs Non-Statements', 260, 18, '#f5c842', 11);
+            text(td('Statements vs Non-Statements'), 260, 18, '#f5c842', 11);
             // Statements column
             box(20, 35, 220, 90, '#0a2a1a');
-            text('STATEMENTS', 130, 50, '#4ecca3', 10);
+            text(td('STATEMENTS'), 130, 50, '#4ecca3', 10);
             text('"The sky is blue" = TRUE', 130, 72, '#e0e0e0', 8);
             text('"2+2=5" = FALSE', 130, 92, '#e0e0e0', 8);
             text('"Fish can fly" = FALSE', 130, 112, '#e0e0e0', 8);
             // Non-statements column
             box(280, 35, 220, 90, '#2a0a1a');
-            text('NOT STATEMENTS', 390, 50, '#e94560', 10);
+            text(td('NOT STATEMENTS'), 390, 50, '#e94560', 10);
             text('"How are you?" (question)', 390, 72, '#e0e0e0', 8);
             text('"Close the door!" (command)', 390, 92, '#e0e0e0', 8);
             text('"Wow!" (exclamation)', 390, 112, '#e0e0e0', 8);
             // AND / NOT diagram
-            text('AND: Both must be true', 140, 150, '#f5c842', 9);
+            text(td('AND: Both must be true'), 140, 150, '#f5c842', 9);
             box(30, 165, 80, 30, '#0a2a1a'); text('TRUE', 70, 180, '#4ecca3', 9);
             text('AND', 140, 180, '#f5c842', 10);
             box(170, 165, 80, 30, '#0a2a1a'); text('TRUE', 210, 180, '#4ecca3', 9);
             text('=', 270, 180, '#888', 10);
             box(290, 165, 80, 30, '#0a2a1a'); text('TRUE', 330, 180, '#4ecca3', 10);
 
-            text('NOT: Flips the value', 140, 215, '#f5c842', 9);
+            text(td('NOT: Flips the value'), 140, 215, '#f5c842', 9);
             box(50, 230, 80, 25, '#0a2a1a'); text('TRUE', 90, 242, '#4ecca3', 9);
             arrow(140, 242, 180, 242, '#f5c842');
             text('NOT', 160, 232, '#f5c842', 8);
@@ -8452,7 +8467,7 @@ function drawLessonDiagram(lessonId, container) {
             break;
         }
         case 'truth-tables': {
-            text('AND vs OR Truth Tables', 260, 18, '#f5c842', 11);
+            text(td('AND vs OR Truth Tables'), 260, 18, '#f5c842', 11);
             // AND gate diagram
             gate(80, 40, 'AND', 'T', 'T', 'T');
             gate(80, 95, 'AND', 'T', 'F', 'F');
@@ -8460,21 +8475,21 @@ function drawLessonDiagram(lessonId, container) {
             gate(310, 40, 'OR', 'T', 'F', 'T');
             gate(310, 95, 'OR', 'F', 'F', 'F');
             // Visual comparison
-            text('AND = ALL must be true', 150, 160, '#4ecca3', 9);
-            text('OR = At least ONE true', 380, 160, '#4ecca3', 9);
+            text(td('AND = ALL must be true'), 150, 160, '#4ecca3', 9);
+            text(td('OR = At least ONE true'), 380, 160, '#4ecca3', 9);
             // Checklist metaphor
             box(30, 180, 200, 70, '#0a1a2a');
-            text('AND Checklist:', 130, 195, '#f5c842', 8);
+            text(td('AND Checklist:'), 130, 195, '#f5c842', 8);
             text('[x] Sunny  [x] Warm', 130, 215, '#4ecca3', 8);
             text('= TRUE (both checked!)', 130, 235, '#4ecca3', 8);
             box(280, 180, 210, 70, '#0a1a2a');
-            text('OR Checklist:', 385, 195, '#f5c842', 8);
+            text(td('OR Checklist:'), 385, 195, '#f5c842', 8);
             text('[x] Pizza  [ ] Pasta', 385, 215, '#4ecca3', 8);
             text('= TRUE (one is enough!)', 385, 235, '#4ecca3', 8);
             break;
         }
         case 'implication': {
-            text('IF-THEN (Implication)', 260, 18, '#f5c842', 11);
+            text(td('IF-THEN (Implication)'), 260, 18, '#f5c842', 11);
             text('Promise: "If you clean, you get ice cream"', 260, 42, '#e0e0e0', 8);
             // Four scenarios as flow boxes
             const scenarios = [
@@ -8498,9 +8513,9 @@ function drawLessonDiagram(lessonId, container) {
             break;
         }
         case 'equivalence': {
-            text("De Morgan's Rules", 260, 18, '#f5c842', 11);
+            text(td("De Morgan's Rules"), 260, 18, '#f5c842', 11);
             // Rule 1: NOT(A AND B) = NOT A OR NOT B
-            text('Rule 1:', 50, 50, '#f5c842', 9);
+            text(td('Rule 1:'), 50, 50, '#f5c842', 9);
             box(90, 38, 180, 26, '#1a1a3e');
             text('NOT (A AND B)', 180, 50, '#e0e0e0', 9);
             text('=', 290, 50, '#888', 12);
@@ -8510,7 +8525,7 @@ function drawLessonDiagram(lessonId, container) {
             venn(150, 120, 45, 'A', 'B', '#e94560', '#4ecca3');
             text('Shaded = NOT(A AND B)', 150, 180, '#8888aa', 7);
             // Rule 2: NOT(A OR B) = NOT A AND NOT B
-            text('Rule 2:', 50, 210, '#f5c842', 9);
+            text(td('Rule 2:'), 50, 210, '#f5c842', 9);
             box(90, 198, 180, 26, '#1a1a3e');
             text('NOT (A OR B)', 180, 210, '#e0e0e0', 9);
             text('=', 290, 210, '#888', 12);
@@ -8522,28 +8537,28 @@ function drawLessonDiagram(lessonId, container) {
             break;
         }
         case 'valid-reasoning': {
-            text('Valid Reasoning Patterns', 260, 18, '#f5c842', 11);
+            text(td('Valid Reasoning Patterns'), 260, 18, '#f5c842', 11);
             // Modus Ponens
-            text('Modus Ponens (Forward)', 130, 45, '#4ecca3', 9);
+            text(td('Modus Ponens (Forward)'), 130, 45, '#4ecca3', 9);
             box(20, 58, 220, 24, '#0a1a2a'); text('If dog -> animal', 130, 70, '#e0e0e0', 8);
             box(20, 86, 220, 24, '#0a1a2a'); text('Buddy IS a dog', 130, 98, '#e0e0e0', 8);
             arrow(130, 114, 130, 128, '#4ecca3');
             box(20, 130, 220, 24, '#0a2a1a'); text('Buddy IS an animal', 130, 142, '#4ecca3', 8);
             // Modus Tollens
-            text('Modus Tollens (Backward)', 390, 45, '#e94560', 9);
+            text(td('Modus Tollens (Backward)'), 390, 45, '#e94560', 9);
             box(280, 58, 220, 24, '#0a1a2a'); text('If dog -> animal', 390, 70, '#e0e0e0', 8);
             box(280, 86, 220, 24, '#0a1a2a'); text('Zorp is NOT animal', 390, 98, '#e0e0e0', 8);
             arrow(390, 114, 390, 128, '#e94560');
             box(280, 130, 220, 24, '#2a0a1a'); text('Zorp is NOT a dog', 390, 142, '#e94560', 8);
             // Invalid pattern
-            text('INVALID (The Trick!)', 260, 180, '#e94560', 10);
+            text(td('INVALID (The Trick!)'), 260, 180, '#e94560', 10);
             box(100, 194, 320, 24, '#2a0a1a'); text('If dog -> animal.  Mittens IS animal.', 260, 206, '#e0e0e0', 8);
             box(140, 225, 240, 24, '#2a0a0a'); text('Mittens is a dog?? WRONG!', 260, 237, '#e94560', 8);
             text('(Mittens could be a cat!)', 260, 255, '#8888aa', 7);
             break;
         }
         case 'predicate-logic': {
-            text('Predicates & Quantifiers', 260, 18, '#f5c842', 11);
+            text(td('Predicates & Quantifiers'), 260, 18, '#f5c842', 11);
             // Predicate example
             text('Predicate: "is tall"', 130, 45, '#4ecca3', 9);
             box(30, 58, 90, 30, '#0a2a1a'); text('Nyela', 75, 73, '#e0e0e0', 9);
@@ -8575,7 +8590,7 @@ function drawLessonDiagram(lessonId, container) {
             break;
         }
         case 'logical-proofs': {
-            text('Proof Chains (Dominoes!)', 260, 18, '#f5c842', 11);
+            text(td('Proof Chains (Dominoes!)'), 260, 18, '#f5c842', 11);
             // Chain: A -> B -> C -> D
             const labels = ['A', 'B', 'C', 'D'];
             for (let i = 0; i < 4; i++) {
@@ -8599,7 +8614,7 @@ function drawLessonDiagram(lessonId, container) {
             break;
         }
         case 'set-theory': {
-            text('Set Theory: Collections', 260, 18, '#f5c842', 11);
+            text(td('Set Theory: Collections'), 260, 18, '#f5c842', 11);
             // Venn diagram
             venn(170, 110, 60, 'Fruits', 'Red Things', '#e94560', '#4ecca3');
             text('Apple', 170, 110, '#f5c842', 8);
@@ -8620,7 +8635,7 @@ function drawLessonDiagram(lessonId, container) {
             break;
         }
         case 'boolean-algebra': {
-            text('Boolean Algebra Shortcuts', 260, 18, '#f5c842', 11);
+            text(td('Boolean Algebra Shortcuts'), 260, 18, '#f5c842', 11);
             const rules = [
                 ['A AND TRUE = A', '#4ecca3'],
                 ['A OR FALSE = A', '#4ecca3'],
@@ -8641,10 +8656,10 @@ function drawLessonDiagram(lessonId, container) {
             break;
         }
         case 'modal-logic': {
-            text('Possibility & Necessity', 260, 18, '#f5c842', 11);
+            text(td('Possibility & Necessity'), 260, 18, '#f5c842', 11);
             // Three columns
             box(20, 40, 150, 130, '#0a2a1a');
-            text('NECESSARY', 95, 55, '#4ecca3', 9);
+            text(td('NECESSARY'), 95, 55, '#4ecca3', 9);
             text('Must be true', 95, 75, '#8888aa', 7);
             text('2 + 2 = 4', 95, 100, '#e0e0e0', 8);
             text('Triangles', 95, 118, '#e0e0e0', 8);
@@ -8652,14 +8667,14 @@ function drawLessonDiagram(lessonId, container) {
             text('ALWAYS', 95, 158, '#4ecca3', 8);
 
             box(185, 40, 150, 130, '#1a1a2a');
-            text('POSSIBLE', 260, 55, '#f5c842', 9);
+            text(td('POSSIBLE'), 260, 55, '#f5c842', 9);
             text('Could be true', 260, 75, '#8888aa', 7);
             text('Rain tomorrow', 260, 100, '#e0e0e0', 8);
             text('Life on Mars', 260, 120, '#e0e0e0', 8);
             text('MAYBE', 260, 158, '#f5c842', 8);
 
             box(350, 40, 150, 130, '#2a0a1a');
-            text('IMPOSSIBLE', 425, 55, '#e94560', 9);
+            text(td('IMPOSSIBLE'), 425, 55, '#e94560', 9);
             text('Cannot be true', 425, 75, '#8888aa', 7);
             text('Square circle', 425, 100, '#e0e0e0', 8);
             text('2 + 2 = 7', 425, 120, '#e0e0e0', 8);
@@ -8672,7 +8687,7 @@ function drawLessonDiagram(lessonId, container) {
             break;
         }
         case 'paradoxes': {
-            text('Paradoxes: Self-Reference', 260, 18, '#f5c842', 11);
+            text(td('Paradoxes: Self-Reference'), 260, 18, '#f5c842', 11);
             // Liar's paradox loop
             box(130, 40, 260, 35, '#2a0a1a');
             text('"This statement is FALSE"', 260, 57, '#e0e0e0', 9);
@@ -8694,7 +8709,7 @@ function drawLessonDiagram(lessonId, container) {
             break;
         }
         case 'analyzing-arguments': {
-            text('Anatomy of an Argument', 260, 18, '#f5c842', 11);
+            text(td('Anatomy of an Argument'), 260, 18, '#f5c842', 11);
             // Premise blocks stacking up to conclusion
             box(120, 180, 280, 40, '#0a2a1a');
             text('PREMISE: All dogs are animals', 260, 200, '#4ecca3', 9);
@@ -8713,7 +8728,7 @@ function drawLessonDiagram(lessonId, container) {
             break;
         }
         case 'language-ambiguity': {
-            text('Ambiguity & Vagueness', 260, 18, '#f5c842', 11);
+            text(td('Ambiguity & Vagueness'), 260, 18, '#f5c842', 11);
             // Ambiguous sentence splitting into two meanings
             box(100, 40, 320, 30, '#1a1a3e');
             text('"I saw the man with the telescope"', 260, 55, '#e0e0e0', 8);
@@ -8735,7 +8750,7 @@ function drawLessonDiagram(lessonId, container) {
             break;
         }
         case 'categorical-syllogisms': {
-            text('Categorical Syllogisms', 260, 18, '#f5c842', 11);
+            text(td('Categorical Syllogisms'), 260, 18, '#f5c842', 11);
             // Four types
             const types = [
                 ['ALL S are P', '#4ecca3'], ['NO S are P', '#e94560'],
@@ -8756,15 +8771,15 @@ function drawLessonDiagram(lessonId, container) {
             break;
         }
         case 'causal-reasoning': {
-            text('Correlation vs Causation', 260, 18, '#f5c842', 11);
+            text(td('Correlation vs Causation'), 260, 18, '#f5c842', 11);
             // Two paths
             box(30, 45, 220, 80, '#2a0a1a');
-            text('CORRELATION', 140, 60, '#e94560', 10);
+            text(td('CORRELATION'), 140, 60, '#e94560', 10);
             text('Things happen together', 140, 80, '#e0e0e0', 8);
             text('(but one may NOT cause', 140, 96, '#8888aa', 7);
             text('the other)', 140, 112, '#8888aa', 7);
             box(270, 45, 220, 80, '#0a2a1a');
-            text('CAUSATION', 380, 60, '#4ecca3', 10);
+            text(td('CAUSATION'), 380, 60, '#4ecca3', 10);
             text('One thing MAKES', 380, 80, '#e0e0e0', 8);
             text('another happen', 380, 96, '#e0e0e0', 8);
             text('(proven by experiment)', 380, 112, '#8888aa', 7);
