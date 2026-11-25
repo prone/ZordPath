@@ -29,7 +29,7 @@ registerLanguage('zh', '中文', '\u{1F1F9}\u{1F1FC}', {
     nothingHere: '這裡沒有發現。', alreadyCollected: '你已經收集了這個符文。',
     wrongAnswer: '錯了！', correctAnswer: '正確！', theAnswerIs: '答案是：',
     comeBackLater: '下次再來試試！', catchSuccessful: '捕捉成功！',
-    brokeFree: '掙脫了！', escaped: '逃跑了！', defeated: '被擊敗了！',
+    brokeFree: '掙脫了！', escaped: '逃跑了！', escapeConfirm: '要嘗試逃跑嗎？', defeated: '被擊敗了！',
     victory: '勝利！', youWereDefeated: '你被打敗了...',
     caught: '捕獲！', giveNickname: '給牠取個暱稱：',
     chooseZord: '選擇一隻佐德出戰！',

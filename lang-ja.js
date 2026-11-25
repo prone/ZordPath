@@ -29,7 +29,7 @@ registerLanguage('ja', '日本語', '\u{1F1EF}\u{1F1F5}', {
     nothingHere: '何も見つかりません。', alreadyCollected: 'このルーンは既に集めました。',
     wrongAnswer: '不正解！', correctAnswer: '正解！', theAnswerIs: '答えは：',
     comeBackLater: 'また来て挑戦しよう！', catchSuccessful: '捕獲成功！',
-    brokeFree: '逃げられた！', escaped: '脱出した！', defeated: '倒した！',
+    brokeFree: '逃げられた！', escaped: '脱出した！', escapeConfirm: '逃げてみる？', defeated: '倒した！',
     victory: '勝利！', youWereDefeated: '負けてしまった...',
     caught: '捕獲！', giveNickname: 'ニックネームをつけよう：',
     chooseZord: 'ゾードを選んで出動！',

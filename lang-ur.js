@@ -29,7 +29,7 @@ registerLanguage('ur', 'اردو', '\u{1F1F5}\u{1F1F0}', {
     nothingHere: 'یہاں کچھ نہیں ملا', alreadyCollected: 'آپ یہ نشان پہلے لے چکے ہیں',
     wrongAnswer: '!غلط', correctAnswer: '!صحیح', theAnswerIs: ':صحیح جواب ہے',
     comeBackLater: '!واپس آ کر دوبارہ کوشش کرو', catchSuccessful: '!کامیاب پکڑ',
-    brokeFree: '!آزاد ہو گیا', escaped: '!فرار', defeated: '!شکست',
+    brokeFree: '!آزاد ہو گیا', escaped: '!فرار', escapeConfirm: '؟فرار کی کوشش کریں', defeated: '!شکست',
     victory: '!فتح', youWereDefeated: '...آپ ہار گئے',
     caught: '!پکڑا گیا', giveNickname: ':اسے ایک نام دو',
     chooseZord: '!ایک زورڈ چنو',

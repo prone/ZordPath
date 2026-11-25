@@ -35,7 +35,7 @@ const LANG_EN = {
     nothingHere: 'Nothing to find here.', alreadyCollected: 'You already collected this rune.',
     wrongAnswer: 'Wrong!', correctAnswer: 'Correct!', theAnswerIs: 'The answer is:',
     comeBackLater: 'Come back and try again!', catchSuccessful: 'Catch successful!',
-    brokeFree: 'broke free!', escaped: 'Escaped!', defeated: 'defeated!',
+    brokeFree: 'broke free!', escaped: 'Escaped!', escapeConfirm: 'Try to escape?', defeated: 'defeated!',
     victory: 'Victory!', youWereDefeated: 'You were defeated...',
     caught: 'CAUGHT!', giveNickname: 'Give it a nickname:',
     chooseZord: 'Choose a Zord to deploy!',
@@ -267,7 +267,14 @@ function getLesson(lessonId) {
 }
 
 // In-game confirm dialog (replaces browser confirm())
-function showGameConfirm(message, onYes) {
+// onNo and opts are optional. opts.keys: Enter/Y confirms, Escape/N cancels.
+function showGameConfirm(message, onYes, onNo, opts) {
+    let keyHandler = null;
+    const close = (yes) => {
+        if (keyHandler) document.removeEventListener('keydown', keyHandler, true);
+        overlay.remove();
+        if (yes) onYes(); else if (onNo) onNo();
+    };
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;';
     const box = document.createElement('div');
@@ -282,17 +289,27 @@ function showGameConfirm(message, onYes) {
     yesBtn.className = 'btn btn-primary';
     yesBtn.style.fontSize = '10px';
     yesBtn.textContent = t('confirm');
-    yesBtn.addEventListener('click', () => { overlay.remove(); onYes(); });
+    yesBtn.addEventListener('click', () => close(true));
     const noBtn = document.createElement('button');
     noBtn.className = 'btn btn-secondary';
     noBtn.style.fontSize = '10px';
     noBtn.textContent = t('cancel');
-    noBtn.addEventListener('click', () => overlay.remove());
+    noBtn.addEventListener('click', () => close(false));
     btnRow.appendChild(yesBtn);
     btnRow.appendChild(noBtn);
     box.appendChild(btnRow);
     overlay.appendChild(box);
     document.body.appendChild(overlay);
+    if (opts && opts.keys) {
+        keyHandler = (e) => {
+            const k = e.key.toLowerCase();
+            // Swallow every key so nothing behind the dialog reacts
+            e.stopImmediatePropagation();
+            if (k === 'enter' || k === 'y') { e.preventDefault(); close(true); }
+            else if (k === 'escape' || k === 'n' || k === 'e') { e.preventDefault(); close(false); }
+        };
+        document.addEventListener('keydown', keyHandler, true);
+    }
 }
 
 // ============================================================
@@ -433,6 +450,7 @@ function saveToSlot(i) {
         playerCol: state.playerCol, playerRow: state.playerRow, facing: state.facing,
         defeatedEnemies: [...state.defeatedEnemies],
         defeatedZones: [...state.defeatedZones],
+        zonesCleared: state.zonesCleared || 0,
         builtItems: [...state.builtItems],
         zordList: state.zordList.map(z => ({ ...z, power: { ...z.power } })),
         zordBench: [...state.zordBench],
@@ -484,7 +502,11 @@ function loadFromSlot(i) {
         }
         state.facing = d.facing || 'down';
         state.defeatedEnemies = d.defeatedEnemies || [];
-        state.defeatedZones = new Set(d.defeatedZones || []);
+        // Older saves have no zonesCleared; their defeatedZones never shrank
+        state.zonesCleared = d.zonesCleared !== undefined ? d.zonesCleared : (d.defeatedZones || []).length;
+        // Respawn timers aren't saved: regular enemies are back on load, bosses stay dead
+        state.defeatedZones = new Set((d.defeatedZones || []).filter(isBossZone));
+        for (const k of Object.keys(zoneRespawnAt)) delete zoneRespawnAt[k];
         state.builtItems = d.builtItems || [];
         state.zordList = (d.zordList || []).map(z => ({ ...z, power: { ...z.power } }));
         state.zordBench = d.zordBench || [];
@@ -1657,6 +1679,45 @@ const ENEMY_ZONES = {
         { col: 12, row: 9, enemyIndex: 29, roam: 1 }  // Boss
     ]
 };
+
+// Bosses and gate guardians stay defeated; every other enemy respawns.
+// Logic Lord, Arch-Logician Zephyr, Crystal Yeti, Titan Frostclaw
+const BOSS_ENEMY_INDEXES = new Set([7, 29, 41, 49]);
+const ENEMY_RESPAWN_MS = 60000;
+const zoneRespawnAt = {}; // zone key -> timestamp when it comes back (not saved)
+
+function isBossZone(key) {
+    const cut = key.lastIndexOf('_');
+    const zone = (ENEMY_ZONES[key.slice(0, cut)] || [])[Number(key.slice(cut + 1))];
+    return !!zone && BOSS_ENEMY_INDEXES.has(zone.enemyIndex);
+}
+
+// Call on victory or catch. zonesCleared only ever goes up (forest gate).
+function markZoneDefeated(key) {
+    if (!key || state.defeatedZones.has(key)) return;
+    state.defeatedZones.add(key);
+    state.zonesCleared = (state.zonesCleared || 0) + 1;
+    if (!isBossZone(key)) zoneRespawnAt[key] = Date.now() + ENEMY_RESPAWN_MS;
+}
+
+function updateEnemyRespawns() {
+    const now = Date.now();
+    for (const key of Object.keys(zoneRespawnAt)) {
+        if (now < zoneRespawnAt[key]) continue;
+        const cut = key.lastIndexOf('_');
+        const loc = key.slice(0, cut);
+        const ep = (enemyPos[loc] || [])[Number(key.slice(cut + 1))];
+        if (ep && loc === state.location) {
+            // Don't pop back in on top of the player; wait until they move off
+            const px = state.playerCol * TILE + TILE / 2;
+            const py = state.playerRow * TILE + TILE / 2;
+            if (Math.hypot(px - ep.spawnX, py - ep.spawnY) < TILE * 3) continue;
+        }
+        if (ep) { ep.x = ep.spawnX; ep.y = ep.spawnY; }
+        state.defeatedZones.delete(key);
+        delete zoneRespawnAt[key];
+    }
+}
 
 // Runtime enemy positions (pixel-based for smooth movement)
 const enemyPos = {};
@@ -4143,7 +4204,8 @@ const state = {
     playerRow: Math.floor(ROWS / 2),
     facing: 'down',
     defeatedEnemies: [],
-    defeatedZones: new Set(),   // track which enemy zone instances are cleared
+    defeatedZones: new Set(),   // enemy zone instances currently defeated (regular ones respawn)
+    zonesCleared: 0,            // total zone victories, never decreases
     builtItems: [],
     fish: {},           // { fishId: count }
     zordList: [],       // [{ nickname, species, sprite, hp, maxHp, attack, element, power, level, xp, catchLocation }]
@@ -6501,8 +6563,8 @@ function checkTransition() {
 
 function doTransition(t) {
     // Check forest lock
-    if (t.target === 'forest' && state.defeatedZones.size < 3) {
-        showDialogue('\u{1F6AB}', 'Blocked', `The forest is too dangerous! Defeat at least 3 enemies first. (${state.defeatedZones.size}/3)`);
+    if (t.target === 'forest' && (state.zonesCleared || 0) < 3) {
+        showDialogue('\u{1F6AB}', 'Blocked', `The forest is too dangerous! Defeat at least 3 enemies first. (${state.zonesCleared || 0}/3)`);
         state.playerCol -= (state.facing === 'right' ? 1 : state.facing === 'left' ? -1 : 0);
         state.playerRow -= (state.facing === 'down' ? 1 : state.facing === 'up' ? -1 : 0);
         return;
@@ -9443,9 +9505,7 @@ function completeCatch(enemy, b) {
         if (battle) state.hp = battle.playerHp;
         state.rubies += b.pendingCatch.rubies;
         if (!state.defeatedEnemies.includes(enemy.name)) state.defeatedEnemies.push(enemy.name);
-        if (state._pendingZoneKey && !state.defeatedZones.has(state._pendingZoneKey)) {
-            state.defeatedZones.add(state._pendingZoneKey);
-        }
+        markZoneDefeated(state._pendingZoneKey);
         state._pendingZoneKey = null;
         autoSave();
         console.log('[CATCH] Zord added, showing result. battle:', !!battle, 'screen:', state.screen);
@@ -10434,10 +10494,14 @@ function startBattle() {
         cageFlying: false,
         cageX: 0, cageY: 0,
         cageTargetX: 0, cageTargetY: 0,
-        // Escape door (flush with ground)
-        escapeDoorX: 60 + Math.random() * (BW - 120),
+        // Escape door: fixed spot on the back wall behind the player's start,
+        // away from the corner and the middle of the fight. The player must
+        // stand in it and hold Up, then confirm, so it can't be run through.
+        escapeDoorX: 120,
         escapeDoorY: BH * 0.55,
         escapeDoorBlocked: false,
+        escapeHold: 0,          // frames spent pushing into the door
+        escapeDeclined: false,  // said No; must step away before asking again
         escapeRate: enemy.escapeRate !== undefined ? enemy.escapeRate : 0.75
     };
 
@@ -10483,6 +10547,33 @@ function battleLoop() {
     requestAnimationFrame(battleLoop);
 }
 
+const ESCAPE_HOLD_FRAMES = 30; // ~0.5s of holding Up in the doorway
+
+// Roll the escape chance. Only called after the player confirms.
+function attemptEscape(b) {
+    if (Math.random() < b.escapeRate) {
+        // Success - escaped, enemy stays on map
+        b.over = true;
+        state.hp = b.playerHp;
+        state._pendingZoneKey = null;
+        state._encounterCooldown = 90;
+        playSound('gem');
+        const resultEl = document.getElementById('battle-result');
+        document.getElementById('battle-result-text').innerHTML = t('escaped');
+        resultEl.style.display = 'flex';
+        document.getElementById('battle-result-btn').textContent = t('continue');
+        document.getElementById('battle-result-btn').onclick = () => {
+            battle.running = false; battle = null;
+            updateHUD(); showScreen('game');
+        };
+    } else {
+        // Failed - door is now blocked
+        b.escapeDoorBlocked = true;
+        b.damageNums.push({ x: b.escapeDoorX, y: b.escapeDoorY - 20, text: 'BLOCKED!', color: '#e94560', life: 60 });
+        playSound('hurt');
+    }
+}
+
 function battleUpdate() {
     if (battle.over) return;
     const b = battle;
@@ -10495,35 +10586,33 @@ function battleUpdate() {
     if (keys['arrowleft'] || keys['a']) { b.px = Math.max(40, b.px - b.pSpeed); b.pFacing = -1; }
     if (keys['arrowright'] || keys['d']) { b.px = Math.min(BW - 40, b.px + b.pSpeed); b.pFacing = 1; }
 
-    // Check escape door (player must be near the door position on the ground)
+    // Check escape door. Escaping takes intent: stand inside the doorway,
+    // against the back wall, and hold Up for ESCAPE_HOLD_FRAMES, then confirm.
     if (!b.escapeDoorBlocked && !b.over) {
-        const nearDoorX = Math.abs(b.px - b.escapeDoorX) < 30;
-        const nearDoorY = b.py < groundTop + 30;
-        if (nearDoorX && nearDoorY) {
-            // Attempt escape
-            if (Math.random() < b.escapeRate) {
-                // Success - escaped, enemy stays on map
-                b.over = true;
-                state.hp = b.playerHp;
-                state._pendingZoneKey = null;
-                state._encounterCooldown = 90;
-                playSound('gem');
-                const resultEl = document.getElementById('battle-result');
-                document.getElementById('battle-result-text').innerHTML = t('escaped');
-                resultEl.style.display = 'flex';
-                document.getElementById('battle-result-btn').textContent = t('continue');
-                document.getElementById('battle-result-btn').onclick = () => {
-                    battle.running = false; battle = null;
-                    updateHUD(); showScreen('game');
-                };
-            } else {
-                // Failed - door is now blocked
-                b.escapeDoorBlocked = true;
-                b.damageNums.push({ x: b.escapeDoorX, y: b.escapeDoorY - 20, text: 'BLOCKED!', color: '#e94560', life: 60 });
-                playSound('hurt');
-                // Push player away from door
-                b.px += (b.px < BW / 2) ? 30 : -30;
-            }
+        const inDoor = Math.abs(b.px - b.escapeDoorX) < 14 && b.py <= groundTop + 2;
+        const pushingUp = !!(keys['arrowup'] || keys['w']);
+        if (!inDoor) {
+            b.escapeHold = 0;
+            b.escapeDeclined = false;
+        } else if (!pushingUp || b.escapeDeclined) {
+            b.escapeHold = 0;
+        } else if (++b.escapeHold >= ESCAPE_HOLD_FRAMES) {
+            b.escapeHold = 0;
+            b.running = false; // pause the fight while the player decides
+            const resume = () => {
+                if (battle !== b || b.running || state.screen !== 'battle') return;
+                b.running = true;
+                battleLoop();
+            };
+            showGameConfirm(t('escapeConfirm'), () => {
+                if (battle !== b || state.screen !== 'battle') return;
+                attemptEscape(b);
+                resume();
+            }, () => {
+                b.escapeDeclined = true;
+                resume();
+            }, { keys: true });
+            return;
         }
     }
 
@@ -11969,6 +12058,13 @@ function battleRender() {
             c.font = '6px "Press Start 2P", monospace';
             c.textAlign = 'center';
             c.fillText('EXIT', dx, dy - archH - 6);
+            // Hold-to-escape progress
+            if (b.escapeHold > 0) {
+                c.fillStyle = '#1a1a2e';
+                c.fillRect(dx - archW/2, dy + 3, archW, 4);
+                c.fillStyle = '#4ecca3';
+                c.fillRect(dx - archW/2, dy + 3, archW * Math.min(1, b.escapeHold / ESCAPE_HOLD_FRAMES), 4);
+            }
         }
     }
 
@@ -12132,14 +12228,11 @@ function battleRender() {
 
     // --- ZordCage in flight ---
     if (b.cageFlying) {
-        c.font = '20px serif';
-        c.textAlign = 'center';
-        c.textBaseline = 'middle';
         const spin = Math.sin(b.frame * 0.3) * 0.3;
         c.save();
         c.translate(b.cageX, b.cageY);
         c.rotate(spin);
-        c.fillText('\u{1F3C0}', 0, 0);  // cage-like sphere
+        drawZordCage(c);
         c.restore();
     }
 
@@ -12152,6 +12245,36 @@ function battleRender() {
         c.fillText(d.text, d.x, d.y);
     });
     c.globalAlpha = 1;
+}
+
+// Barred cage centred on the current origin (about 22 x 28 px)
+function drawZordCage(c) {
+    // Carry ring
+    c.strokeStyle = '#c9a227';
+    c.lineWidth = 2;
+    c.beginPath(); c.arc(0, -13, 3, 0, Math.PI * 2); c.stroke();
+    // Dark interior so the bars read against any background
+    c.fillStyle = 'rgba(10,10,20,0.45)';
+    c.fillRect(-9, -8, 18, 17);
+    // Vertical bars
+    for (let i = 0; i < 5; i++) {
+        const x = -9 + i * 4;
+        c.fillStyle = '#9aa0ad';
+        c.fillRect(x, -8, 2, 17);
+        c.fillStyle = '#d8dce6';
+        c.fillRect(x, -8, 1, 17);
+    }
+    // Cross band
+    c.fillStyle = '#7a8090';
+    c.fillRect(-9, -1, 18, 2);
+    // Roof and base plates
+    c.fillStyle = '#c9a227';
+    c.fillRect(-8, -12, 16, 2);
+    c.fillRect(-11, -10, 22, 3);
+    c.fillRect(-11, 9, 22, 4);
+    c.fillStyle = '#8a6d14';
+    c.fillRect(-11, 12, 22, 1);
+    c.fillRect(-11, -8, 22, 1);
 }
 
 function endBattle(victory) {
@@ -12168,9 +12291,7 @@ function endBattle(victory) {
         state.hp = battle.playerHp;
         if (!state.defeatedEnemies.includes(enemy.name)) state.defeatedEnemies.push(enemy.name);
         // Mark zone enemy as defeated only on victory
-        if (state._pendingZoneKey && !state.defeatedZones.has(state._pendingZoneKey)) {
-            state.defeatedZones.add(state._pendingZoneKey);
-        }
+        markZoneDefeated(state._pendingZoneKey);
         state._pendingZoneKey = null;
         trackEnemyDefeated();
         trackRubiesEarned(rubiesEarned);
@@ -13671,9 +13792,7 @@ function zordBattleEnd(victory) {
         const rubiesEarned = enemy.rubies + (state.quizCorrect || 0) * 2;
         state.rubies += rubiesEarned;
         if (!state.defeatedEnemies.includes(enemy.name)) state.defeatedEnemies.push(enemy.name);
-        if (state._pendingZoneKey && !state.defeatedZones.has(state._pendingZoneKey)) {
-            state.defeatedZones.add(state._pendingZoneKey);
-        }
+        markZoneDefeated(state._pendingZoneKey);
         state._pendingZoneKey = null;
 
         // Grant XP to bench Zords
@@ -14475,6 +14594,7 @@ function gameLoop() {
             drawHouseInterior();
         } else {
             handleMovement(now);
+            updateEnemyRespawns();
             updateEnemyMovement();
             render();
         }

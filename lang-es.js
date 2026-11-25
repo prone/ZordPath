@@ -29,7 +29,7 @@ registerLanguage('es', 'Espanol', '\u{1F1EA}\u{1F1F8}', {
     nothingHere: 'No hay nada que encontrar aqui.', alreadyCollected: 'Ya recolectaste esta runa.',
     wrongAnswer: 'Incorrecto!', correctAnswer: 'Correcto!', theAnswerIs: 'La respuesta es:',
     comeBackLater: 'Vuelve e intentalo de nuevo!', catchSuccessful: 'Captura exitosa!',
-    brokeFree: 'se libero!', escaped: 'Escapaste!', defeated: 'derrotado!',
+    brokeFree: 'se libero!', escaped: 'Escapaste!', escapeConfirm: 'Intentar escapar?', defeated: 'derrotado!',
     victory: 'Victoria!', youWereDefeated: 'Fuiste derrotado...',
     caught: 'CAPTURADO!', giveNickname: 'Dale un apodo:',
     chooseZord: 'Elige un Zord para desplegar!',

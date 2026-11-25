@@ -29,7 +29,7 @@ registerLanguage('fr', 'Francais', '\u{1F1EB}\u{1F1F7}', {
     nothingHere: 'Rien a trouver ici.', alreadyCollected: 'Vous avez deja cette rune.',
     wrongAnswer: 'Faux !', correctAnswer: 'Correct !', theAnswerIs: 'La reponse est :',
     comeBackLater: 'Revenez et reessayez !', catchSuccessful: 'Capture reussie !',
-    brokeFree: 's\'est libere !', escaped: 'Echappe !', defeated: 'vaincu !',
+    brokeFree: 's\'est libere !', escaped: 'Echappe !', escapeConfirm: 'Tenter de fuir ?', defeated: 'vaincu !',
     victory: 'Victoire !', youWereDefeated: 'Vous avez ete vaincu...',
     caught: 'CAPTURE !', giveNickname: 'Donnez-lui un surnom :',
     chooseZord: 'Choisissez un Zord a deployer !',
